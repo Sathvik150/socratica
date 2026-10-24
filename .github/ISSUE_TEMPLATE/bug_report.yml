@@ -1,0 +1,26 @@
+name: Bug report
+description: Something doesn't work as documented.
+labels: [bug]
+body:
+  - type: dropdown
+    id: part
+    attributes:
+      label: Which part?
+      options: [Chrome extension, CLI (hf-verify), Agent skill, Core / SDK, Benchmark]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Commands, inputs, or a minimal answer + evidence. Please remove anything private, and never paste API keys.
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit

@@ -1,0 +1,31 @@
+{
+  "claims": [
+    { "id": "c1", "text": "It was founded by Dalia Moss in 1910." },
+    { "id": "c2", "text": "The library holds 2.4 million volumes" }
+  ],
+  "passages": [
+    {
+      "id": "p1",
+      "title": "Orrin Library",
+      "url": "https://example.org/velmora/orrin-library",
+      "text": "The Orrin Library is a public library in the city of Velmora. It was founded by Dalia Moss in 1902. The library holds 2.4 million volumes and is open every day except Sunday."
+    }
+  ],
+  "verdicts": [
+    {
+      "claimId": "c1",
+      "verdict": "contradicted",
+      "confidence": 0.9,
+      "rationale": "p1 gives the founding year as 1902.",
+      "quotes": [{ "passage_id": "p1", "quote": "It was founded by Dalia Moss in 1902." }],
+      "correction": "It was founded by Dalia Moss in 1902."
+    },
+    {
+      "claimId": "c2",
+      "verdict": "supported",
+      "confidence": 0.9,
+      "rationale": "p1 states the collection size.",
+      "quotes": [{ "passage_id": "p1", "quote": "The library has a collection of 2.4 million books." }]
+    }
+  ]
+}

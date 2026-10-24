@@ -36,6 +36,13 @@ describe('LLM providers (fake fetch, no network)', () => {
     await expect(new OpenAIProvider({ apiKey: 'secret-placeholder', fetch }).complete('hi')).rejects.not.toThrow(/secret-placeholder/);
   });
 
+  it('OpenAIProvider works keyless against a local OpenAI-compatible server', async () => {
+    const { calls, fetch } = capture({ choices: [{ message: { content: 'ok' } }] });
+    await new OpenAIProvider({ baseUrl: 'http://localhost:11434/v1/', model: 'llama3', fetch }).complete('hi');
+    expect(calls[0]!.url).toBe('http://localhost:11434/v1/chat/completions');
+    expect(calls[0]!.init?.headers?.authorization).toBeUndefined();
+  });
+
   it('requires a key', () => {
     const { fetch } = capture({});
     expect(() => new OpenAIProvider({ apiKey: '', fetch })).toThrow();

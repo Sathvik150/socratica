@@ -8,3 +8,4 @@ coverage/
 *.key
 .DS_Store
 benchmark/results/
+release/

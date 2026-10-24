@@ -43,6 +43,16 @@ importers:
         specifier: 26.1.0
         version: 26.1.0
 
+  packages/cli:
+    dependencies:
+      '@hallucination-firewall/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
+
   packages/core:
     dependencies:
       zod:

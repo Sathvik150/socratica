@@ -1,0 +1,22 @@
+{
+  "name": "@hallucination-firewall/cli",
+  "version": "0.1.0",
+  "description": "hf-verify: fact-check text against evidence from the command line. Works offline, with your own API key, or with a local OpenAI-compatible model.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "hf-verify": "./dist/hf-verify.mjs"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit && node build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hallucination-firewall/core": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

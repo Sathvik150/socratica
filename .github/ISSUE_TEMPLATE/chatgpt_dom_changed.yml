@@ -1,0 +1,21 @@
+name: ChatGPT page changed (answers not detected)
+description: The extension stopped finding answers or detecting when streaming ends.
+labels: [adapter, chatgpt]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ChatGPT selectors are assumptions that live in `packages/browser-extension/src/adapters/chatgpt.ts`.
+        A saved HTML snippet of one answer (with personal content removed) is the most useful thing you can attach.
+  - type: textarea
+    id: symptom
+    attributes:
+      label: What do you see?
+      description: e.g. no summary bar, checks start before the answer finishes, highlights in the wrong place.
+    validations:
+      required: true
+  - type: textarea
+    id: html
+    attributes:
+      label: Sanitized HTML of an assistant message (optional)
+      render: html
