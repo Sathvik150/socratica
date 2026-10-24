@@ -18,7 +18,7 @@ describe('runVerification end to end (MockLLM + supplied documents)', () => {
     expect(result.summary.contradicted).toBe(1);
     const bad = result.verdicts.find((v) => v.verdict === 'contradicted')!;
     expect(bad.claim).toBe('It was founded by Dalia Moss in 1910.');
-    expect(bad.quotes[0]!.quote).toBe('It was founded by Dalia Moss in 1902.');
+    expect(bad.quotes[0]!.quote).toContain('It was founded by Dalia Moss in 1902.');
     expect(bad.quotes[0]!.source.url).toBe('https://example.test/orrin');
     expect(result.passages[bad.quotes[0]!.passageId]!.text).toContain(bad.quotes[0]!.quote);
     expect(bad.correction).toBe('It was founded by Dalia Moss in 1902.');

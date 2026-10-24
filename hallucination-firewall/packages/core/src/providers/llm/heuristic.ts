@@ -23,16 +23,17 @@ function unverifiable(rationale: string): LLMVerdict {
   return { verdict: 'unverifiable', confidence: 0.5, rationale, quotes: [], correction: null };
 }
 
+const PRONOUN_START = /^(?:it|its|they|their|he|she|his|her|this|these|those)\b/i;
+
 const NEGATION = /\b(?:not|never|no|none|neither|nor|cannot)\b|n't\b/i;
 
-/** Capitalized names in original case, excluding a sentence-initial common word. */
+/** Capitalized names in original case, without a leading article or possessive. */
 function names(s: string): string[] {
   const out: string[] = [];
   for (const m of s.matchAll(/\p{Lu}[\p{L}\p{N}'’-]*(?:\s+(?:of\s+|de\s+|von\s+|van\s+)?\p{Lu}[\p{L}\p{N}'’-]*)*/gu)) {
-    const start = m.index ?? 0;
-    const atStart = start === 0 || /[.!?]\s*$/.test(s.slice(0, start));
-    if (atStart && /^(?:The|A|An|In|On|At|It|Its|This|That|These|Those|There|He|She|They|Their|His|Her|After|Before|During|By|For|From|As|When|While)$/.test(m[0])) continue;
-    out.push(m[0]);
+    const name = m[0].replace(/^(?:The|A|An)\s+/, '').replace(/['’]s$/, '');
+    if (/^(?:The|A|An|In|On|At|It|Its|This|That|These|Those|There|He|She|They|Their|His|Her|After|Before|During|By|For|From|As|When|While|Established|Founded)$/.test(name)) continue;
+    out.push(name);
   }
   return out;
 }
@@ -45,10 +46,14 @@ function judge(claim: string, passages: Array<{ id: string; text: string }>): LL
   const claimTokens = nonNumeric(contentTokens(claim));
   let best: { passageId: string; sentence: string; overlap: number } | undefined;
   for (const p of passages) {
-    for (const s of splitSentences(p.text)) {
-      const overlap = coverage(claimTokens, contentTokens(s.text));
-      if (!best || overlap > best.overlap) best = { passageId: p.id, sentence: s.text, overlap };
-    }
+    const sentences = splitSentences(p.text);
+    sentences.forEach((s, i) => {
+      // A pronoun-led sentence is read together with the previous one (quoted verbatim as a span).
+      const prev = i > 0 && PRONOUN_START.test(s.text) ? sentences[i - 1] : undefined;
+      const sentence = prev ? p.text.slice(prev.start, s.end) : s.text;
+      const overlap = coverage(claimTokens, contentTokens(sentence));
+      if (!best || overlap > best.overlap) best = { passageId: p.id, sentence, overlap };
+    });
   }
   if (!best || best.overlap < 0.5) return unverifiable('No passage addresses this claim directly.');
 
@@ -63,8 +68,13 @@ function judge(claim: string, passages: Array<{ id: string; text: string }>): LL
   const lowerClaim = claim.toLowerCase();
   const claimOnlyNames = names(claim).filter((n) => !lowerSentence.includes(n.toLowerCase()));
   const sentenceOnlyNames = names(sentence).filter((n) => !lowerClaim.includes(n.toLowerCase()));
+  // A conflict only counts when the passage talks about the same predicate: every
+  // non-name, non-number word of the claim ("opened", "tall", "founded") must appear.
+  const nameTokens = new Set(names(claim).flatMap((n) => contentTokens(n)));
+  const predicate = claimTokens.filter((t) => !nameTokens.has(t));
+  const samePredicate = predicate.length > 0 && coverage(predicate, contentTokens(sentence)) === 1;
 
-  if (overlap >= 0.6 && missingNums.length > 0 && extraNums.length > 0) {
+  if (samePredicate && overlap >= 0.6 && missingNums.length > 0 && extraNums.length > 0) {
     const correction =
       missingNums.length === 1 && extraNums.length === 1 ? replaceNumber(claim, missingNums[0]!, extraNums[0]!) : null;
     return {
@@ -75,7 +85,7 @@ function judge(claim: string, passages: Array<{ id: string; text: string }>): LL
       correction,
     };
   }
-  if (overlap >= 0.6 && negationMismatch && missingNums.length === 0) {
+  if (samePredicate && overlap >= 0.6 && negationMismatch && missingNums.length === 0) {
     return {
       verdict: 'contradicted',
       confidence: round(0.5 + 0.4 * overlap),
@@ -84,7 +94,7 @@ function judge(claim: string, passages: Array<{ id: string; text: string }>): LL
       correction: null,
     };
   }
-  if (overlap >= 0.6 && missingNums.length === 0 && claimOnlyNames.length === 1 && sentenceOnlyNames.length === 1) {
+  if (samePredicate && overlap >= 0.6 && missingNums.length === 0 && claimOnlyNames.length === 1 && sentenceOnlyNames.length === 1) {
     const wrong = claimOnlyNames[0]!;
     const right = sentenceOnlyNames[0]!;
     return {

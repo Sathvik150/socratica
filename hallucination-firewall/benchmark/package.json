@@ -1,0 +1,17 @@
+{
+  "name": "@hallucination-firewall/benchmark",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "bench": "node dist/run.js"
+  },
+  "dependencies": {
+    "@hallucination-firewall/core": "workspace:*",
+    "zod": "4.6.7"
+  }
+}
