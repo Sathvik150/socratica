@@ -207,7 +207,7 @@ pnpm bench               # offline benchmark
 pnpm package             # release zips → release/
 ```
 
-Requires Node.js 20+. To publish a release, push a tag like `v0.1.0`. The [release workflow](.github/workflows/release.yml) builds, tests and attaches the zips.
+Requires Node.js 20+. To publish a release, push a tag like `v0.1.0`, or push a commit whose message contains `[release]` (the workflow then creates the `v<version>` tag itself). The [release workflow](.github/workflows/release.yml) builds, tests and attaches the zips.
 
 ## 🤝 Contributing
 

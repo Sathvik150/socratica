@@ -1,9 +1,14 @@
 name: Release
 
-# Push a tag like v0.1.0 to build, test and publish the downloadable zips as a GitHub Release.
+# Publishes the downloadable zips as a GitHub Release. Three ways to trigger it:
+#   1. push a tag like v0.1.0
+#   2. push a commit whose message contains "[release]": the workflow creates the
+#      tag v<version from package.json> on that commit
+#   3. run it manually (Actions tab -> Release -> Run workflow) once this file is on the default branch
 on:
   push:
     tags: ['v*']
+    branches: ['**']
   workflow_dispatch:
 
 permissions:
@@ -11,6 +16,7 @@ permissions:
 
 jobs:
   release:
+    if: startsWith(github.ref, 'refs/tags/') || contains(github.event.head_commit.message, '[release]') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,15 +29,29 @@ jobs:
       - run: pnpm build
       - run: pnpm test
       - run: pnpm package
+      - name: Work out the tag
+        id: tag
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            echo "name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+          fi
       - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          target_commitish: ${{ github.sha }}
+          name: Hallucination Firewall ${{ steps.tag.outputs.name }}
           files: release/*.zip
           generate_release_notes: true
-      - name: Upload zips (manual run)
-        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-zips
-          path: release/*.zip
+          body: |
+            ## Downloads
+
+            | Zip | Use it for |
+            |---|---|
+            | `hallucination-firewall-extension-*.zip` | Chrome: unzip, `chrome://extensions` → Developer mode → **Load unpacked** |
+            | `hallucination-firewall-skill-*.zip` | Upload as a skill in Claude / ChatGPT, or unzip into `~/.claude/skills/` |
+            | `hf-verify-cli-*.zip` | Local use: `node hf-verify.mjs verify --answer a.txt --evidence docs/` (works with Ollama / LM Studio) |
+
+            See the [README](https://github.com/${{ github.repository }}#readme) and [CHANGELOG](https://github.com/${{ github.repository }}/blob/${{ github.sha }}/CHANGELOG.md).
