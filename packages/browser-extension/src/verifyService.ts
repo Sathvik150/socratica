@@ -13,6 +13,15 @@ import type { PlatformId } from './adapters/adapter.js';
 import type { VerifyResponse } from './messages.js';
 import { DEFAULT_MODELS, HOST_PERMISSIONS, hasValidConsent, type Settings } from './settings.js';
 
+// One Wikipedia provider per fetch function, so its article cache survives across answers
+// and the extension sends Wikimedia fewer requests.
+const wikipediaProviders = new WeakMap<FetchLike, WikipediaEvidenceProvider>();
+function wikipediaFor(fetch: FetchLike): WikipediaEvidenceProvider {
+  let p = wikipediaProviders.get(fetch);
+  if (!p) wikipediaProviders.set(fetch, (p = new WikipediaEvidenceProvider({ fetch })));
+  return p;
+}
+
 export interface ServiceDeps {
   fetch: FetchLike;
   /** Whether the extension currently holds a host permission (chrome.permissions.contains). */
@@ -47,7 +56,7 @@ export async function handleVerify(
 
   const providers: EvidenceProvider[] = [];
   if (settings.evidence.wikipedia) {
-    if (await deps.hasPermission(HOST_PERMISSIONS.wikipedia)) providers.push(new WikipediaEvidenceProvider({ fetch: deps.fetch }));
+    if (await deps.hasPermission(HOST_PERMISSIONS.wikipedia)) providers.push(wikipediaFor(deps.fetch));
     else warnings.push('Wikipedia is enabled but its permission was not granted.');
   }
   if (settings.evidence.webSearch) {

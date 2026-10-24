@@ -57,7 +57,8 @@ export function isCheckable(sentence: string): boolean {
   const first = words[0] ?? '';
   if (IMPERATIVE_STARTS.has(first)) return false;
   if (FILLER.test(s)) return false;
-  if (HEDGES.test(s)) return false;
+  // "May 24" / "in May 1883" is a month, not the hedge "may".
+  if (HEDGES.test(s.replace(/\bMay(?=\s+\d|,?\s+(?:of\s+)?\d{4})/g, ''))) return false;
   if (SECOND_PERSON_INSTRUCTION.test(s)) return false;
   if (/^(?:i|we|you)\b/i.test(s)) return false;
   const hasNumber = numbers(s).length > 0;

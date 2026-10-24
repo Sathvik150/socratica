@@ -61,14 +61,49 @@ function fakeFetch(routes: Array<[RegExp, unknown]>, calls: Array<{ url: string;
 
 describe('WikipediaEvidenceProvider (fake fetch, no network)', () => {
   it('searches, fetches extracts, and returns ranked passages with article URLs', async () => {
-    const fetch = fakeFetch([
-      [/list=search/, { query: { search: [{ title: 'Zentha Bridge' }] } }],
-      [/prop=extracts/, { query: { pages: { '1': { extract: docs[0]!.text } } } }],
-    ]);
+    const calls: Array<{ url: string; headers?: Record<string, string> }> = [];
+    const fetch = fakeFetch(
+      [
+        [/list=search/, { query: { search: [{ title: 'Zentha Bridge' }] } }],
+        [/prop=extracts/, { query: { pages: { '1': { extract: docs[0]!.text } } } }],
+      ],
+      calls,
+    );
     const claims = extractClaims('The Zentha Bridge opened in 1987.');
     const passages = await new WikipediaEvidenceProvider({ fetch }).retrieve(claims[0]!, { limit: 2 });
     expect(passages[0]?.source.url).toBe('https://en.wikipedia.org/wiki/Zentha_Bridge');
     expect(passages[0]?.text).toContain('1991');
+    // Wikimedia API policy: every request identifies the client.
+    for (const c of calls) expect(c.headers?.['api-user-agent']).toMatch(/^HallucinationFirewall\//);
+  });
+});
+
+describe('WikipediaEvidenceProvider rate limiting', () => {
+  it('retries once after a short Retry-After, and caches articles across claims', async () => {
+    let searches = 0;
+    const urls: string[] = [];
+    const fetch: FetchLike = async (url) => {
+      urls.push(url);
+      if (url.includes('list=search') && searches++ === 0) {
+        return { ok: false, status: 429, headers: { get: () => '0' }, json: async () => ({}), text: async () => '' };
+      }
+      const body = url.includes('list=search')
+        ? { query: { search: [{ title: 'Zentha Bridge' }] } }
+        : { query: { pages: { 1: { extract: docs[0]!.text } } } };
+      return { ok: true, status: 200, json: async () => body, text: async () => '' };
+    };
+    const wiki = new WikipediaEvidenceProvider({ fetch });
+    const [c1, c2] = extractClaims('The Zentha Bridge opened in 1987. The Zentha Bridge is in Velmora.');
+    expect((await wiki.retrieve(c1!, { limit: 2 })).length).toBeGreaterThan(0);
+    await wiki.retrieve(c2!, { limit: 2 });
+    expect(urls.filter((u) => u.includes('list=search'))).toHaveLength(3); // 429, retry, second claim
+    expect(urls.filter((u) => u.includes('prop=extracts'))).toHaveLength(1); // article cached
+  });
+
+  it('gives up on a long Retry-After instead of stalling', async () => {
+    const fetch: FetchLike = async () => ({ ok: false, status: 429, headers: { get: () => '21' }, json: async () => ({}), text: async () => '' });
+    const [c] = extractClaims('The Zentha Bridge opened in 1987.');
+    await expect(new WikipediaEvidenceProvider({ fetch }).retrieve(c!, { limit: 2 })).rejects.toThrow(/429/);
   });
 });
 

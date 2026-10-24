@@ -129,7 +129,13 @@ export interface EvidenceProvider {
 export type FetchLike = (
   url: string,
   init?: { method?: string; headers?: Record<string, string>; body?: string; signal?: unknown },
-) => Promise<{ ok: boolean; status: number; json(): Promise<unknown>; text(): Promise<string> }>;
+) => Promise<{
+  ok: boolean;
+  status: number;
+  json(): Promise<unknown>;
+  text(): Promise<string>;
+  headers?: { get(name: string): string | null };
+}>;
 
 export interface VerifyOptions {
   /** Passages retrieved per claim (after merging providers). Default 4. */

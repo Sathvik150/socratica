@@ -56,6 +56,12 @@ describe('extractClaims', () => {
     for (const c of claims) expect(answer.slice(c.span.start, c.span.end)).toBe(c.text);
   });
 
+  it('does not mistake the month "May" for the hedge "may"', () => {
+    expect(extractClaims('The bridge officially opened on May 24, 1883.')).toHaveLength(1);
+    expect(extractClaims('The Velmora Symphony was founded in May 1884.')).toHaveLength(1);
+    expect(extractClaims('The bridge may have opened in 1883.')).toHaveLength(0);
+  });
+
   it('does not split on abbreviations or decimals', () => {
     const claims = extractClaims('Dr. Ilsa Varn measured 3.5 kilograms of ore in the Velmora mine.');
     expect(claims).toHaveLength(1);

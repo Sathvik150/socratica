@@ -94,6 +94,34 @@ class HighlightLayer {
   }
 }
 
+export interface Box {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+/**
+ * Collapse the many rects a Range reports (one per text node and inline
+ * element; live ChatGPT splits text into lots of small spans) into one box
+ * per visual line.
+ */
+export function mergeLineRects(rects: Box[]): Box[] {
+  const lines: Box[] = [];
+  for (const r of rects.filter((x) => x.right - x.left > 0 && x.bottom - x.top > 0).sort((a, b) => a.top - b.top || a.left - b.left)) {
+    const line = lines.find((l) => Math.min(l.bottom, r.bottom) - Math.max(l.top, r.top) > 0.5 * Math.min(l.bottom - l.top, r.bottom - r.top));
+    if (line) {
+      line.left = Math.min(line.left, r.left);
+      line.right = Math.max(line.right, r.right);
+      line.top = Math.min(line.top, r.top);
+      line.bottom = Math.max(line.bottom, r.bottom);
+    } else {
+      lines.push({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
+    }
+  }
+  return lines;
+}
+
 const layers = new WeakMap<Document, HighlightLayer>();
 function layerFor(doc: Document): HighlightLayer {
   let layer = layers.get(doc);
@@ -238,11 +266,10 @@ export class AnswerOverlay {
       if (!claim) continue;
       const range = rangeForSpan(map, claim.span.start, claim.span.end, this.#doc);
       if (!range || typeof range.getClientRects !== 'function') continue; // e.g. non-layout DOMs
-      for (const rect of Array.from(range.getClientRects())) {
-        if (rect.width === 0 || rect.height === 0) continue;
+      for (const rect of mergeLineRects(Array.from(range.getClientRects()))) {
         const mark = el(this.#doc, 'div', `mark ${v.verdict}`);
         mark.title = `${VERDICT_LABEL[v.verdict]}: click for evidence`;
-        Object.assign(mark.style, { left: `${rect.left + sx}px`, top: `${rect.top + sy}px`, width: `${rect.width}px`, height: `${rect.height}px` });
+        Object.assign(mark.style, { left: `${rect.left + sx}px`, top: `${rect.top + sy}px`, width: `${rect.right - rect.left}px`, height: `${rect.bottom - rect.top}px` });
         mark.addEventListener('click', (e) => {
           e.stopPropagation();
           this.openPanel(v.claimId, { x: rect.left, y: rect.bottom });

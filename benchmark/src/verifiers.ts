@@ -26,8 +26,9 @@ export class FirewallVerifier implements BaselineVerifier {
   constructor(
     private readonly llm: LLMProvider,
     private readonly options: VerifyOptions = {},
+    model?: string,
   ) {
-    this.name = `hallucination-firewall (${llm.id})`;
+    this.name = `hallucination-firewall (${llm.id}${model ? `: ${model}` : ''})`;
   }
 
   async verify(text: string, evidence: EvidenceDocument[]): Promise<Verdict> {

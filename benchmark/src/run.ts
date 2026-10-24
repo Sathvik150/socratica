@@ -4,6 +4,7 @@
  *   pnpm bench                       # offline: HeuristicLLM + binary baseline
  *   pnpm bench -- --llm openai       # also run with a real LLM (uses HF_OPENAI_API_KEY, makes network calls)
  *   pnpm bench -- --llm anthropic    # (uses HF_ANTHROPIC_API_KEY, makes network calls)
+ *   pnpm bench -- --llm local --model qwen2.5:3b [--base-url http://localhost:11434/v1]   # local OpenAI-compatible server
  *   pnpm bench -- --data path.jsonl  # custom dataset
  */
 import { fileURLToPath } from 'node:url';
@@ -41,8 +42,14 @@ async function main() {
         : new AnthropicProvider({ apiKey, fetch: fetchFn, ...(model ? { model } : {}) });
     console.log(`NOTE: --llm ${llm} sends ${items.length} claims and their evidence to the provider.`);
     verifiers.unshift(new FirewallVerifier(provider));
+  } else if (llm === 'local') {
+    const model = arg('model');
+    if (!model) throw new Error('--llm local requires --model');
+    const baseUrl = arg('base-url') ?? 'http://localhost:11434/v1';
+    console.log(`NOTE: --llm local sends ${items.length} claims and their evidence to ${baseUrl} (${model}).`);
+    verifiers.unshift(new FirewallVerifier(new OpenAIProvider({ baseUrl, model, fetch: fetchFn }), {}, model));
   } else if (llm) {
-    throw new Error(`Unknown --llm ${llm} (expected openai or anthropic)`);
+    throw new Error(`Unknown --llm ${llm} (expected openai, anthropic or local)`);
   }
 
   const counts = items.reduce<Record<string, number>>((acc, i) => ((acc[i.label] = (acc[i.label] ?? 0) + 1), acc), {});
