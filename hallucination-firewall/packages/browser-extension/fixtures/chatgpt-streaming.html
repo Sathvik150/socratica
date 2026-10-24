@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>ChatGPT</title></head>
+<body>
+<div id="__next">
+  <main>
+    <div class="flex flex-col text-sm">
+      <article data-testid="conversation-turn-1">
+        <div data-message-author-role="user" data-message-id="user-1">
+          <div class="whitespace-pre-wrap">When did the Zentha Bridge open?</div>
+        </div>
+      </article>
+      <article data-testid="conversation-turn-2">
+        <div data-message-author-role="assistant" data-message-id="asst-2">
+          <div class="markdown prose w-full break-words result-streaming">
+            <p>The Zentha Bridge opened in</p>
+          </div>
+        </div>
+      </article>
+    </div>
+  </main>
+  <form><textarea id="prompt-textarea"></textarea><button data-testid="stop-button" aria-label="Stop streaming">Stop</button></form>
+</div>
+</body>
+</html>

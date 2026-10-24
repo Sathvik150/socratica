@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hallucination Firewall demo</title>
+  <style>
+    body { margin: 0; background: #212121; color: #ececec; font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    header { padding: 12px 16px; background: #171717; font-size: 14px; color: #b4b4b4; }
+    main { max-width: 760px; margin: 0 auto; padding: 24px 16px 80px; }
+    [data-message-author-role="user"] { background: #303030; border-radius: 18px; padding: 10px 16px; margin: 0 0 24px auto; width: fit-content; max-width: 80%; }
+    .markdown p, .markdown li { margin: 0 0 10px; }
+    pre { background: #0d0d0d; padding: 12px; border-radius: 8px; overflow: auto; }
+    aside { margin-top: 40px; font-size: 13px; color: #b4b4b4; border-top: 1px solid #444; padding-top: 12px; }
+  </style>
+</head>
+<body>
+  <header>Hallucination Firewall · offline demo (mock judge, supplied documents, no network). Click the red highlight.</header>
+  <main>
+    <div data-message-author-role="user" data-message-id="demo-user-1">
+      <div class="whitespace-pre-wrap">Tell me about the Orrin Library.</div>
+    </div>
+    <div data-message-author-role="assistant" data-message-id="demo-asst-1">
+      <div class="markdown prose">
+        <p>The <strong>Orrin Library</strong> is a public library in Velmora.</p>
+        <p>It was founded by Dalia Moss in 1910. The library holds 2.4 million volumes.</p>
+        <ul><li>I think it is the nicest library in the region.</li></ul>
+      </div>
+    </div>
+    <aside>
+      <strong>Evidence supplied to <code>verify()</code> (fictional):</strong>
+      <ul id="evidence"></ul>
+    </aside>
+  </main>
+  <script src="demo.js"></script>
+</body>
+</html>

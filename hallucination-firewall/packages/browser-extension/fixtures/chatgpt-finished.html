@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>ChatGPT</title></head>
+<body>
+<div id="__next">
+  <main>
+    <div class="flex flex-col text-sm">
+      <article data-testid="conversation-turn-1">
+        <div data-message-author-role="user" data-message-id="user-1">
+          <div class="whitespace-pre-wrap">Tell me about the Orrin Library.</div>
+        </div>
+      </article>
+      <article data-testid="conversation-turn-2">
+        <div data-message-author-role="assistant" data-message-id="asst-1" data-message-model-slug="gpt-x">
+          <div class="markdown prose w-full break-words">
+            <p>The <strong>Orrin Library</strong> is a public library in Velmora.</p>
+            <p>It was founded by Dalia Moss in 1910. The library holds 2.4 million volumes.</p>
+            <ul>
+              <li>I think it is the nicest library in the region.</li>
+            </ul>
+            <pre><code>The Orrin Library opened in 1777.</code></pre>
+          </div>
+        </div>
+        <div class="flex"><button aria-label="Copy">Copy</button><button aria-label="Read aloud">Read</button></div>
+      </article>
+    </div>
+  </main>
+  <form><textarea id="prompt-textarea"></textarea><button data-testid="send-button" aria-label="Send prompt">Send</button></form>
+</div>
+</body>
+</html>

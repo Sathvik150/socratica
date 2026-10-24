@@ -1,0 +1,21 @@
+{
+  "name": "@hallucination-firewall/browser-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chrome MV3 extension: Review Mode fact verification for ChatGPT answers.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit && node build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hallucination-firewall/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/chrome": "0.1.43",
+    "esbuild": "0.28.2",
+    "jsdom": "26.1.0"
+  }
+}

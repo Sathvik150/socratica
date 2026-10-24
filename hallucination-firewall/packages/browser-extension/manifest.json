@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Hallucination Firewall",
+  "version": "0.1.0",
+  "description": "Review Mode: checks finished ChatGPT answers against retrieved evidence and annotates claims inline.",
+  "permissions": ["storage"],
+  "optional_host_permissions": [
+    "https://en.wikipedia.org/*",
+    "https://api.openai.com/*",
+    "https://api.anthropic.com/*",
+    "https://api.search.brave.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://chatgpt.com/*"],
+      "js": ["contentScript.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "action": {
+    "default_title": "Hallucination Firewall settings"
+  }
+}
