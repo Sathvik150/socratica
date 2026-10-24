@@ -5,6 +5,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [0.1.0] - 2026-10-24
 
+### Fixed (from live testing)
+- ChatGPT adapter now supports the current chatgpt.com transcript UI (`li[data-message-role]`,
+  `[data-assistant-markdown-root]`, `data-message-complete`), verified on the live site. Fixtures are captured from it.
+- Highlights merge into one box per line (live ChatGPT splits text into many spans).
+- The month "May" is no longer treated as the hedge word "may".
+- The Wikipedia provider follows Wikimedia's client-identification policy and backs off on HTTP 429.
+- `pnpm bench --llm local` runs the benchmark against Ollama or other OpenAI-compatible servers.
+
 ### Added
 - **Core engine**: claim extraction, pluggable evidence retrieval (your documents, Wikipedia, optional Brave web
   search), three-way verdicts with verbatim-quote validation, grounded corrections, summary scoring.

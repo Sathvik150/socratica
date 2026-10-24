@@ -16,19 +16,27 @@ For each verifier, the runner reports:
 
 ## Results
 
-Printed by `pnpm bench` (offline). Re-run rather than trusting this table.
+Printed by `pnpm bench` on 2026-10-24. Local models ran CPU-only on a 4-core machine. Re-run rather than trusting this table.
 
-| Verifier | Accuracy | FPR on contradicted | C-vs-U accuracy | Contradicted P / R |
-|---|---|---|---|---|
-| hallucination-firewall + `HeuristicLLM` (offline judge) | 89.2% | 0.0% | 84.0% | 100.0% / 66.7% |
-| naive binary-overlap reference (no "unverifiable" output) | 51.4% | 52.0% | 28.0% | 35.0% / 58.3% |
+| Verifier | Accuracy | FPR on contradicted | C-vs-U accuracy | Contradicted P / R | Run time |
+|---|---|---|---|---|---|
+| hallucination-firewall + **qwen2.5:7b** (Ollama, `--llm local`) | 97.3% | 0.0% | 96.0% | 100.0% / 91.7% | 13m 53s |
+| hallucination-firewall + `HeuristicLLM` (offline judge) | 89.2% | 0.0% | 84.0% | 100.0% / 66.7% | < 1s |
+| hallucination-firewall + **qwen2.5:3b** (Ollama, `--llm local`) | 54.1% | 0.0% | 40.0% | 100.0% / 25.0% | 4m 13s |
+| naive binary-overlap reference (no "unverifiable" output) | 51.4% | 52.0% | 28.0% | 35.0% / 58.3% | < 1s |
+
+Reproduce the local runs:
+
+```bash
+ollama pull qwen2.5:7b
+pnpm build && pnpm bench --llm local --model qwen2.5:7b
+```
 
 **Caveats**
-- **The set is tiny (n=37), synthetic and in-sample.** The same author wrote both the data and the heuristic
-  judge. The first run scored 75.7% accuracy with a 16.0% contradicted FPR. Three generalization bugs were
-  then fixed after reading its errors, so the improvement is partly fitted to this set.
+- **The set is tiny (n=37) and synthetic.** For the **heuristic judge** it is also **in-sample**: the same author wrote the data and the heuristic. The first run scored 75.7% accuracy with a 16.0% contradicted FPR, and three generalization bugs were fixed after reading its errors. The local models were not tuned on this set.
+- qwen2.5:7b's only error was calling a contradiction `unverifiable` (the safe direction). qwen2.5:3b mostly answered `unverifiable` and marked 6 unverifiable claims as supported. Small models are weak judges, but none of these runs produced a false `contradicted`.
 - The binary-overlap baseline is a reference point, **not** a re-implementation of any existing tool.
-- **No real-LLM or third-party-detector numbers have been run, so none are reported.**
+- **No hosted LLM (OpenAI or Anthropic API) or third-party detector has been benchmarked, so no numbers are reported for them.**
 
 ## Comparing another verifier
 
@@ -41,10 +49,10 @@ interface BaselineVerifier {
 }
 ```
 
-Then add it to the `verifiers` list in `benchmark/src/run.ts`. To run the firewall with a real judge (this
-makes network calls with your key):
+Then add it to the `verifiers` list in `benchmark/src/run.ts`. To run the firewall with a real judge:
 
 ```bash
-HF_OPENAI_API_KEY=... pnpm bench --llm openai
-HF_ANTHROPIC_API_KEY=... pnpm bench --llm anthropic
+pnpm bench --llm local --model qwen2.5:7b                 # local OpenAI-compatible server (default Ollama)
+HF_OPENAI_API_KEY=... pnpm bench --llm openai             # network, your key
+HF_ANTHROPIC_API_KEY=... pnpm bench --llm anthropic       # network, your key
 ```

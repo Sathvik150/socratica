@@ -145,21 +145,40 @@ Full details: [docs/privacy.md](docs/privacy.md).
 
 Run `pnpm bench` on 37 labeled, fictional claims (12 supported, 12 contradicted, 13 unverifiable). These are the numbers it printed:
 
-| Verifier | Accuracy | False-positive rate on contradicted | Contradicted vs unverifiable |
+| Judge | Accuracy | False-positive rate on contradicted | Contradicted vs unverifiable |
 |---|---|---|---|
-| Hallucination Firewall (offline heuristic judge) | 89.2% | 0.0% | 84.0% |
+| **qwen2.5:7b, local via Ollama** (`--llm local`) | **97.3%** | **0.0%** | **96.0%** |
+| Offline heuristic judge (default, no model) | 89.2% | 0.0% | 84.0% |
+| qwen2.5:3b, local via Ollama | 54.1% | 0.0% | 40.0% |
 | Naive yes/no reference baseline | 51.4% | 52.0% | 28.0% |
 
-> ⚠️ This is a tiny, synthetic, **in-sample** set written by the same author as the heuristic judge. Some fixes were made after seeing its errors. It shows the three-way design working, **not** real-world accuracy. No real-LLM or third-party comparisons have been run. See [docs/benchmark.md](docs/benchmark.md) to reproduce it or plug in your own verifier.
+All of these judges are in-repo or local; **no hosted LLM (OpenAI or Anthropic API) has been benchmarked**. The local models ran CPU-only on 4 cores; the 7B run took about 14 minutes.
+
+> ⚠️ This is a tiny synthetic set. The heuristic judge was written by the same author, and some fixes came after seeing its errors, so its number is **in-sample**. The local models were not tuned on it. It shows the three-way design working, **not** real-world accuracy. See [docs/benchmark.md](docs/benchmark.md) to reproduce it or plug in your own verifier.
+
+## ✅ What has been tested
+
+| Surface | How it was tested | Result |
+|---|---|---|
+| Core, SDK, CLI, extension logic | 93 automated tests (`pnpm test`); no network | ✅ pass |
+| GitHub CI | Node 20 and 22 on GitHub Actions, building, testing, benchmarking and packaging | ✅ pass |
+| Extension on **live chatgpt.com** | Real Chromium with the extension, logged-out ChatGPT, 2026-10-24 | ✅ detects finished answers, extracts claims, highlights and explains them (details below) |
+| Agent Skill in **Claude Code** | Installed from the release zip into `.claude/skills`, then a fact-check request run headless | ✅ skill auto-loaded, validator ran, semantic contradiction caught |
+| CLI with a **local model** | Ollama 0.40.10, `qwen2.5:3b` and `qwen2.5:7b`, from the unzipped release | ✅ works; quality depends on the model (see benchmark) |
+| Skill upload to **claude.ai / ChatGPT** | Not tested | ⏳ needs a logged-in account (see [docs/skill.md](docs/skill.md)) |
+| Logged-in ChatGPT, hosted OpenAI/Anthropic judges | Not tested | ⏳ needs your account / API key |
+
+<img src="docs/images/live-chatgpt.png" alt="The extension running on live chatgpt.com: dashed underlines on claims, the evidence panel, and the summary bar under the answer" width="760">
 
 ## ⚠️ Known limitations
 
 - **Review Mode only.** You see the answer before it's checked.
-- **ChatGPT page selectors are assumptions.** They were tested only on hand-written HTML fixtures, **not on live chatgpt.com**, and may break when the site changes. Fixes go in [`adapters/chatgpt.ts`](packages/browser-extension/src/adapters/chatgpt.ts).
-- **Claim extraction is rule-based.** It can miss claims or skip facts phrased as opinions.
-- **The offline judge is a lexical heuristic.** It handles simple number, name and negation conflicts. Paraphrases and multi-step reasoning come out as `unverifiable`. Use an LLM judge for those.
-- **Retrieval is keyword-based.** English Wikipedia only for now.
-- **Live providers are untested here.** The Wikipedia, OpenAI, Anthropic and Brave integrations have been tested only with mocked network calls. Installing the skill in each host is not tested either.
+- **ChatGPT's page can change.** The adapter was verified on live chatgpt.com (logged-out UI) on 2026-10-24, and that page is saved as test fixtures. The **logged-in UI was not tested** and may differ. Older selectors are kept as a fallback. Fixes go in [`adapters/chatgpt.ts`](packages/browser-extension/src/adapters/chatgpt.ts).
+- **Wikipedia rate limits.** Wikimedia throttles clients by IP. In testing from a cloud machine, requests were rate-limited (HTTP 429) after a few bursts. The extension identifies itself as Wikimedia's API policy asks, caches articles and backs off; rate-limited claims fall back to `unverifiable`.
+- **The offline heuristic judge is literal.** It handles simple number, name and negation conflicts, but real encyclopedia wording usually comes out `unverifiable`. For real-world answers, use an LLM judge: OpenAI or Anthropic in the extension, or a local model with the CLI.
+- **The extension has no local-model option yet.** Local models are supported in the CLI, SDK and skill.
+- **Small local models are unreliable judges.** In testing, `qwen2.5:3b` fabricated a quote, which the validator caught and downgraded, and it missed most contradictions. 7B-class models did far better.
+- **Claim extraction is rule-based.** It can miss claims, such as pronoun clauses without a named entity.
 - **Only ChatGPT is supported.** Claude and Gemini adapters are stubs.
 
 ## 🗂️ Project structure

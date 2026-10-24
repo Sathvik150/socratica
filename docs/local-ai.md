@@ -18,9 +18,20 @@ Any server with an OpenAI-compatible `/v1/chat/completions` endpoint works:
 | llama.cpp server | `... --llm local --model local --base-url http://localhost:8080/v1` |
 | vLLM | `... --llm local --model <model> --base-url http://localhost:8000/v1` |
 
-If your server needs a key, set `HF_LOCAL_API_KEY`. Small models may return invalid JSON or paraphrase quotes.
-When that happens, the validator turns those verdicts into `unverifiable` instead of trusting them, so you
-lose recall, not correctness.
+If your server needs a key, set `HF_LOCAL_API_KEY`.
+
+### Tested
+
+On 2026-10-24, these ran with Ollama 0.40.10, CPU-only on 4 cores, from the unzipped release:
+
+| Model | Example (`examples/`) | Benchmark (37 items) |
+|---|---|---|
+| `qwen2.5:7b` | n/a | 97.3% accuracy, 0.0% false-contradiction rate, ~14 min |
+| `qwen2.5:3b` | 33 s; 1 supported, 2 unverifiable | 54.1% accuracy, 0.0% false-contradiction rate, 4m 13s |
+
+**Pick a 7B-class model or larger.** In testing, the 3B model fabricated a quote: it "quoted" text that isn't in the
+source. The validator caught it and downgraded the verdict to `unverifiable`, which shows why the validator exists.
+Small models lose recall but don't produce false contradictions.
 
 ## Use it from your own agent
 

@@ -46,5 +46,12 @@ Any agent that can read a folder and run shell commands can use the skill. That 
 Codex-style CLIs, Open Interpreter, and your own agent loop. Point it at `SKILL.md`. For a fully local setup with
 your own model, see [local-ai.md](local-ai.md).
 
-> These hosts change quickly, so check their current docs for the skills folder or upload location.
-> The skill has been tested here by running its scripts directly. Installing it in each host has not been tested.
+## Test status
+
+| Host | Status |
+|---|---|
+| **Claude Code** | ✅ Tested on 2026-10-24. The release zip was unzipped into a project's `.claude/skills/`, then `claude -p "Fact-check answer.txt against the documents in sources/"` ran headless. Claude Code loaded the skill on its own and ran `hf-verify.mjs`. It judged the claims, including a semantic contradiction ("landlocked" vs "island nation") that the offline judge misses, then ran `validate_verdicts.py` and reported `4 checked, 1 supported, 2 contradicted, 1 unverifiable`. |
+| claude.ai / Claude desktop upload | ⏳ Not tested: needs a logged-in Claude account. The zip has the standard layout (one folder with `SKILL.md` at its root). |
+| ChatGPT Skills / Custom GPT | ⏳ Not tested: needs a ChatGPT plan with Skills. |
+
+These hosts change quickly, so check their current docs for the skills folder or upload location.
