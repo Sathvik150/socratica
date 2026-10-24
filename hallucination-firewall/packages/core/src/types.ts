@@ -2,7 +2,7 @@
  * Core types for Hallucination Firewall.
  *
  * This package is platform-agnostic: nothing here knows about the DOM,
- * `chrome.*`, or which chatbot produced the text being verified.
+ * browser-extension APIs, or which chatbot produced the text being verified.
  */
 
 /** The three-way verdict. `contradicted` is reserved for explicit conflict with a retrieved passage. */
@@ -18,6 +18,11 @@ export interface Claim {
   text: string;
   /** Character offsets of `text` inside the original answer string. */
   span: { start: number; end: number };
+  /**
+   * The surrounding sentence(s) the claim came from, used to resolve pronouns
+   * during retrieval and verification. Not itself judged.
+   */
+  context: string;
 }
 
 /** Where a passage came from. */
