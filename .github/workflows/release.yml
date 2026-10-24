@@ -4,12 +4,18 @@ name: Release
 #   1. push a tag like v0.1.0
 #   2. push a commit whose message contains "[release]": the workflow creates the
 #      tag v<version from package.json> on that commit
-#   3. run it manually (Actions tab -> Release -> Run workflow) once this file is on the default branch
+#   3. run it manually (Actions tab -> Release -> Run workflow); tick "recreate" to replace an
+#      existing release + tag of the same version (e.g. after rewriting history)
 on:
   push:
     tags: ['v*']
     branches: ['**']
   workflow_dispatch:
+    inputs:
+      recreate:
+        description: Delete an existing release and tag with the same version first (e.g. after rewriting history)
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -37,6 +43,11 @@ jobs:
           else
             echo "name=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
           fi
+      - name: Delete the existing release and tag (manual runs with recreate)
+        if: github.event_name == 'workflow_dispatch' && inputs.recreate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete "${{ steps.tag.outputs.name }}" --cleanup-tag --yes --repo "$GITHUB_REPOSITORY" || echo "nothing to delete"
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
