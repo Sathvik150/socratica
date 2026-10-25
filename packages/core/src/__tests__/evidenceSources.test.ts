@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  EuropePmcEvidenceProvider, GoogleFactCheckEvidenceProvider, HeuristicLLM,
-  TavilyEvidenceProvider, UrlEvidenceProvider, WikidataEvidenceProvider, WikipediaEvidenceProvider,
+  BraveSearchEvidenceProvider, EuropePmcEvidenceProvider, FirecrawlSearchEvidenceProvider, GoogleFactCheckEvidenceProvider, HeuristicLLM,
+  SerperEvidenceProvider, UrlEvidenceProvider, WikidataEvidenceProvider, WikipediaEvidenceProvider, createWebSearch,
   retrieveEvidence, runVerification, trustedUrl, verifyClaim, type Claim, type FetchLike, type Passage,
 } from '../index.js';
 import { EvidenceHttp } from '../providers/evidence/http.js';
@@ -41,7 +41,7 @@ describe('Wikidata evidence', () => {
     expect(f.calls).toHaveLength(2);
     expect(decodeURIComponent(f.calls[0]!.url)).toContain('search=eiffel tower');
     expect(f.calls[0]!.url).not.toContain('1899');
-    expect(f.calls[0]!.init?.headers?.['api-user-agent']).toContain('HallucinationFirewall');
+    expect(f.calls[0]!.init?.headers?.['api-user-agent']).toContain('Socratica');
   });
 
   it('ignores deprecated, unknown and missing values and prefers preferred statements', async () => {
@@ -216,24 +216,6 @@ describe('trusted URLs', () => {
 });
 
 describe('independent search sources', () => {
-  it('restricts Tavily to trusted domains and rejects lookalike domains even if returned by the API', async () => {
-    const raw = 'The Eiffel Tower opened in 1889.';
-    const f = fake(() => response({ results: ['https://who.int/tower', 'https://data.who.int/tower', 'https://who.int.attacker.org/tower', 'https://notwho.int/tower'].map((url) => ({ title: 'Tower', url, raw_content: raw })) }));
-    const found = await new TavilyEvidenceProvider({ ...f, apiKey: 'test', domains: ['who.int'] }).retrieve(claim, opts);
-    expect(found.map((p) => p.source.url)).toEqual(['https://who.int/tower', 'https://data.who.int/tower']);
-    expect(JSON.parse(f.calls[0]!.init!.body!).include_domains).toEqual(['who.int']);
-    expect(() => new TavilyEvidenceProvider({ ...f, apiKey: 'test', domains: ['https://who.int/path'] })).toThrow(/hostnames/);
-  });
-  it('Tavily uses extracted page text, not a generated answer or snippet', async () => {
-    const raw = 'The Eiffel Tower opened in 1889.';
-    const f = fake(() => response({ answer: claim.text, results: [{ title: 'Tower', url: 'https://trusted.org/tower', raw_content: raw, content: claim.text }, { url: 'https://trusted.org/snippet', content: claim.text }] }));
-    const found = await new TavilyEvidenceProvider({ ...f, apiKey: 'tavily-private-test' }).retrieve(claim, opts);
-    expect(found.map((p) => p.text)).toEqual([raw]);
-    expect(f.calls[0]?.init?.headers?.authorization).toBe('Bearer tavily-private-test');
-    expect(f.calls[0]?.init?.body).not.toContain('tavily-private-test');
-    expect(JSON.parse(f.calls[0]!.init!.body!)).toMatchObject({ include_raw_content: 'text', include_answer: false });
-  });
-
   it('Europe PMC quotes actual abstracts with stable source links', async () => {
     const f = fake(() => response({ resultList: { result: [{ id: '123', source: 'MED', title: 'Tower study', abstractText: '<p>The Eiffel Tower opened in 1889.</p>' }, { id: '124', source: 'MED', title: claim.text }] } }));
     const found = await new EuropePmcEvidenceProvider(f).retrieve(claim, opts);
@@ -320,11 +302,62 @@ describe('network failures and bounded caches', () => {
     await check;
   });
 
-  it.each([GoogleFactCheckEvidenceProvider, TavilyEvidenceProvider])('requires credentials and hides provider error bodies', async (Provider) => {
+  it.each([GoogleFactCheckEvidenceProvider, SerperEvidenceProvider, BraveSearchEvidenceProvider])('requires credentials and hides provider error bodies', async (Provider) => {
     const f = fake(() => response({ error: 'private-key-in-body' }, 401));
     expect(() => new Provider({ ...f, apiKey: '' })).toThrow(/API key/);
     const p = new Provider({ ...f, apiKey: 'test' });
     await expect(p.retrieve(claim, opts)).rejects.toThrow('HTTP 401');
     await expect(p.retrieve(claim, opts)).rejects.not.toThrow('private-key-in-body');
+  });
+});
+
+describe('web search engines (fake fetch, no network)', () => {
+  const snippet = "The Eiffel Tower opened on 31 March 1889 for the World's Fair.";
+
+  it('Firecrawl needs no key, sends only a claim-based query, and quotes result snippets', async () => {
+    const f = fake(() => response({ success: true, data: { web: [
+      { title: 'Eiffel Tower', url: 'https://example.org/eiffel', description: snippet },
+      { title: 'Not a web page', url: 'javascript:alert(1)', description: snippet },
+    ] } }));
+    const found = await new FirecrawlSearchEvidenceProvider({ fetch: f.fetch }).retrieve(claim, opts);
+    expect(found.map((p) => [p.text, p.source.url, p.source.providerId])).toEqual([[snippet, 'https://example.org/eiffel', 'firecrawl']]);
+    expect(f.calls[0]!.url).toBe('https://api.firecrawl.dev/v2/search');
+    expect(f.calls[0]!.init!.headers).not.toHaveProperty('authorization');
+    expect(JSON.parse(f.calls[0]!.init!.body!)).toMatchObject({ limit: 5, sources: ['web'] });
+  });
+
+  it('Firecrawl sends an optional key as a bearer token and reads the v1 response shape too', async () => {
+    const f = fake(() => response({ success: true, data: [{ title: 'Eiffel Tower', url: 'https://example.org/eiffel', description: snippet }] }));
+    const found = await new FirecrawlSearchEvidenceProvider({ fetch: f.fetch, apiKey: 'fc-test' }).retrieve(claim, opts);
+    expect(found).toHaveLength(1);
+    expect(f.calls[0]!.init!.headers).toMatchObject({ authorization: 'Bearer fc-test' });
+    expect(f.calls[0]!.init!.body).not.toContain('fc-test');
+  });
+
+  it('Firecrawl reports its daily limit as a temporary outage, never as a contradiction', async () => {
+    const f = fake(() => response({ success: false, error: 'Rate limit exceeded' }, 429, { 'retry-after': '60' }));
+    await expect(new FirecrawlSearchEvidenceProvider({ fetch: f.fetch }).retrieve(claim, opts)).rejects.toThrow('Firecrawl is temporarily unavailable (HTTP 429); try again in 60 seconds.');
+  });
+
+  it('Serper uses the answer box, knowledge panel and organic snippets, with the key only in a header', async () => {
+    const f = fake(() => response({
+      answerBox: { title: 'Eiffel Tower opening', link: 'https://example.org/answer', snippet },
+      knowledgeGraph: { title: 'Eiffel Tower', description: 'The Eiffel Tower is a wrought-iron lattice tower in Paris that opened in 1889.', descriptionLink: 'https://en.wikipedia.org/wiki/Eiffel_Tower' },
+      organic: [{ title: 'History', link: 'https://example.org/history', snippet: 'Construction of the Eiffel Tower finished and it opened in 1889.' }],
+    }));
+    const found = await new SerperEvidenceProvider({ fetch: f.fetch, apiKey: 'serper-test' }).retrieve(claim, opts);
+    expect(found.map((p) => p.source.url).sort()).toEqual(['https://en.wikipedia.org/wiki/Eiffel_Tower', 'https://example.org/answer', 'https://example.org/history']);
+    expect(found.every((p) => p.source.providerId === 'serper')).toBe(true);
+    expect(f.calls[0]!.url).toBe('https://google.serper.dev/search');
+    expect(f.calls[0]!.init!.headers).toMatchObject({ 'x-api-key': 'serper-test' });
+    expect(f.calls[0]!.init!.body).not.toContain('serper-test');
+  });
+
+  it('createWebSearch builds Firecrawl without a key and explains a missing key for the others', () => {
+    const { fetch } = fake(() => response({}));
+    expect(createWebSearch('firecrawl', { fetch }).id).toBe('firecrawl');
+    expect(createWebSearch('serper', { fetch, apiKey: 'k' }).id).toBe('serper');
+    expect(() => createWebSearch('serper', { fetch })).toThrow('Google (via Serper) needs an API key (free sign-up at https://serper.dev), or choose Firecrawl, which needs none.');
+    expect(() => createWebSearch('brave', { fetch, apiKey: '  ' })).toThrow(/Brave Search needs an API key/);
   });
 });

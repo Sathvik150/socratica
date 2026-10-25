@@ -1,5 +1,5 @@
 /**
- * @hallucination-firewall/sdk — the small public surface over core.
+ * @socratica/sdk — the small public surface over core.
  *
  *   const result = await verify({ question, answer, evidence: [{ title, text, url }] });
  *
@@ -16,7 +16,7 @@ import {
   type LLMProvider,
   type VerifyOptions,
   type VerifyOutput,
-} from '@hallucination-firewall/core';
+} from '@socratica/core';
 
 export interface VerifyRequest {
   answer: string;
@@ -38,4 +38,4 @@ export async function verify(request: VerifyRequest): Promise<VerifyOutput> {
   });
 }
 
-export * from '@hallucination-firewall/core';
+export * from '@socratica/core';

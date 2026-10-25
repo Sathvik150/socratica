@@ -1,56 +1,98 @@
-# Hallucination Firewall design system
+# Socratica design system
 
-The UI is built from three sources:
+Socratica looks like a well-made book: a subtle off-white page, a classical serif for headings and the
+wordmark, a calm humanist sans for reading, one antique-gold accent, and a laurel mark. The structure
+(parchment surfaces, ring hairlines instead of heavy shadows, generous line height, soft corners) follows
+the Claude design analyses in [`styles/vendor/`](styles/vendor/README.md); the name, laurel, gold and
+verdict colours are Socratica's own. Light and dark themes are both complete: extension pages follow the
+OS setting, and the in-page overlay follows ChatGPT's own theme.
 
-- **[Tailwind CSS v4](https://github.com/tailwindlabs/tailwindcss)** for all styles (`styles/*.css`, `@apply` and
-  `@theme`), compiled at build time. No Tailwind runtime ships.
-- **[open-design](https://github.com/nexu-io/open-design)** (Apache-2.0) for token *values*: its
-  `design-systems/linear-app/tokens.css` package is vendored in `styles/vendor/` and exposed as `--od-*` variables.
-- **[awesome-design-md](https://github.com/VoltAgent/awesome-design-md)** (MIT) for the design *rules*: its Linear
-  `DESIGN.md` is vendored next to it and summarised below.
+Before 0.2.0 the project was called Hallucination Firewall and used an indigo-violet look.
 
-Both Linear files are independent analyses of Linear's public website, not affiliated with Linear. This document
-records what we took, what we changed for a browser extension, and where the tokens live in code.
+## Where the styles live
 
-`pnpm build` (or `pnpm build:css`) compiles the styles with the Tailwind CLI:
+`pnpm build` (or `pnpm build:css`) runs `scripts/build-css.mjs`, which compiles the stylesheets with the
+[Tailwind CSS v4](https://github.com/tailwindlabs/tailwindcss) CLI:
 
 | Source | Output | Used by |
 | --- | --- | --- |
+| `styles/tokens.css` | imported by both files below | colours, type, radii, motion |
 | `styles/pages.css` | `static/theme.css` (copied into `dist/`) | popup, settings page, demo page |
 | `styles/overlay.css` | `src/ui/overlay.generated.ts` (CSS as a string) | in-page summary bar and evidence panel (Shadow DOM) |
-| `styles/tokens.css` | imported by both | maps `--od-*` tokens onto Tailwind's theme (`bg-surface`, `text-muted`, `rounded-card`, ...) plus our light set and verdict colours |
-| `styles/vendor/` | read by the build | the two upstream files, unchanged, with their licenses |
 
-## Taken from the sources
+There is no Tailwind preflight. Tailwind provides the `@theme` tokens, `@utility` blocks for the light and
+dark palettes and the skeleton shimmer, a few sizing utilities used by skeletons in the HTML, and
+minification. Utilities live in a cascade layer, so the plain design rules always win.
 
-- **One accent, used sparingly.** Lavender-blue `#5e6ad2` (hover `#828fff`) for the brand mark, the primary action,
-  focus rings and links. No second accent colour and no accent-filled surfaces.
-- **Hierarchy from stepped surfaces and hairline borders, not shadows or gradients.** Dark canvas `--od-bg`
-  (`#08090a`), surfaces stepping up to `--od-surface` (`#191a1b`), translucent white borders (`--od-border`, 8%).
-  Only the floating evidence panel has a shadow (`--od-elev-raised` plus a soft drop), because it floats over
-  someone else's page.
-- **Text tiers.** Primary `#f7f8f8`, secondary `#d0d6e0`, tertiary `#8a8f98`, quaternary `#62666d` (dark).
-- **Type.** Inter-style system sans: 600 for headings with slight negative tracking, 400 for body, 510 to 550 for
-  labels. Small uppercase eyebrows have positive tracking. Mono is used only for code.
-- **Shape.** 4px spacing base. open-design's radius scale: 6px (`--od-radius-sm`) for buttons and inputs, 12px
-  (`--od-radius-lg`) for cards and the summary bar; one step more (16px) for the floating panel and the popup card.
-  Pills are reserved for status badges (verdict chips) and the on/off switch.
-- **Focus and motion.** A lavender outline on controls and `--od-focus-ring` on inputs; open-design's
-  `--od-ease-standard` easing for every transition.
+Three outside design sources are used, all vendored or pinned:
 
-## Changed for the extension
+- **open-design** (`styles/vendor/open-design-claude.tokens.css`, Apache-2.0): the build copies it to
+  `styles/generated/od-tokens.css` with every variable prefixed `--od-` and declared on `:root, :host`, so
+  the Shadow DOM sees it too. Surfaces, body text, muted text, radii, easing and the focus ring come from it.
+- **awesome-design-md** (`styles/vendor/awesome-design-md-claude.DESIGN.md`, MIT): the rules followed for
+  type, spacing and depth (serif display over a sans body, one accent used sparingly, ring-style borders).
+- **Tailwind CSS** compiles everything.
 
-- **Light mode.** The Linear file is dark-only. The overlay has to sit inside ChatGPT's light theme too, so there is a
-  light set built on the same rules: surfaces `#ffffff / #f7f8f8 / #f1f2f4`, borders `#e6e7ea / #d7d9de`, text
-  `#1b1c1f / #3c3f45 / #6b6f76`. The accent is the same.
-- **Verdict colours.** Linear has a single semantic green. A fact checker needs three states, so we add red and amber
-  in the same muted register: supported `#27a644`, contradicted `#eb5757`, unverifiable `#f2994a`. On light
-  backgrounds the text versions are darkened (`#1f7a35`, `#c42b2b`, `#9a4d0f`) to meet WCAG AA at 12px.
-- **No web fonts.** Extension pages and the overlay load instantly, so we don't bundle Inter: the stack uses Inter
-  when it's installed, then the system UI font.
-- **Shadow DOM.** open-design declares tokens on `:root`, which doesn't reach into the overlay's shadow root, and
-  shares names with Tailwind's theme (`--radius-sm`). The build copies them as `--od-*` on `:root, :host`. Chrome also
-  ignores `@property` inside shadow roots, so the build declares Tailwind's `--tw-*` defaults directly.
-- **Skeleton loaders.** Anything that waits on the network shows a skeleton with the same size as the finished
-  content (the summary bar while checking, the popup while loading, a selection check in progress, the settings
-  page while it loads). Skeletons shimmer, and stay still when the user prefers reduced motion.
+## Type
+
+| Role | Face | Notes |
+| --- | --- | --- |
+| Display: wordmark, headings, the claim in the evidence panel, quotes | Garogier (`static/fonts/Garogier.ttf`, GPL-2.0-or-later, bundled unmodified) | Falls back to Cormorant Garamond, EB Garamond, Garamond, Palatino, Georgia |
+| Body and controls | Inter, then the system UI font | 15px / 1.6 on pages, 13–13.5px in the popup and overlay |
+| Eyebrows and labels | the sans, 600, uppercase, letter-spacing .16–.32em | "AI YOU CAN TRUST", "REASON", "EVIDENCE" |
+
+The wordmark is "SOCRATICA" in the display face with wide letter-spacing (.26–.34em). Extension pages load
+Garogier with `@font-face` in `pages.css`. The overlay can't: a relative URL inside chatgpt.com would point at
+chatgpt.com, and the page's CSP may block it. So `loadSerifFont()` (in `src/ui/theme.ts`) fetches the font
+from the extension (`web_accessible_resources`, matched to chatgpt.com only) and registers it with the
+`FontFace` API. Until it loads, the fallback serif stack is used.
+
+## Colour
+
+`--sc-*` variables switch between light and dark (`sc-light` / `sc-dark` utilities in `tokens.css`):
+
+| Token | Light | Dark | Use |
+| --- | --- | --- | --- |
+| `--sc-canvas` | `#f6f2ea` | `#181613` | the off-white page |
+| `--sc-surface`, `--sc-surface-2` | ivory (open-design), `#efe9de` | `#211f1b`, `#2a2723` | cards, insets |
+| `--sc-line`, `--sc-line-strong` | `#e6dfd1`, `#d6ccb9` | `#36312a`, `#4a4339` | hairlines, control borders |
+| `--sc-ink`, `--sc-body`, `--sc-muted` | `#23211e`, open-design body, open-design muted | `#f4efe5`, `#ddd5c6`, `#b2a996` | headings, text, secondary text |
+| `--sc-gold`, `--sc-gold-strong` | `#a9884f`, `#8f6e36` | `#d2b07a` | laurel, primary buttons, active tab, switch on |
+| `--sc-gold-text` | `#7a5d2b` | `#dcbc88` | gold text (5.4:1 on the canvas, so it passes WCAG AA) |
+| `--sc-ok*`, `--sc-bad*`, `--sc-unk*` | sage, brick, ochre (text on their tints passes AA) | lighter tints | supported, contradicted, unverifiable |
+
+Gold is the only accent. Verdict colours appear only on verdicts: chips, seals, the meter and highlights.
+
+## Shape, depth and motion
+
+- Radii: 8px small controls, 12px inputs, 16px cards, 20px floating panels, pills for buttons and chips.
+- Depth: a 1px ring plus a soft, warm shadow (`--sc-shadow`). The evidence panel is the one floating element,
+  so it is the only one with a deeper shadow.
+- Motion: short rise and pop animations with open-design's standard easing, a meter that grows into place, and
+  skeleton shimmer. All of it is turned off under `prefers-reduced-motion`.
+
+## The laurel
+
+The laurel wreath (`LAUREL_PATH` in `src/ui/icons.ts`, inlined in the HTML pages) is two arcs of leaves on a
+64-unit grid, generated so every leaf has the same winding (overlapping subpaths with opposite winding showed
+seams). The toolbar icons put a Garogier "S" inside the laurel on an off-white tile. Other icons are 24-unit
+stroke icons at 1.6px.
+
+## Surfaces
+
+- **Popup** (`static/popup.html`, `src/popupView.ts`): a rounded card with the laurel and wordmark, a small
+  on/off switch with slightly rounded corners, and a settings button. Three tabs: **Verify** (this page, check
+  selected text), **Sources** (the required web search engine, the other sources, the judge) and **Insights**
+  (the last check's meter and legend, how to read a verdict, and the Socrates line).
+- **Settings** (`src/optionsView.ts`): a centred column of cards: privacy notice, **Web search** (marked
+  Required, one engine chosen from cards, one key field), Judge, More evidence sources, Platforms. Save sits in
+  an opaque floating bar at the bottom of the window.
+- **Overlay** (`styles/overlay.css`, `src/overlay.ts`): the summary bar under each answer (laurel, wordmark,
+  meter, verdict chips, "Show details"), dashed or wavy underlines on claims, and the evidence panel: a verdict
+  seal and meaning, the claim in the display face, confidence, reason, suggested correction, and each source as
+  a card with its verbatim quote below it.
+- **Demo** (`static/demo.html`): a landing page in the style of the brand mock-up, with a working, offline
+  ChatGPT-like answer in the hero.
+
+Chrome ignores `@property` inside shadow roots, so the build declares Tailwind's `--tw-*` defaults directly for
+the overlay.

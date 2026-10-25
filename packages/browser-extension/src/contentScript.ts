@@ -1,11 +1,12 @@
 /**
  * Content script (chatgpt.com only). Reads finished answers, asks the
  * background worker to verify them, and renders results. It never makes
- * network requests itself.
+ * network requests itself; the only file it reads is its own bundled font.
  */
 import { adapterFor } from './adapters/index.js';
 import type { PageStatus, Request, StateResponse, TabRequest, VerifyResponse } from './messages.js';
 import { AnswerOverlay } from './overlay.js';
+import { loadSerifFont } from './ui/theme.js';
 import { MessageWatcher, type ReadyMessage } from './watcher.js';
 
 function send<T>(msg: Request): Promise<T> {
@@ -15,14 +16,15 @@ function send<T>(msg: Request): Promise<T> {
 async function main(): Promise<void> {
   const adapter = adapterFor(new URL(location.href));
   if (!adapter) return;
-  const state = await send<StateResponse>({ type: 'hf/get-state', platform: adapter.platform });
+  void loadSerifFont(document, chrome.runtime.getURL('fonts/Garogier.ttf'));
+  const state = await send<StateResponse>({ type: 'socratica/get-state', platform: adapter.platform });
 
   const overlays = new Map<string, AnswerOverlay>();
   const latest = new Map<string, string>();
   const current = new Map<string, ReadyMessage>();
   /** Answers the user explicitly asked to check from the popup. */
   const force = new Set<string>();
-  const openOptions = () => void send({ type: 'hf/open-options' });
+  const openOptions = () => void send({ type: 'socratica/open-options' });
   // What the popup shows for this tab.
   const status: Omit<PageStatus, 'answers' | 'platform'> = { state: !state.platformEnabled ? 'disabled' : state.consentGranted ? 'idle' : 'consent-required' };
 
@@ -31,7 +33,7 @@ async function main(): Promise<void> {
     overlay.showStatus('Checking claims against evidence…');
     status.state = 'checking';
     const res = await send<VerifyResponse>({
-      type: 'hf/verify',
+      type: 'socratica/verify',
       platform: adapter.platform,
       answer: m.text,
       ...(m.question ? { question: m.question } : {}),
@@ -44,6 +46,7 @@ async function main(): Promise<void> {
       case 'ok':
         overlay.render(res.result, m.text, res.warnings);
         status.lastSummary = res.result.summary.text;
+        status.lastCounts = { checked: res.result.summary.checked, supported: res.result.summary.supported, contradicted: res.result.summary.contradicted, unverifiable: res.result.summary.unverifiable };
         break;
       case 'consent-required':
         overlay.showConsentRequired();
@@ -95,6 +98,7 @@ async function main(): Promise<void> {
       latest.clear();
       current.clear();
       delete status.lastSummary;
+      delete status.lastCounts;
       delete status.lastError;
     }
   };
@@ -103,12 +107,12 @@ async function main(): Promise<void> {
   // Requests from the toolbar popup.
   chrome.runtime.onMessage.addListener((msg: TabRequest, sender, sendResponse) => {
     if (sender.id !== chrome.runtime.id) return false;
-    if (msg.type === 'hf/page-status') {
+    if (msg.type === 'socratica/page-status') {
       const answers = adapter.findAssistantMessages(document).length;
       sendResponse({ platform: adapter.platform, answers, ...status } satisfies PageStatus);
       return false;
     }
-    if (msg.type === 'hf/check-latest') {
+    if (msg.type === 'socratica/check-latest') {
       // Re-check only the newest answer, even if auto-check is off.
       if (!watcher) {
         sendResponse({ ok: false, message: 'Checking is switched off. Turn it on at the top of this popup.' });
@@ -133,7 +137,7 @@ async function main(): Promise<void> {
   // The on/off switch, consent or settings may change in the popup or options page; pick that up without a reload.
   chrome.storage.onChanged.addListener(async (_changes, area) => {
     if (area !== 'local') return;
-    const next = await send<StateResponse>({ type: 'hf/get-state', platform: adapter.platform });
+    const next = await send<StateResponse>({ type: 'socratica/get-state', platform: adapter.platform });
     const consentNowGranted = next.consentGranted && !state.consentGranted;
     Object.assign(state, next);
     setRunning(state.platformEnabled);

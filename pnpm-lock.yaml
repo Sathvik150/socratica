@@ -20,7 +20,7 @@ importers:
 
   benchmark:
     dependencies:
-      '@hallucination-firewall/core':
+      '@socratica/core':
         specifier: workspace:*
         version: link:../packages/core
       zod:
@@ -29,7 +29,7 @@ importers:
 
   packages/browser-extension:
     dependencies:
-      '@hallucination-firewall/core':
+      '@socratica/core':
         specifier: workspace:*
         version: link:../core
     devDependencies:
@@ -51,7 +51,7 @@ importers:
 
   packages/cli:
     dependencies:
-      '@hallucination-firewall/core':
+      '@socratica/core':
         specifier: workspace:*
         version: link:../core
       undici:
@@ -70,7 +70,7 @@ importers:
 
   packages/sdk:
     dependencies:
-      '@hallucination-firewall/core':
+      '@socratica/core':
         specifier: workspace:*
         version: link:../core
 

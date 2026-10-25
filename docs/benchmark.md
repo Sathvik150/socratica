@@ -20,9 +20,9 @@ Printed by `pnpm bench` on 2026-10-24. Local models ran CPU-only on a 4-core mac
 
 | Verifier | Accuracy | FPR on contradicted | C-vs-U accuracy | Contradicted P / R | Run time |
 |---|---|---|---|---|---|
-| hallucination-firewall + **qwen2.5:7b** (Ollama, `--llm local`) | 97.3% | 0.0% | 96.0% | 100.0% / 91.7% | 13m 53s |
-| hallucination-firewall + `HeuristicLLM` (offline judge) | 89.2% | 0.0% | 84.0% | 100.0% / 66.7% | < 1s |
-| hallucination-firewall + **qwen2.5:3b** (Ollama, `--llm local`) | 54.1% | 0.0% | 40.0% | 100.0% / 25.0% | 4m 13s |
+| socratica + **qwen2.5:7b** (Ollama, `--llm local`) | 97.3% | 0.0% | 96.0% | 100.0% / 91.7% | 13m 53s |
+| socratica + `HeuristicLLM` (offline judge) | 89.2% | 0.0% | 84.0% | 100.0% / 66.7% | < 1s |
+| socratica + **qwen2.5:3b** (Ollama, `--llm local`) | 54.1% | 0.0% | 40.0% | 100.0% / 25.0% | 4m 13s |
 | naive binary-overlap reference (no "unverifiable" output) | 51.4% | 52.0% | 28.0% | 35.0% / 58.3% | < 1s |
 
 Reproduce the local runs:
@@ -53,6 +53,6 @@ Then add it to the `verifiers` list in `benchmark/src/run.ts`. To run the firewa
 
 ```bash
 pnpm bench --llm local --model qwen2.5:7b                 # local OpenAI-compatible server (default Ollama)
-HF_OPENAI_API_KEY=... pnpm bench --llm openai             # network, your key
-HF_ANTHROPIC_API_KEY=... pnpm bench --llm anthropic       # network, your key
+SOCRATICA_OPENAI_API_KEY=... pnpm bench --llm openai             # network, your key
+SOCRATICA_ANTHROPIC_API_KEY=... pnpm bench --llm anthropic       # network, your key
 ```

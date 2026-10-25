@@ -1,10 +1,10 @@
 ---
-name: hallucination-firewall
+name: socratica
 description: Fact-check an AI answer, draft, or document against evidence. Splits the text into atomic factual claims and gives each one a verdict of supported, contradicted, or unverifiable, backed by verbatim quotes from the sources, with a correction when the evidence states the right fact. Use when the user asks to fact-check, verify claims, detect hallucinations, or check text against sources or documents.
 license: MIT
 ---
 
-# Hallucination Firewall
+# Socratica
 
 Evidence-linked fact checking with a strict three-way verdict. The point is **trust**: every
 verdict must be traceable to text that was actually retrieved, and missing evidence is never
@@ -27,26 +27,26 @@ reported as a falsehood.
 `SKILL_DIR` below means **the folder that contains this SKILL.md**. It is often read-only and is
 not your working directory, so always call the scripts by their full path:
 
-- claude.ai / Claude desktop: `/mnt/skills/plugins/hallucination-firewall` or `/mnt/skills/user/hallucination-firewall`
-- Claude Code: `~/.claude/skills/hallucination-firewall` or `.claude/skills/hallucination-firewall`
+- claude.ai / Claude desktop: `/mnt/skills/plugins/socratica` or `/mnt/skills/user/socratica`
+- Claude Code: `~/.claude/skills/socratica` or `.claude/skills/socratica`
 
-If unsure, find it: `find / -name validate_verdicts.py -path '*hallucination-firewall*' 2>/dev/null`.
+If unsure, find it: `find / -name validate_verdicts.py -path '*socratica*' 2>/dev/null`.
 
 Read `SKILL.md` and the `references/` files with your file-reading tool, not with shell commands
 such as `cat`. Use the shell only to run the scripts.
-Do all work in a writable folder of your own (for example `./hf-work`), never inside `SKILL_DIR`.
+Do all work in a writable folder of your own (for example `./socratica-work`), never inside `SKILL_DIR`.
 
 The scripts need only **Python 3** (standard library). Node is optional.
 
 ## Workflow
 
-1. **Save the text to check** to `hf-work/answer.txt` (use code to write it; pasted text is fine).
+1. **Save the text to check** to `socratica-work/answer.txt` (use code to write it; pasted text is fine).
    Note the question that produced it if the user gives one.
 2. **Extract claims** by hand, following `SKILL_DIR/references/claim-extraction.md`: atomic,
    checkable statements of fact, copied from the text. Skip opinions, instructions, questions,
    hedged statements and code. (If Node is available,
-   `node SKILL_DIR/scripts/hf-verify.mjs extract --answer hf-work/answer.txt` suggests a list.)
-3. **Save every evidence passage to a file** in `hf-work/sources/`, one file per source, exactly
+   `node SKILL_DIR/scripts/socratica.mjs extract --answer socratica-work/answer.txt` suggests a list.)
+3. **Save every evidence passage to a file** in `socratica-work/sources/`, one file per source, exactly
    as retrieved. **Write files with code from the original text; don't retype sources.**
    In order of preference:
    - files the user attached (in claude.ai: `/mnt/user-data/uploads/`), or text they pasted
@@ -54,13 +54,13 @@ The scripts need only **Python 3** (standard library). Node is optional.
    - nothing: say so, and every claim will be `unverifiable`
 4. **Judge each claim** with `SKILL_DIR/references/verdict-rules.md`. For each quote, get the exact
    wording from the source file rather than typing it from memory:
-   `python3 SKILL_DIR/scripts/find_quote.py hf-work/sources "approximate wording"`
+   `python3 SKILL_DIR/scripts/find_quote.py socratica-work/sources "approximate wording"`
    It prints the matching text exactly as it appears in the file. Use that string as the quote.
-5. **Write `hf-work/verdicts.json`** in the format in `SKILL_DIR/references/validation-format.md`.
+5. **Write `socratica-work/verdicts.json`** in the format in `SKILL_DIR/references/validation-format.md`.
    Point each passage at its file with `"path"` (relative to `verdicts.json`) instead of copying
    the text in.
 6. **Validate**:
-   `python3 SKILL_DIR/scripts/validate_verdicts.py hf-work/verdicts.json --format text`
+   `python3 SKILL_DIR/scripts/validate_verdicts.py socratica-work/verdicts.json --format text`
    Its output is the final result. Do not change verdicts after this step.
 7. **Report** to the user, starting from the validator's text output:
    - the summary line, e.g. `5 checked, 3 supported, 1 contradicted, 1 unverifiable`
@@ -75,7 +75,7 @@ When the user gives documents and no model judgement is wanted, the bundled dete
 judge does the whole pipeline (simple sentences only; it returns `unverifiable` when unsure):
 
 ```bash
-node SKILL_DIR/scripts/hf-verify.mjs verify --answer hf-work/answer.txt --evidence hf-work/sources/ --format text
+node SKILL_DIR/scripts/socratica.mjs verify --answer socratica-work/answer.txt --evidence socratica-work/sources/ --format text
 ```
 
 ### No code execution available

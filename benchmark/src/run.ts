@@ -2,13 +2,13 @@
  * Benchmark runner. Prints only metrics it computed on this run.
  *
  *   pnpm bench                       # offline: HeuristicLLM + binary baseline
- *   pnpm bench -- --llm openai       # also run with a real LLM (uses HF_OPENAI_API_KEY, makes network calls)
- *   pnpm bench -- --llm anthropic    # (uses HF_ANTHROPIC_API_KEY, makes network calls)
+ *   pnpm bench -- --llm openai       # also run with a real LLM (uses SOCRATICA_OPENAI_API_KEY, makes network calls)
+ *   pnpm bench -- --llm anthropic    # (uses SOCRATICA_ANTHROPIC_API_KEY, makes network calls)
  *   pnpm bench -- --llm local --model qwen2.5:3b [--base-url http://localhost:11434/v1]   # local OpenAI-compatible server
  *   pnpm bench -- --data path.jsonl  # custom dataset
  */
 import { fileURLToPath } from 'node:url';
-import { AnthropicProvider, HeuristicLLM, OpenAIProvider, type FetchLike, type Verdict } from '@hallucination-firewall/core';
+import { AnthropicProvider, HeuristicLLM, OpenAIProvider, type FetchLike, type Verdict } from '@socratica/core';
 import { loadDataset, type BenchmarkItem } from './dataset.js';
 import { computeMetrics, formatMetrics } from './metrics.js';
 import { BinaryOverlapBaseline, FirewallVerifier, type BaselineVerifier } from './verifiers.js';
@@ -32,7 +32,7 @@ async function main() {
   const llm = arg('llm');
   const fetchFn = globalThis.fetch as unknown as FetchLike;
   if (llm === 'openai' || llm === 'anthropic') {
-    const envName = llm === 'openai' ? 'HF_OPENAI_API_KEY' : 'HF_ANTHROPIC_API_KEY';
+    const envName = llm === 'openai' ? 'SOCRATICA_OPENAI_API_KEY' : 'SOCRATICA_ANTHROPIC_API_KEY';
     const apiKey = process.env[envName];
     if (!apiKey) throw new Error(`--llm ${llm} requires ${envName} in the environment`);
     const model = arg('model');

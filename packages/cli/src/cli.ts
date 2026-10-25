@@ -1,5 +1,5 @@
 /**
- * hf-verify: command-line front end for Hallucination Firewall.
+ * socratica: command-line front end for Socratica.
  *
  * API keys are read from environment variables only, never from flags,
  * so they do not end up in shell history.
@@ -13,8 +13,9 @@ import {
   WikipediaEvidenceProvider,
   WikidataEvidenceProvider,
   GoogleFactCheckEvidenceProvider,
-  TavilyEvidenceProvider,
   UrlEvidenceProvider,
+  WEB_SEARCH_ENGINES,
+  createWebSearch,
   EuropePmcEvidenceProvider,
   WorldBankEvidenceProvider,
   GovUkEvidenceProvider,
@@ -24,19 +25,20 @@ import {
   type FetchLike,
   type LLMProvider,
   type VerifyOutput,
-} from '@hallucination-firewall/core';
+  type WebSearchEngine,
+} from '@socratica/core';
 import { loadEvidence } from './evidence.js';
 import { validateVerdicts, type ValidateInput } from './validate.js';
 
-export const VERSION = '0.1.5';
+export const VERSION = '0.2.0';
 
-export const HELP = `hf-verify ${VERSION} - evidence-linked fact checking (supported / contradicted / unverifiable)
+export const HELP = `socratica ${VERSION} - evidence-linked fact checking (supported / contradicted / unverifiable)
 
 USAGE
-  hf-verify verify   --answer <file|-> [--evidence <file|dir>]... [options]
-  hf-verify extract  --answer <file|->
-  hf-verify validate --input <file|-> [--format text|json]
-  hf-verify --help | --version
+  socratica verify   --answer <file|-> [--evidence <file|dir>]... [options]
+  socratica extract  --answer <file|->
+  socratica validate --input <file|-> [--format text|json]
+  socratica --help | --version
 
 COMMANDS
   verify    Extract claims from an answer, retrieve evidence, judge each claim, print a report.
@@ -49,14 +51,14 @@ VERIFY OPTIONS
   --answer <file|->        Answer text to check ("-" reads stdin).
   --question <text>        The question that produced the answer (context only).
   --evidence <file|dir>    Evidence documents: .json ([{title,text,url}]), .txt/.md, or a folder. Repeatable.
+  --web <engine>           Web search engine: firecrawl (free, no key), serper (Google results, free key)
+                           or brave (your key). Required unless you pass --evidence files.
   --wikipedia              Also search English Wikipedia (network).
   --wikidata               Search structured Wikidata statements (network, no key).
   --europe-pmc             Search biomedical abstracts (network, no key).
   --world-bank             Retrieve country statistics with years and units (no key).
   --gov-uk                 Retrieve official UK government guidance (no key).
   --fact-check             Search Google ClaimReview records (your key).
-  --tavily                 Search extracted web page text (your key).
-  --search-domain <host>   Restrict Tavily to trusted domains. Repeatable.
   --evidence-url <url>     Fetch a trusted public HTTPS page. Repeatable, up to 10.
   --llm <name>             Judge: heuristic (default, offline) | openai | anthropic | local
   --model <name>           Model name for the judge.
@@ -66,16 +68,19 @@ VERIFY OPTIONS
   --fail-on-contradiction  Exit with code 2 if any claim is contradicted.
 
 ENVIRONMENT
-  HF_OPENAI_API_KEY        Key for --llm openai.
-  HF_ANTHROPIC_API_KEY     Key for --llm anthropic.
-  HF_LOCAL_API_KEY         Optional key for --llm local.
-  HF_GOOGLE_FACT_CHECK_API_KEY  Key for --fact-check.
-  HF_TAVILY_API_KEY        Key for --tavily.
+  SOCRATICA_OPENAI_API_KEY        Key for --llm openai.
+  SOCRATICA_ANTHROPIC_API_KEY     Key for --llm anthropic.
+  SOCRATICA_LOCAL_API_KEY         Optional key for --llm local.
+  SOCRATICA_GOOGLE_FACT_CHECK_API_KEY  Key for --fact-check.
+  SOCRATICA_FIRECRAWL_API_KEY     Optional key for --web firecrawl (raises the free limits).
+  SOCRATICA_SERPER_API_KEY        Key for --web serper (free sign-up at serper.dev).
+  SOCRATICA_BRAVE_API_KEY         Key for --web brave.
+  The pre-0.2 HF_* names (HF_OPENAI_API_KEY and so on) are still read as fallbacks.
 
 EXAMPLES
-  hf-verify verify --answer answer.txt --evidence sources/
-  echo "The Eiffel Tower opened in 1899." | hf-verify verify --answer - --wikipedia
-  hf-verify verify --answer a.txt --evidence docs.json --llm local --model llama3.1
+  socratica verify --answer answer.txt --evidence sources/
+  echo "The Eiffel Tower opened in 1899." | socratica verify --answer - --web firecrawl --wikipedia
+  socratica verify --answer a.txt --evidence docs.json --llm local --model llama3.1
 `;
 
 export interface ParsedArgs {
@@ -83,7 +88,23 @@ export interface ParsedArgs {
   flags: Map<string, string[]>;
 }
 
-const BOOLEAN_FLAGS = new Set(['wikipedia', 'wikidata', 'europe-pmc', 'world-bank', 'gov-uk', 'fact-check', 'tavily', 'help', 'version', 'fail-on-contradiction']);
+const BOOLEAN_FLAGS = new Set(['wikipedia', 'wikidata', 'europe-pmc', 'world-bank', 'gov-uk', 'fact-check', 'help', 'version', 'fail-on-contradiction']);
+
+const WEB_KEY_ENV: Record<WebSearchEngine, string> = {
+  firecrawl: 'SOCRATICA_FIRECRAWL_API_KEY',
+  serper: 'SOCRATICA_SERPER_API_KEY',
+  brave: 'SOCRATICA_BRAVE_API_KEY',
+};
+
+/** Reads the pre-0.2 HF_* variable names as fallbacks for the SOCRATICA_* ones. */
+export function withLegacyEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const out = { ...env };
+  for (const [name, value] of Object.entries(env)) {
+    const renamed = name.startsWith('HF_') ? `SOCRATICA_${name.slice(3)}` : undefined;
+    if (renamed && value && !out[renamed]) out[renamed] = value;
+  }
+  return out;
+}
 
 export function parseArgs(argv: string[]): ParsedArgs {
   const flags = new Map<string, string[]>();
@@ -124,13 +145,13 @@ export function makeLLM(flags: Map<string, string[]>, env: NodeJS.ProcessEnv, fe
     case 'heuristic':
       return new HeuristicLLM();
     case 'openai': {
-      const apiKey = env.HF_OPENAI_API_KEY;
-      if (!apiKey) throw new UsageError('--llm openai needs HF_OPENAI_API_KEY in the environment');
+      const apiKey = env.SOCRATICA_OPENAI_API_KEY;
+      if (!apiKey) throw new UsageError('--llm openai needs SOCRATICA_OPENAI_API_KEY in the environment');
       return new OpenAIProvider({ apiKey, fetch, ...(model ? { model } : {}) });
     }
     case 'anthropic': {
-      const apiKey = env.HF_ANTHROPIC_API_KEY;
-      if (!apiKey) throw new UsageError('--llm anthropic needs HF_ANTHROPIC_API_KEY in the environment');
+      const apiKey = env.SOCRATICA_ANTHROPIC_API_KEY;
+      if (!apiKey) throw new UsageError('--llm anthropic needs SOCRATICA_ANTHROPIC_API_KEY in the environment');
       return new AnthropicProvider({ apiKey, fetch, ...(model ? { model } : {}) });
     }
     case 'local': {
@@ -139,7 +160,7 @@ export function makeLLM(flags: Map<string, string[]>, env: NodeJS.ProcessEnv, fe
         baseUrl: one(flags, 'base-url') ?? 'http://localhost:11434/v1',
         model,
         fetch,
-        ...(env.HF_LOCAL_API_KEY ? { apiKey: env.HF_LOCAL_API_KEY } : {}),
+        ...(env.SOCRATICA_LOCAL_API_KEY ? { apiKey: env.SOCRATICA_LOCAL_API_KEY } : {}),
       });
     }
     default:
@@ -147,12 +168,10 @@ export function makeLLM(flags: Map<string, string[]>, env: NodeJS.ProcessEnv, fe
   }
 }
 
-const ICON = { supported: '✔', contradicted: '✘', unverifiable: '?' } as const;
-
 export function formatReport(result: VerifyOutput): string {
   const lines = [`Summary: ${result.summary.text}`, ''];
   for (const v of result.verdicts) {
-    lines.push(`${ICON[v.verdict]} [${v.verdict.toUpperCase()}] ${v.claim}`);
+    lines.push(`[${v.verdict.toUpperCase()}] ${v.claim}`);
     if (v.rationale) lines.push(`    reason: ${v.rationale}`);
     for (const q of v.quotes) lines.push(`    evidence: "${q.quote}"`, `      source: ${q.source.title}${q.source.url ? ` <${q.source.url}>` : ''}`);
     if (v.correction) lines.push(`    correction: ${v.correction}`);
@@ -172,6 +191,7 @@ export interface Io {
 /** Runs the CLI and returns the exit code. */
 export async function main(argv: string[], io: Io): Promise<number> {
   const { command, flags } = parseArgs(argv);
+  const env = withLegacyEnv(io.env);
   if (flags.has('version')) return io.stdout(`${VERSION}\n`), 0;
   if (flags.has('help') || !command || command === 'help') return io.stdout(HELP), 0;
 
@@ -203,19 +223,24 @@ export async function main(argv: string[], io: Io): Promise<number> {
     if (!answerPath) throw new UsageError('verify needs --answer <file|->');
     const answer = readInput(answerPath, io.stdin);
     const documents = loadEvidence(flags.get('evidence') ?? []);
-    const providers: EvidenceProvider[] = flags.has('wikipedia') ? [new WikipediaEvidenceProvider({ fetch: io.fetch })] : [];
+    const providers: EvidenceProvider[] = [];
+    const engine = one(flags, 'web');
+    if (engine !== undefined) {
+      if (!Object.hasOwn(WEB_SEARCH_ENGINES, engine)) throw new UsageError(`Unknown --web ${engine} (expected firecrawl, serper or brave)`);
+      const key = env[WEB_KEY_ENV[engine as WebSearchEngine]];
+      try { providers.push(createWebSearch(engine as WebSearchEngine, { fetch: io.fetch, ...(key ? { apiKey: key } : {}) })); }
+      catch (err) { throw new UsageError(`${err instanceof Error ? err.message : 'Web search is not set up.'} Set ${WEB_KEY_ENV[engine as WebSearchEngine]} in the environment.`); }
+    } else if (documents.length === 0) {
+      throw new UsageError('verify needs a web search engine: add --web firecrawl (free, no key needed), --web serper or --web brave. Or check against your own files with --evidence.');
+    }
+    if (flags.has('wikipedia')) providers.push(new WikipediaEvidenceProvider({ fetch: io.fetch }));
     if (flags.has('wikidata')) providers.push(new WikidataEvidenceProvider({ fetch: io.fetch }));
     if (flags.has('europe-pmc')) providers.push(new EuropePmcEvidenceProvider({ fetch: io.fetch }));
     if (flags.has('world-bank')) providers.push(new WorldBankEvidenceProvider({ fetch: io.fetch }));
     if (flags.has('gov-uk')) providers.push(new GovUkEvidenceProvider({ fetch: io.fetch }));
     if (flags.has('fact-check')) {
-      if (!io.env.HF_GOOGLE_FACT_CHECK_API_KEY) throw new UsageError('--fact-check needs HF_GOOGLE_FACT_CHECK_API_KEY in the environment');
-      providers.push(new GoogleFactCheckEvidenceProvider({ apiKey: io.env.HF_GOOGLE_FACT_CHECK_API_KEY, fetch: io.fetch }));
-    }
-    if (flags.has('tavily')) {
-      if (!io.env.HF_TAVILY_API_KEY) throw new UsageError('--tavily needs HF_TAVILY_API_KEY in the environment');
-      try { providers.push(new TavilyEvidenceProvider({ apiKey: io.env.HF_TAVILY_API_KEY, domains: flags.get('search-domain') ?? [], fetch: io.fetch })); }
-      catch (err) { throw new UsageError(err instanceof Error ? err.message : 'Invalid search domain'); }
+      if (!env.SOCRATICA_GOOGLE_FACT_CHECK_API_KEY) throw new UsageError('--fact-check needs SOCRATICA_GOOGLE_FACT_CHECK_API_KEY in the environment');
+      providers.push(new GoogleFactCheckEvidenceProvider({ apiKey: env.SOCRATICA_GOOGLE_FACT_CHECK_API_KEY, fetch: io.fetch }));
     }
     const urls = flags.get('evidence-url') ?? [];
     if (urls.length > 10) throw new UsageError('--evidence-url accepts up to 10 URLs');
@@ -228,12 +253,12 @@ export async function main(argv: string[], io: Io): Promise<number> {
       answer,
       documents,
       providers,
-      llm: makeLLM(flags, io.env, io.fetch),
+      llm: makeLLM(flags, env, io.fetch),
       ...(question ? { question } : {}),
     });
     io.stdout(one(flags, 'format') === 'json' ? JSON.stringify(result, null, 2) + '\n' : formatReport(result));
     return flags.has('fail-on-contradiction') && result.summary.contradicted > 0 ? 2 : 0;
   }
 
-  throw new UsageError(`Unknown command: ${command}. Run hf-verify --help.`);
+  throw new UsageError(`Unknown command: ${command}. Run socratica --help.`);
 }

@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
-import type { EvidenceDocument } from '@hallucination-firewall/core';
+import type { EvidenceDocument } from '@socratica/core';
 
 const TEXT_EXT = new Set(['.txt', '.md', '.markdown', '.text']);
 

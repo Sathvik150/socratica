@@ -43,7 +43,7 @@ HTTPS proxy, with no API key, no provider errors, the correct 1889 correction an
 `P1619` citation. Reproduce from the repository root after `pnpm build`:
 
 ```bash
-node packages/cli/dist/hf-verify.mjs verify --answer - --wikidata --format json <<'EOF'
+node packages/cli/dist/socratica.mjs verify --answer - --wikidata --format json <<'EOF'
 The Eiffel Tower opened in 1899.
 EOF
 ```
@@ -81,7 +81,9 @@ hosted-model test.
 
 ## Still untested live
 
-- Tavily, Google Fact Check and Brave requests require user API keys that were not configured.
+- Google Fact Check and Brave requests require user API keys that were not configured.
+- The 0.2.0 web search engines (Firecrawl, Serper, Brave) are tested only against recorded response
+  shapes with a fake fetch. No live search request has been made with them yet.
 - Hosted model verification requires a model API key, or an available local model server. Neither
   was available. Scientific/metadata/NASA retrieval success therefore must not be described as a
   successful automatic semantic verdict for those claims.

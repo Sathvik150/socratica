@@ -1,6 +1,7 @@
-import { trustedDomains, trustedUrl } from '@hallucination-firewall/core';
+import { WEB_SEARCH_ENGINES, trustedUrl, type WebSearchEngine } from '@socratica/core';
 import type { TestJudgeResponse } from './messages.js';
-import { DEFAULT_MODELS, HOST_PERMISSIONS, CONSENT_VERSION, TRUSTED_SOURCE_PRESETS, hasValidConsent, localOrigin, requiredOrigins, type LLMChoice, type Settings } from './settings.js';
+import { DEFAULT_MODELS, HOST_PERMISSIONS, CONSENT_VERSION, WEB_KEY_FIELD, hasValidConsent, localOrigin, requiredOrigins, type LLMChoice, type Settings } from './settings.js';
+import { icon } from './ui/icons.js';
 
 export interface OptionsApi {
   load(): Promise<Settings>;
@@ -17,6 +18,29 @@ const h = <K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, props: 
   return node;
 };
 
+/** How each web search engine is described in settings. */
+const ENGINE_COPY: Record<WebSearchEngine, { title: string; detail: string; keyLabel: string }> = {
+  firecrawl: {
+    title: 'Firecrawl',
+    detail: 'Free, with no key or sign-up. A daily limit applies per network; add a free Firecrawl key for more.',
+    keyLabel: 'Firecrawl API key (optional)',
+  },
+  serper: {
+    title: 'Google results via Serper',
+    detail: 'Google’s web results. Needs a free Serper key (2,500 searches, no card) from serper.dev.',
+    keyLabel: 'Serper API key',
+  },
+  brave: {
+    title: 'Brave Search',
+    detail: 'Brave’s independent web index. Needs your Brave Search API key.',
+    keyLabel: 'Brave Search API key',
+  },
+};
+
+function card(doc: Document, id: string, title: string, ...children: Array<Node | string>): HTMLElement {
+  return h(doc, 'section', { className: 'card', id }, h(doc, 'h2', {}, title), ...children);
+}
+
 /** Renders the options + consent page into `root`. Kept free of chrome.* so it can be tested. */
 export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<void> {
   const doc = root.ownerDocument;
@@ -26,13 +50,21 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
     root.replaceChildren();
     root.removeAttribute('aria-busy');
     const consented = hasValidConsent(settings);
+    const mark = h(doc, 'span', { className: 'mark' }, icon(doc, 'laurel', 44));
     root.append(
-      h(doc, 'h1', {}, 'Hallucination Firewall'),
-      h(doc, 'p', { className: 'muted' }, 'Review Mode: after a ChatGPT answer finishes, its factual claims are checked against retrieved evidence and annotated in place. It cannot stop an answer from being shown.'),
+      h(
+        doc,
+        'header',
+        { className: 'page-head' },
+        mark,
+        h(doc, 'p', { className: 'eyebrow' }, 'Settings'),
+        h(doc, 'h1', {}, 'Socratica'),
+        h(doc, 'p', { className: 'lede' }, 'Review Mode: after a ChatGPT answer finishes, its factual claims are checked against evidence from the web and annotated in place. It cannot stop an answer from being shown.'),
+      ),
     );
 
     // ---- Consent (mandatory) ----
-    const consent = h(doc, 'section', { className: `consent${consented ? ' granted' : ''}`, id: 'consent' });
+    const consent = h(doc, 'section', { className: `card consent${consented ? ' granted' : ''}`, id: 'consent' });
     consent.append(
       h(doc, 'h2', {}, consented ? 'Privacy notice — accepted' : 'Before anything is checked: privacy notice'),
       h(doc, 'p', {}, 'Nothing is sent anywhere until you accept this notice. When you accept, for each ChatGPT answer that is checked:'),
@@ -40,11 +72,11 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
         doc,
         'ul',
         {},
-        h(doc, 'li', {}, 'Short search queries built from individual claims are sent to the sources you enable: Wikipedia, Wikidata, Europe PMC, GOV.UK, World Bank, Google Fact Check, Tavily, or Brave Search. Google Fact Check, Tavily, and Brave require your own keys. Wikidata receives entity names; World Bank receives country, indicator and year requests; other search sources receive claim-based queries.'),
+        h(doc, 'li', {}, 'Short search queries built from individual claims are sent to the web search engine you choose (Firecrawl by default; Google results via Serper or Brave Search with your own key). Web search is required, so every check uses it.'),
+        h(doc, 'li', {}, 'The other sources you enable also receive claim-based queries: Wikipedia, Wikidata (entity names), Europe PMC, GOV.UK, World Bank (country, indicator and year requests) and Google Fact Check (your key).'),
         h(doc, 'li', {}, 'If you enable trusted URLs, their pages are fetched without cookies or credentials. Those sites receive the URL request, not your claim text. Only the HTTPS sites you enter are requested; redirects are refused.'),
         h(doc, 'li', {}, 'If you choose OpenAI or Anthropic as the judge, each claim, its surrounding sentence, your question, and the retrieved passages are sent to that provider using your own API key, under that provider’s terms.'),
-        h(doc, 'li', {}, 'With the offline judge and no evidence sources enabled, nothing leaves your browser (but every claim will be unverifiable).'),
-        h(doc, 'li', {}, 'API keys are stored only in this browser (chrome.storage.local). There is no Hallucination Firewall server, account, telemetry or analytics.'),
+        h(doc, 'li', {}, 'To send nothing at all, switch Socratica off from its toolbar popup. API keys are stored only in this browser (chrome.storage.local). There is no Socratica server, account, telemetry or analytics.'),
       ),
     );
     if (consented) {
@@ -64,7 +96,7 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
         settings = { ...settings, consent: { granted: true, version: CONSENT_VERSION, grantedAt: new Date().toISOString() } };
         await api.save(settings);
         render();
-        if (!granted) status('Consent saved, but some site permissions were declined; those sources will be skipped.');
+        if (!granted) status('Consent saved, but some site permissions were declined. Web search is required, so press Save and allow it.');
       });
       consent.append(h(doc, 'label', { className: 'inline' }, box, 'I have read this and agree to send claim text as described.'), accept);
     }
@@ -72,19 +104,47 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
 
     // ---- Settings ----
     const form = h(doc, 'fieldset', { id: 'settings' });
-    const platforms = h(doc, 'section', {}, h(doc, 'h2', {}, 'Platforms'));
-    const chatgpt = h(doc, 'input', { type: 'checkbox', id: 'platform-chatgpt', checked: settings.platforms.chatgpt });
-    platforms.append(
-      h(doc, 'label', { className: 'inline' }, chatgpt, 'ChatGPT (chatgpt.com)'),
-      h(doc, 'label', { className: 'inline' }, h(doc, 'input', { type: 'checkbox', disabled: true }), 'Claude — not supported yet'),
-      h(doc, 'label', { className: 'inline' }, h(doc, 'input', { type: 'checkbox', disabled: true }), 'Gemini — not supported yet'),
+
+    // Web search: required, exactly one engine.
+    const webKeys = { ...settings.evidence.web };
+    let engine: WebSearchEngine = settings.evidence.web.engine;
+    const webKey = h(doc, 'input', { type: 'password', id: 'web-key', autocomplete: 'off' });
+    const webKeyLabel = h(doc, 'span', {});
+    const webKeyRow = h(doc, 'label', { id: 'web-key-row' }, webKeyLabel, webKey);
+    const choices = h(doc, 'div', { className: 'choices' });
+    choices.setAttribute('role', 'radiogroup');
+    choices.setAttribute('aria-label', 'Web search engine');
+    const syncWebKey = () => {
+      webKey.value = webKeys[WEB_KEY_FIELD[engine]];
+      webKey.placeholder = WEB_SEARCH_ENGINES[engine].keyRequired ? 'paste your key' : 'not needed';
+      webKeyLabel.textContent = ENGINE_COPY[engine].keyLabel;
+      for (const c of choices.querySelectorAll('.choice')) c.classList.toggle('selected', (c as HTMLElement).dataset.engine === engine);
+    };
+    for (const id of Object.keys(WEB_SEARCH_ENGINES) as WebSearchEngine[]) {
+      const radio = h(doc, 'input', { type: 'radio', name: 'web-engine', id: `web-${id}`, value: id, checked: engine === id });
+      radio.addEventListener('change', () => {
+        webKeys[WEB_KEY_FIELD[engine]] = webKey.value.trim();
+        engine = id;
+        syncWebKey();
+      });
+      const label = h(doc, 'label', { className: 'choice', htmlFor: `web-${id}` }, radio, h(doc, 'span', {}, h(doc, 'b', {}, ENGINE_COPY[id].title), h(doc, 'small', {}, ENGINE_COPY[id].detail)));
+      label.dataset.engine = id;
+      choices.append(label);
+    }
+    const webSection = card(
+      doc,
+      'web-search',
+      'Web search',
+      h(doc, 'p', { className: 'muted' }, 'Every check searches the web, so claims about the real world have something to be checked against. Pick one engine.'),
+      choices,
+      webKeyRow,
     );
-    const auto = h(doc, 'input', { type: 'checkbox', id: 'auto-check', checked: settings.autoCheck });
-    const behaviour = h(doc, 'section', {}, h(doc, 'h2', {}, 'Behaviour'), h(doc, 'label', { className: 'inline' }, auto, 'Automatically check each answer when it finishes (otherwise click “Check this answer”).'));
+    webSection.querySelector('h2')!.append(h(doc, 'span', { className: 'badge' }, 'Required'));
+    syncWebKey();
 
     const llmSelect = h(doc, 'select', { id: 'llm-provider' });
     for (const [value, label] of [
-      ['heuristic', 'Offline heuristic judge (no key, no network; simple sentences only)'],
+      ['heuristic', 'Offline heuristic judge (no key, no model; names, numbers and wording)'],
       ['openai', 'OpenAI (your API key)'],
       ['anthropic', 'Anthropic (your API key)'],
       ['local', 'Local model: Ollama, LM Studio, llama.cpp… (runs on your computer)'],
@@ -95,7 +155,7 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
     const baseUrlRow = h(doc, 'label', { id: 'llm-base-url-row' }, 'Server URL (OpenAI-compatible)', baseUrl);
     const hint = h(doc, 'p', { className: 'muted', id: 'llm-hint' });
     const HINTS: Record<LLMChoice, string> = {
-      heuristic: 'No model, no network. It only recognises very literal matches, so most real answers come out "unverifiable". Pick a model for real checks.',
+      heuristic: 'No model and no extra network calls. It compares names, numbers and wording with the evidence, so paraphrased claims often stay "unverifiable". Pick a model for more thorough checks.',
       openai: 'Uses your OpenAI API key. Claims and retrieved passages are sent to OpenAI.',
       anthropic: 'Uses your Anthropic API key. Claims and retrieved passages are sent to Anthropic.',
       local:
@@ -118,47 +178,34 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
       if (!api.testJudge) return;
       testOut.textContent = 'Testing… (uses the last saved settings)';
       const r = await api.testJudge();
-      testOut.textContent = r.ok ? `✔ ${r.judge} answered in ${r.ms} ms.` : `✘ ${r.judge}: ${r.message}`;
+      testOut.textContent = r.ok ? `Connected: ${r.judge} answered in ${r.ms} ms.` : `Could not connect to ${r.judge}: ${r.message}`;
     });
-    const llm = h(
+    const llm = card(
       doc,
-      'section',
-      {},
-      h(doc, 'h2', {}, 'Judge (LLM)'),
+      'judge',
+      'Judge',
       h(doc, 'label', {}, 'Provider', llmSelect),
       hint,
       baseUrlRow,
       h(doc, 'label', {}, 'Model', model),
       h(doc, 'label', {}, 'API key', key),
-      h(doc, 'div', {}, testBtn, testOut),
+      h(doc, 'div', { className: 'row' }, testBtn, testOut),
     );
 
     const wiki = h(doc, 'input', { type: 'checkbox', id: 'ev-wikipedia', checked: settings.evidence.wikipedia });
-    const web = h(doc, 'input', { type: 'checkbox', id: 'ev-web', checked: settings.evidence.webSearch });
-    const webKey = h(doc, 'input', { type: 'password', id: 'ev-web-key', value: settings.evidence.webSearchApiKey, autocomplete: 'off', placeholder: 'Brave Search API key' });
     const wikidata = h(doc, 'input', { type: 'checkbox', id: 'ev-wikidata', checked: settings.evidence.wikidata });
     const europePmc = h(doc, 'input', { type: 'checkbox', id: 'ev-europe-pmc', checked: settings.evidence.europePmc });
     const worldBank = h(doc, 'input', { type: 'checkbox', id: 'ev-world-bank', checked: settings.evidence.worldBank });
     const govUk = h(doc, 'input', { type: 'checkbox', id: 'ev-gov-uk', checked: settings.evidence.govUk });
     const factCheck = h(doc, 'input', { type: 'checkbox', id: 'ev-fact-check', checked: settings.evidence.googleFactCheck });
     const factCheckKey = h(doc, 'input', { type: 'password', id: 'ev-fact-check-key', value: settings.evidence.googleFactCheckApiKey, autocomplete: 'off', placeholder: 'Google Fact Check API key' });
-    const tavily = h(doc, 'input', { type: 'checkbox', id: 'ev-tavily', checked: settings.evidence.tavily });
-    const tavilyKey = h(doc, 'input', { type: 'password', id: 'ev-tavily-key', value: settings.evidence.tavilyApiKey, autocomplete: 'off', placeholder: 'Tavily API key' });
-    const tavilyDomains = h(doc, 'textarea', { id: 'ev-tavily-domains', value: settings.evidence.tavilyDomains.join('\n'), rows: 3, placeholder: 'who.int\nnih.gov\nOne trusted domain per line (optional)' });
-    const sourcePreset = h(doc, 'select', { id: 'ev-source-preset' }, h(doc, 'option', { value: '' }, 'Choose a trusted source set…'));
-    for (const preset of TRUSTED_SOURCE_PRESETS) sourcePreset.append(h(doc, 'option', { value: preset.id }, preset.label));
-    sourcePreset.addEventListener('change', () => {
-      const preset = TRUSTED_SOURCE_PRESETS.find((p) => p.id === sourcePreset.value);
-      if (preset) tavilyDomains.value = preset.domains.join('\n');
-    });
     const urls = h(doc, 'input', { type: 'checkbox', id: 'ev-urls', checked: settings.evidence.urls });
     const trustedUrls = h(doc, 'textarea', { id: 'ev-trusted-urls', value: settings.evidence.trustedUrls.join('\n'), rows: 4, placeholder: 'https://trusted-site.org/article\nOne public HTTPS URL per line (up to 10)' });
-    const evidence = h(
+    const evidence = card(
       doc,
-      'section',
-      {},
-      h(doc, 'h2', {}, 'Evidence sources'),
-      h(doc, 'p', { className: 'muted' }, 'For broad coverage across topics, use Tavily or Brave with your own search key and choose a model to compare the evidence. The key-free sources add specialist coverage. Trusted URLs let you check against a specific primary source. Missing evidence always stays unverifiable.'),
+      'sources',
+      'More evidence sources',
+      h(doc, 'p', { className: 'muted' }, 'Optional, alongside web search. The key-free sources add encyclopedic and specialist coverage; trusted URLs check against a specific primary source. Missing evidence always stays unverifiable.'),
       h(doc, 'label', { className: 'inline' }, wiki, `Wikipedia (${HOST_PERMISSIONS.wikipedia.replace('/*', '')})`),
       h(doc, 'label', { className: 'inline' }, wikidata, 'Wikidata — structured dates, numbers, people and places (no key)'),
       h(doc, 'label', { className: 'inline' }, europePmc, 'Europe PMC — biomedical abstracts (no key)'),
@@ -166,25 +213,31 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
       h(doc, 'label', { className: 'inline' }, govUk, 'GOV.UK — official UK government guidance (no key)'),
       h(doc, 'label', { className: 'inline' }, factCheck, 'Google Fact Check — publisher reviews (your key; choose a model to interpret ratings)'),
       factCheckKey,
-      h(doc, 'label', { className: 'inline' }, tavily, 'Tavily — extracted web page text (your key; may incur usage charges)'),
-      tavilyKey,
-      h(doc, 'label', {}, 'Fill trusted domains for a topic', sourcePreset),
-      h(doc, 'label', {}, 'Restrict Tavily to trusted domains (one per line)', tavilyDomains),
-      h(doc, 'p', { className: 'muted' }, 'Search results are not automatically trustworthy. Restrict domains to authoritative sources for your topic, or use trusted URLs. An empty domain list searches the general web.'),
-      h(doc, 'p', { className: 'muted' }, 'For example, select NASA and ESA for space claims. To check a specific NASA page without a search key, paste its HTTPS URL below.'),
-      h(doc, 'label', { className: 'inline' }, web, 'Web search via Brave Search API (your key)'),
-      webKey,
       h(doc, 'label', { className: 'inline' }, urls, 'Trusted URLs — check against pages you choose'),
       h(doc, 'label', {}, 'Source URLs (one per line)', trustedUrls),
-      h(doc, 'p', { className: 'muted' }, 'Wikidata can share Wikimedia rate limits. Europe PMC is an independent source. No source guarantees coverage; failures remain visible and other sources continue.'),
+      h(doc, 'p', { className: 'muted' }, 'Wikidata can share Wikimedia rate limits. No source guarantees coverage; failures stay visible and the other sources continue.'),
+    );
+
+    const chatgpt = h(doc, 'input', { type: 'checkbox', id: 'platform-chatgpt', checked: settings.platforms.chatgpt });
+    const auto = h(doc, 'input', { type: 'checkbox', id: 'auto-check', checked: settings.autoCheck });
+    const general = card(
+      doc,
+      'general',
+      'Platforms and behaviour',
+      h(doc, 'label', { className: 'inline' }, chatgpt, 'ChatGPT (chatgpt.com)'),
+      h(doc, 'label', { className: 'inline' }, h(doc, 'input', { type: 'checkbox', disabled: true }), 'Claude — not supported yet'),
+      h(doc, 'label', { className: 'inline' }, h(doc, 'input', { type: 'checkbox', disabled: true }), 'Gemini — not supported yet'),
+      h(doc, 'label', { className: 'inline' }, auto, 'Automatically check each answer when it finishes (otherwise click “Check this answer”).'),
     );
 
     const save = h(doc, 'button', { id: 'save', type: 'button', className: 'primary' }, 'Save');
     const statusEl = h(doc, 'span', { className: 'status muted', id: 'status' });
-    form.append(platforms, behaviour, llm, evidence, h(doc, 'div', {}, save, statusEl));
+    statusEl.setAttribute('role', 'status');
+    form.append(webSection, llm, evidence, general, h(doc, 'div', { className: 'actions' }, save, statusEl));
     root.append(form);
 
     save.addEventListener('click', async () => {
+      webKeys[WEB_KEY_FIELD[engine]] = webKey.value.trim();
       const next: Settings = {
         ...settings,
         platforms: { ...settings.platforms, chatgpt: chatgpt.checked },
@@ -193,14 +246,15 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
         evidence: {
           wikipedia: wiki.checked, wikidata: wikidata.checked, europePmc: europePmc.checked, worldBank: worldBank.checked, govUk: govUk.checked,
           googleFactCheck: factCheck.checked, googleFactCheckApiKey: factCheckKey.value.trim(),
-          tavily: tavily.checked, tavilyApiKey: tavilyKey.value.trim(), tavilyDomains: tavilyDomains.value.split(/\r?\n/).map((s) => s.trim()).filter(Boolean),
           urls: urls.checked, trustedUrls: trustedUrls.value.split(/\r?\n/).map((s) => s.trim()).filter(Boolean),
-          webSearch: web.checked, webSearchApiKey: webKey.value.trim(),
+          web: { ...webKeys, engine },
         },
       };
-      if (next.evidence.tavily) {
-        try { next.evidence.tavilyDomains = trustedDomains(next.evidence.tavilyDomains); }
-        catch (err) { status(err instanceof Error ? err.message : 'Invalid trusted search domain.'); return; }
+      // Web search is required, so an engine that can't run is not saved.
+      if (WEB_SEARCH_ENGINES[engine].keyRequired && !next.evidence.web[WEB_KEY_FIELD[engine]]) {
+        status(`${ENGINE_COPY[engine].title} needs an API key (free sign-up at ${WEB_SEARCH_ENGINES[engine].signup}). Or choose Firecrawl, which needs none.`);
+        webKey.focus();
+        return;
       }
       if (next.evidence.urls) {
         try {
@@ -219,7 +273,7 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
       const granted = hasValidConsent(next) ? await api.requestPermissions(requiredOrigins(next)) : true;
       settings = next;
       await api.save(settings);
-      status(granted ? 'Saved.' : 'Saved, but some site permissions were declined; those sources will be skipped.');
+      status(granted ? 'Saved.' : 'Saved, but some site permissions were declined. Web search is required, so checks will stop until it is allowed.');
     });
   };
 

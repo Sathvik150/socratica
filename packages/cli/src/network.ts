@@ -1,5 +1,5 @@
 import { EnvHttpProxyAgent } from 'undici';
-import type { FetchLike } from '@hallucination-firewall/core';
+import type { FetchLike } from '@socratica/core';
 
 /** Node 20's native fetch does not read proxy environment variables on its own. */
 export function networkFetch(env: NodeJS.ProcessEnv): FetchLike {

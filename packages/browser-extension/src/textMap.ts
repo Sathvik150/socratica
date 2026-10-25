@@ -16,7 +16,7 @@ export interface TextMap {
 
 const BLOCK = new Set(['P', 'DIV', 'LI', 'UL', 'OL', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'TR', 'TABLE', 'SECTION', 'ARTICLE', 'BR', 'HR']);
 /** Code blocks are never checked; UI injected by this extension is never read back. */
-const SKIP = (el: Element) => el.tagName === 'PRE' || el.hasAttribute('data-hf-ui') || el.tagName === 'SCRIPT' || el.tagName === 'STYLE' || el.tagName === 'BUTTON';
+const SKIP = (el: Element) => el.tagName === 'PRE' || el.hasAttribute('data-socratica-ui') || el.tagName === 'SCRIPT' || el.tagName === 'STYLE' || el.tagName === 'BUTTON';
 
 export function extractText(root: Node): TextMap {
   let text = '';

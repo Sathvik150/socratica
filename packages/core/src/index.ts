@@ -10,11 +10,20 @@ export { chunkText, scorePassage, searchQuery } from './rank.js';
 export { hashString, splitSentences } from './text.js';
 export { DocumentEvidenceProvider } from './providers/evidence/documents.js';
 export { WikipediaEvidenceProvider, type WikipediaOptions } from './providers/evidence/wikipedia.js';
-export { BraveSearchEvidenceProvider, type BraveSearchOptions } from './providers/evidence/webSearch.js';
+export {
+  BraveSearchEvidenceProvider,
+  FirecrawlSearchEvidenceProvider,
+  SerperEvidenceProvider,
+  WEB_SEARCH_ENGINES,
+  createWebSearch,
+  type BraveSearchOptions,
+  type FirecrawlSearchOptions,
+  type SerperOptions,
+  type WebSearchEngine,
+} from './providers/evidence/webSearch.js';
 export { WikidataEvidenceProvider, type WikidataOptions } from './providers/evidence/wikidata.js';
 export { GoogleFactCheckEvidenceProvider, type GoogleFactCheckOptions } from './providers/evidence/factCheck.js';
 export { UrlEvidenceProvider, trustedUrl, trustedDomains, type UrlEvidenceOptions } from './providers/evidence/urls.js';
-export { TavilyEvidenceProvider, type TavilyOptions } from './providers/evidence/tavily.js';
 export { EuropePmcEvidenceProvider, type ScholarlyOptions } from './providers/evidence/scholarly.js';
 export { WorldBankEvidenceProvider, type WorldBankOptions } from './providers/evidence/worldBank.js';
 export { GovUkEvidenceProvider, type GovUkOptions } from './providers/evidence/govuk.js';

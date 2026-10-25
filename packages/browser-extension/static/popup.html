@@ -2,23 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Hallucination Firewall</title>
+  <title>Socratica</title>
   <link rel="icon" href="icons/icon-32.png">
   <link rel="stylesheet" href="theme.css">
 </head>
-<!-- Chrome draws the popup window itself; the content sits in a rounded card so the popup reads as rounded. -->
+<!-- Chrome draws the popup window itself; the content sits in a softly rounded card. -->
 <body class="popup">
-  <div class="card">
-    <header>
-      <img src="icons/icon-32.png" alt="">
-      <h1>Hallucination Firewall</h1>
+  <div class="shell">
+    <header class="popup-head">
+      <svg class="mark" viewBox="0 0 64 64" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M22.6 52.4 L20.8 51.4 L19.1 50.2 L17.5 49 L16.1 47.5 L14.8 45.9 L13.6 44.3 L12.6 42.5 L11.8 40.6 L11.2 38.7 L10.8 36.7 L10.5 34.7 L10.5 32.6 L10.6 30.6 L10.9 28.6 L11.4 26.6 L12.1 24.7 L13 22.9 L14 21.1 L15.2 19.5 L16.6 17.9 L18.1 16.6 L19.7 15.3 L21.4 14.2 L23.2 13.3 L23.7 14.3 L22 15.2 L20.3 16.2 L18.8 17.4 L17.4 18.7 L16.1 20.2 L14.9 21.7 L14 23.4 L13.1 25.1 L12.5 26.9 L12 28.8 L11.7 30.7 L11.6 32.6 L11.6 34.6 L11.9 36.5 L12.3 38.4 L12.9 40.2 L13.6 42 L14.6 43.7 L15.7 45.3 L16.9 46.8 L18.3 48.1 L19.7 49.4 L21.3 50.5 L23 51.4ZM18.8 49.3Q13.9 52.4 9.2 49.2Q14 46.1 18.8 49.3ZM18.8 49.3Q14.6 45.4 16.6 40Q20.8 43.9 18.8 49.3ZM14.4 44.5Q9.2 45.9 5.8 41.6Q11.1 40.2 14.4 44.5ZM14.4 44.5Q11.8 39.7 15.2 35.5Q17.8 40.2 14.4 44.5ZM11.8 38.6Q6.7 38.3 4.9 33.5Q10 33.8 11.8 38.6ZM11.8 38.6Q10.8 33.6 15 30.7Q16 35.7 11.8 38.6ZM11 32.2Q6.5 30.4 6.3 25.7Q10.8 27.4 11 32.2ZM11 32.2Q11.6 27.4 16.2 26.1Q15.6 30.8 11 32.2ZM12.3 25.8Q8.8 23 10 18.7Q13.5 21.5 12.3 25.8ZM12.3 25.8Q14.1 21.7 18.6 21.8Q16.7 25.9 12.3 25.8ZM15.4 20.1Q13.1 16.7 15.4 13.2Q17.7 16.6 15.4 20.1ZM15.4 20.1Q18.2 17.1 22.1 18.4Q19.3 21.5 15.4 20.1ZM20.1 15.7Q19.1 12 22.1 9.6Q23.1 13.3 20.1 15.7ZM20.1 15.7Q23.5 13.8 26.5 16.1Q23.2 18 20.1 15.7ZM23.5 13.8Q25.6 10.3 29.6 11.1Q27.5 14.6 23.5 13.8ZM41 51.4 L42.7 50.5 L44.3 49.4 L45.7 48.1 L47.1 46.8 L48.3 45.3 L49.4 43.7 L50.4 42 L51.1 40.2 L51.7 38.4 L52.1 36.5 L52.4 34.6 L52.4 32.6 L52.3 30.7 L52 28.8 L51.5 26.9 L50.9 25.1 L50 23.4 L49.1 21.7 L47.9 20.2 L46.6 18.7 L45.2 17.4 L43.7 16.2 L42 15.2 L40.3 14.3 L40.8 13.3 L42.6 14.2 L44.3 15.3 L45.9 16.6 L47.4 17.9 L48.8 19.5 L50 21.1 L51 22.9 L51.9 24.7 L52.6 26.6 L53.1 28.6 L53.4 30.6 L53.5 32.6 L53.5 34.7 L53.2 36.7 L52.8 38.7 L52.2 40.6 L51.4 42.5 L50.4 44.3 L49.2 45.9 L47.9 47.5 L46.5 49 L44.9 50.2 L43.2 51.4 L41.4 52.4ZM45.2 49.3Q50 46.1 54.8 49.2Q50.1 52.4 45.2 49.3ZM45.2 49.3Q43.2 43.9 47.4 40Q49.4 45.4 45.2 49.3ZM49.6 44.5Q52.9 40.2 58.2 41.6Q54.8 45.9 49.6 44.5ZM49.6 44.5Q46.2 40.2 48.8 35.5Q52.2 39.7 49.6 44.5ZM52.2 38.6Q54 33.8 59.1 33.5Q57.3 38.3 52.2 38.6ZM52.2 38.6Q48 35.7 49 30.7Q53.2 33.6 52.2 38.6ZM53 32.2Q53.2 27.4 57.7 25.7Q57.5 30.4 53 32.2ZM53 32.2Q48.4 30.8 47.8 26.1Q52.4 27.4 53 32.2ZM51.7 25.8Q50.5 21.5 54 18.7Q55.2 23 51.7 25.8ZM51.7 25.8Q47.3 25.9 45.4 21.8Q49.9 21.7 51.7 25.8ZM48.6 20.1Q46.3 16.6 48.6 13.2Q50.9 16.7 48.6 20.1ZM48.6 20.1Q44.7 21.5 41.9 18.4Q45.8 17.1 48.6 20.1ZM43.9 15.7Q40.9 13.3 41.9 9.6Q44.9 12 43.9 15.7ZM43.9 15.7Q40.8 18 37.5 16.1Q40.5 13.8 43.9 15.7ZM40.5 13.8Q36.5 14.6 34.4 11.1Q38.4 10.3 40.5 13.8Z"/></svg>
+      <span class="wordmark">Socratica</span>
       <button type="button" id="power" class="switch" role="switch" aria-checked="false"><span class="switch-label">…</span><span class="track" aria-hidden="true"><span class="knob"></span></span></button>
+      <button type="button" id="gear" class="icon-btn" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M10.34 5.82 L10.59 3.11 L13.41 3.11 L13.66 5.82 L15.2 6.46 L17.29 4.72 L19.28 6.71 L17.54 8.8 L18.18 10.34 L20.89 10.59 L20.89 13.41 L18.18 13.66 L17.54 15.2 L19.28 17.29 L17.29 19.28 L15.2 17.54 L13.66 18.18 L13.41 20.89 L10.59 20.89 L10.34 18.18 L8.8 17.54 L6.71 19.28 L4.72 17.29 L6.46 15.2 L5.82 13.66 L3.11 13.41 L3.11 10.59 L5.82 10.34 L6.46 8.8 L4.72 6.71 L6.71 4.72 L8.8 6.46Z M12 14.8a2.8 2.8 0 1 0 0-5.6 2.8 2.8 0 0 0 0 5.6z"/></svg></button>
     </header>
     <main id="app" aria-busy="true">
-      <!-- Skeleton until settings load: same layout as the "Setup" and "This page" cards. -->
-      <section class="sk-card" aria-hidden="true"><span class="sk-title"></span><span class="sk-line w-4/5"></span><span class="sk-line w-3/5"></span></section>
-      <section class="sk-card" aria-hidden="true"><span class="sk-title"></span><span class="sk-line w-1/2"></span><span class="sk-button"></span></section>
-      <section class="sk-card" aria-hidden="true"><span class="sk-title"></span><span class="sk-line w-2/3"></span><span class="sk-button w-32"></span></section>
+      <!-- Skeleton until settings load: the tab row, then the "This page" and "Check selected text" cards. -->
+      <div class="tabs" aria-hidden="true"><span class="sk-line w-12"></span><span class="sk-line w-14"></span><span class="sk-line w-14"></span></div>
+      <section class="card sk-card" aria-hidden="true"><span class="sk-title"></span><span class="sk-line w-4/5"></span><span class="sk-line w-3/5"></span><span class="sk-button"></span></section>
+      <section class="card sk-card" aria-hidden="true"><span class="sk-title"></span><span class="sk-line w-2/3"></span><span class="sk-button w-32"></span></section>
     </main>
   </div>
   <script src="popup.js"></script>

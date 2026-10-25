@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { MockLLM, runVerification } from '@hallucination-firewall/core';
+import { MockLLM, runVerification } from '@socratica/core';
 import { chatgptAdapter } from '../adapters/chatgpt.js';
 import { DEMO_DOCUMENTS } from '../demoData.js';
 import { AnswerOverlay } from '../overlay.js';
@@ -23,7 +23,7 @@ describe('end to end on the saved ChatGPT fixture (MockLLM + supplied documents)
     overlay.render(result, m.text);
 
     // Summary bar under the answer, inside a shadow root.
-    expect(overlay.host.getAttribute('data-hf-ui')).toBe('summary');
+    expect(overlay.host.getAttribute('data-socratica-ui')).toBe('summary');
     expect(overlay.host.previousElementSibling).toBe(m.content);
     const bar = overlay.root.querySelector('.bar')!;
     expect(bar.querySelector('.row')!.getAttribute('aria-label')).toBe('3 checked, 2 supported, 1 contradicted, 0 unverifiable');
@@ -35,7 +35,7 @@ describe('end to end on the saved ChatGPT fixture (MockLLM + supplied documents)
     // Open the contradicted claim from the details list (what a click on the highlight does).
     const item = Array.from(overlay.root.querySelectorAll<HTMLLIElement>('ul.details li')).find((li) => li.textContent!.includes('Contradicted'))!;
     item.querySelector<HTMLButtonElement>('button.claim')!.click();
-    const layerHost = document.querySelector('[data-hf-ui="layer"]') as HTMLElement;
+    const layerHost = document.querySelector('[data-socratica-ui="layer"]') as HTMLElement;
     const panel = layerHost.shadowRoot!.querySelector('.panel')!;
     expect(panel.textContent).toContain('It was founded by Dalia Moss in 1910.');
     expect(panel.querySelector('.correction')!.textContent).toBe('It was founded by Dalia Moss in 1902.');
@@ -46,7 +46,7 @@ describe('end to end on the saved ChatGPT fixture (MockLLM + supplied documents)
     expect(link.rel).toBe('noopener noreferrer');
 
     // The page's own answer DOM was not modified.
-    expect(m.content.querySelector('[data-hf-ui]')).toBeNull();
+    expect(m.content.querySelector('[data-socratica-ui]')).toBeNull();
   });
 
   it('renders evidence text as text, never as HTML', async () => {

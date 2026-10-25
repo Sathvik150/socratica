@@ -1,110 +1,130 @@
 /*
- * In-page overlay (summary bar + evidence panel), rendered inside Shadow DOM.
- * Compiled by the Tailwind CLI into src/ui/overlay.generated.ts. No preflight: the shadow
- * root is isolated already, and :host { all: initial } resets inherited page styles.
+ * In-page overlay (summary bar + evidence panel), rendered inside Shadow DOM on chatgpt.com.
+ * Compiled by the Tailwind CLI into src/ui/overlay.generated.ts. Same Socratica tokens as the
+ * extension pages; follows ChatGPT's light/dark theme through :host([data-theme]). The display
+ * serif is registered on the page by loadSerifFont() (a relative @font-face here would point at
+ * chatgpt.com), with a system serif stack as the fallback.
  */
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities) source(none);
 @import "./tokens.css";
 
-@layer base {
-  :host { all: initial; @apply hf-light; }
-  /* The overlay follows ChatGPT's theme, not only the OS setting. */
-  :host([data-theme="dark"]) { @apply hf-dark; }
-  * { box-sizing: border-box; font-family: var(--font-sans); }
-  [hidden] { display: none !important; }
-  svg { flex: none; }
+:host { all: initial; @apply sc-light; }
+:host([data-theme="dark"]) { @apply sc-dark; }
+* { box-sizing: border-box; font-family: var(--font-sans); }
+[hidden] { display: none !important; }
+svg { flex: none; }
+
+/* ---------- Summary bar ---------- */
+.bar {
+  position: relative; margin: 12px 0 8px; padding: 12px 14px 10px; border-radius: 18px; font-size: 13px; line-height: 1.5;
+  color: var(--sc-body); background: var(--sc-surface); box-shadow: var(--shadow-ring), var(--sc-shadow); animation: var(--animate-rise);
 }
+.head { display: flex; align-items: center; gap: 8px; }
+.brand { display: inline-flex; align-items: center; gap: 8px; color: var(--sc-ink); }
+.logo { display: inline-flex; color: var(--sc-gold); }
+.wordmark { font: 15px/1 var(--font-display); letter-spacing: .26em; text-transform: uppercase; color: var(--sc-ink); }
+.spacer { flex: 1; }
+.status { color: var(--sc-muted); }
 
-@layer components {
-  /* ---------- Summary bar ---------- */
-  .bar {
-    @apply relative mt-2.5 mb-1.5 px-3 py-2.5 rounded-card text-[13px] leading-[1.45]
-      bg-surface text-fg border border-line animate-rise;
-  }
-  .head { @apply flex items-center gap-2; }
-  .brand { @apply inline-flex items-center gap-[7px] font-semibold tracking-[-.01em]; }
-  .logo { @apply size-5 rounded-md grid place-items-center bg-accent text-white; }
-  .spacer { @apply flex-1; }
-  .status { @apply text-muted; }
+/* Skeleton: the finished bar's footprint (meter, chip row, details toggle), so results don't shift the page. */
+.skeleton { @apply sc-skeleton; }
+.skeleton.meter-ph { height: 8px; margin: 12px 0 10px; }
+.skeleton-row { display: flex; gap: 6px; }
+.skeleton.chip-ph { width: 96px; height: 24px; }
+.skeleton.chip-ph:nth-child(2) { width: 108px; }
+.skeleton.chip-ph:last-child { width: 70px; }
+.skeleton.toggle-ph { width: 104px; height: 14px; margin: 12px 0 4px; border-radius: 6px; }
 
-  .skeleton { @apply hf-skeleton; }
-  /* Skeleton: the finished bar's footprint (meter, chip row, details toggle), so results don't shift the page. */
-  .skeleton.meter-ph { @apply h-1.5 mt-2.5 mb-2; }
-  .skeleton-row { @apply flex gap-1.5; }
-  .skeleton.chip-ph { @apply w-[92px] h-[22px]; }
-  .skeleton.chip-ph:nth-child(2) { @apply w-[104px]; }
-  .skeleton.chip-ph:last-child { @apply w-[68px]; }
-  .skeleton.toggle-ph { @apply w-[96px] h-3.5 mt-[11px] mb-[3px] rounded-md; }
+.meter { display: flex; gap: 3px; height: 8px; margin: 12px 0 10px; border-radius: 999px; overflow: hidden; background: var(--sc-surface-2); }
+.meter i { display: block; height: 100%; transform-origin: left; animation: var(--animate-grow); }
+.meter .supported { background: var(--sc-ok-solid); }
+.meter .contradicted { background: var(--sc-bad-solid); }
+.meter .unverifiable { background: var(--sc-unk-solid); }
 
-  .meter { @apply flex gap-0.5 h-1.5 mt-2.5 mb-2 rounded-full overflow-hidden bg-surface-3; }
-  .meter i { @apply block h-full origin-left animate-grow; }
-  .meter .supported { @apply bg-ok; }
-  .meter .contradicted { @apply bg-bad; }
-  .meter .unverifiable { @apply bg-unk; }
-
-  .row { @apply flex flex-wrap items-center gap-1.5; }
-  .chip { @apply inline-flex items-center gap-1 px-[9px] py-0.5 rounded-full text-xs font-semibold whitespace-nowrap border border-transparent; }
-  .chip.supported { @apply bg-ok-bg text-ok border-ok-line; }
-  .chip.contradicted { @apply bg-bad-bg text-bad border-bad-line; }
-  .chip.unverifiable { @apply bg-unk-bg text-unk border-unk-line; }
-  .chip.checked { @apply bg-transparent text-muted font-medium pl-0.5; }
-  .tag { @apply inline-flex items-center px-2 py-px rounded-full text-[11px] font-medium text-muted border border-dashed border-line-strong cursor-help; }
-
-  button {
-    @apply inline-flex items-center gap-[5px] text-xs font-medium cursor-pointer rounded-control px-[9px] py-1
-      border border-line bg-surface text-fg transition-[border-color,background-color,transform] duration-150;
-    font-family: inherit;
-  }
-  button:hover { @apply bg-surface-2 border-line-strong; }
-  button:active { @apply translate-y-px; }
-  button:focus-visible { @apply outline-2 outline-accent outline-offset-2; }
-  button.ghost { @apply border-transparent bg-transparent; }
-  button.ghost:hover { @apply bg-surface-2 border-line; }
-  button.more-toggle { @apply mt-1.5 px-1.5 py-[3px] text-muted font-medium; }
-  button.more-toggle svg { @apply transition-transform duration-150; }
-  button.more-toggle.open svg { @apply rotate-180; }
-
-  ul.details { @apply list-none mt-1 mb-0 p-0 grid gap-0.5; }
-  ul.details li { @apply flex gap-2 items-baseline px-1 py-1.5 border-t border-line; }
-  ul.details li button.claim {
-    @apply border-0 bg-transparent text-left p-0 text-fg text-[12.5px] font-normal underline decoration-line-strong underline-offset-[3px];
-  }
-  ul.details li button.claim:hover { @apply decoration-accent bg-transparent; }
-
-  .note { @apply flex gap-1.5 items-start mt-2 px-[9px] py-1.5 rounded-control text-xs bg-unk-bg text-fg border border-unk-line; }
-  .note svg { @apply text-unk mt-px; }
-  .note.info { @apply bg-surface-2 border-line text-muted; }
-  .note.info svg { @apply text-muted; }
-
-  /* ---------- Fallback highlight boxes (browsers without the CSS Custom Highlight API) ---------- */
-  .mark { @apply absolute left-0 top-0 will-change-transform pointer-events-auto cursor-pointer rounded-[3px]; }
-  .mark.contradicted { background: rgba(235, 87, 87, .16); box-shadow: inset 0 -2px 0 #eb5757; }
-  .mark.unverifiable { box-shadow: inset 0 -2px 0 rgba(242, 153, 74, .95); }
-
-  /* ---------- Evidence panel (the one floating element, so the one with a shadow) ---------- */
-  .panel {
-    @apply fixed z-[2] pointer-events-auto w-[min(440px,calc(100vw-24px))] max-h-[min(70vh,560px)] overflow-auto overscroll-contain
-      bg-surface text-fg border border-line-strong rounded-float shadow-float px-4 pt-3.5 pb-4 text-[13px] leading-normal animate-pop;
-  }
-  .panel::before { content: ""; @apply absolute inset-x-0 top-0 h-[3px] rounded-t-float bg-(--accent,var(--color-accent)); }
-  .panel.contradicted { --accent: var(--hf-bad); }
-  .panel.supported { --accent: var(--hf-ok); }
-  .panel.unverifiable { --accent: var(--hf-unk); }
-  .panel h3 { @apply mt-0.5 mb-2 text-[13px] flex items-center gap-2.5; }
-  .conf { @apply inline-flex items-center gap-1.5 text-muted font-medium text-xs; }
-  .conf .track { @apply w-16 h-[5px] rounded-full bg-surface-3 overflow-hidden; }
-  .conf .fill { @apply block h-full rounded-[inherit] bg-(--accent,var(--color-accent)); }
-  .panel .claim { @apply text-sm font-semibold mt-1 mb-2.5 tracking-[-.005em]; }
-  .panel .label { @apply text-[10.5px] font-bold uppercase tracking-[.08em] text-muted mt-3 mb-[5px]; }
-  .panel blockquote { @apply mt-0 mx-0 mb-2 px-[11px] py-[9px] rounded-r-control border-l-[3px] border-(--accent,var(--color-accent)) bg-surface-2; }
-  .panel .quote { @apply text-[13px]; }
-  .panel .source { @apply inline-flex items-center gap-1 mt-1.5 text-[11.5px] font-medium no-underline text-(--hf-link); }
-  .panel a.source:hover { @apply underline; }
-  .panel span.source { @apply text-muted; }
-  .panel .correction { @apply px-[11px] py-[9px] rounded-control bg-ok-bg border border-ok-line font-medium; }
-  .panel .close { @apply absolute top-2.5 right-2.5 size-7 p-0 justify-center rounded-control; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; white-space: nowrap;
+  font-size: 12px; font-weight: 600; box-shadow: inset 0 0 0 1px transparent;
 }
+.chip svg { stroke-width: 2.2; }
+.chip.supported { color: var(--sc-ok); background: var(--sc-ok-bg); box-shadow: inset 0 0 0 1px var(--sc-ok-line); }
+.chip.contradicted { color: var(--sc-bad); background: var(--sc-bad-bg); box-shadow: inset 0 0 0 1px var(--sc-bad-line); }
+.chip.unverifiable { color: var(--sc-unk); background: var(--sc-unk-bg); box-shadow: inset 0 0 0 1px var(--sc-unk-line); }
+.chip.checked { color: var(--sc-muted); font-weight: 500; padding-left: 2px; }
+.tag { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 500; color: var(--sc-muted); box-shadow: inset 0 0 0 1px var(--sc-line-strong); cursor: help; }
+
+button {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; cursor: pointer;
+  font: 500 12.5px/1.2 var(--font-sans); color: var(--sc-ink); background: var(--sc-surface); border: 1px solid var(--sc-line-strong);
+  transition: background-color .15s var(--ease-calm), border-color .15s var(--ease-calm), transform .12s var(--ease-calm);
+}
+button:hover { background: var(--sc-surface-2); }
+button:active { transform: translateY(1px); }
+button:focus-visible { outline: none; box-shadow: var(--sc-focus); }
+button.ghost { border-color: transparent; background: transparent; }
+button.ghost:hover { background: var(--sc-surface-2); }
+button.more-toggle { margin-top: 6px; padding: 4px 8px; color: var(--sc-muted); font-weight: 500; }
+button.more-toggle svg { transition: transform .15s var(--ease-calm); }
+button.more-toggle.open svg { transform: rotate(180deg); }
+
+ul.details { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 2px; }
+ul.details li { display: flex; gap: 10px; align-items: baseline; padding: 8px 4px; border-top: 1px solid var(--sc-line); }
+ul.details li button.claim {
+  padding: 0; border: 0; border-radius: 0; background: none; text-align: left; font-size: 13px; font-weight: 400; color: var(--sc-ink);
+  text-decoration: underline; text-decoration-color: var(--sc-line-strong); text-underline-offset: 3px;
+}
+ul.details li button.claim:hover { background: none; text-decoration-color: var(--sc-gold); }
+.note {
+  display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; padding: 8px 10px; border-radius: 12px; font-size: 12.5px;
+  color: var(--sc-ink); background: var(--sc-unk-bg); box-shadow: inset 0 0 0 1px var(--sc-unk-line);
+}
+.note svg { color: var(--sc-unk); margin-top: 1px; }
+.note.info { color: var(--sc-muted); background: var(--sc-surface-2); box-shadow: inset 0 0 0 1px var(--sc-line); }
+.note.info svg { color: var(--sc-gold-text); }
+
+/* ---------- Fallback highlight boxes (browsers without the CSS Custom Highlight API) ---------- */
+.mark { position: absolute; left: 0; top: 0; will-change: transform; pointer-events: auto; cursor: pointer; border-radius: 3px; }
+.mark.contradicted { background: rgba(192, 80, 63, .16); box-shadow: inset 0 -2px 0 #b4483a; }
+.mark.unverifiable { box-shadow: inset 0 -2px 0 rgba(178, 132, 46, .95); }
+
+/* ---------- Evidence panel: the one floating element, so the one with a real shadow ---------- */
+.panel {
+  position: fixed; z-index: 2; pointer-events: auto; width: min(440px, calc(100vw - 24px)); max-height: min(72vh, 580px); overflow: auto; overscroll-behavior: contain;
+  padding: 16px 18px 18px; border-radius: var(--radius-float); font-size: 13px; line-height: 1.55;
+  color: var(--sc-body); background: var(--sc-surface); box-shadow: var(--shadow-ring), var(--sc-shadow), 0 24px 60px -30px rgba(40, 30, 10, .45);
+  animation: var(--animate-pop);
+}
+.panel .close { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; padding: 0; justify-content: center; color: var(--sc-muted); }
+.verdict-head { display: flex; gap: 12px; align-items: center; margin: 2px 40px 12px 0; padding: 10px 12px; border-radius: 14px; background: var(--sc-canvas); box-shadow: inset 0 0 0 1px var(--sc-line); }
+.seal { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: none; color: #fffdf8; }
+.seal svg { stroke-width: 2.4; }
+.panel.supported .seal { background: var(--sc-ok-solid); }
+.panel.contradicted .seal { background: var(--sc-bad-solid); }
+.panel.unverifiable .seal { background: var(--sc-unk-solid); }
+.verdict-title b { display: block; font-size: 14px; font-weight: 600; line-height: 1.3; color: var(--sc-ink); }
+.verdict-title small { display: block; font-size: 12px; line-height: 1.4; color: var(--sc-muted); }
+.panel .claim { margin: 0 0 8px; font: 19px/1.3 var(--font-display); color: var(--sc-ink); }
+.conf { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; color: var(--sc-muted); }
+.conf .track { width: 64px; height: 5px; border-radius: 999px; overflow: hidden; background: var(--sc-surface-2); }
+.conf .fill { display: block; height: 100%; border-radius: inherit; background: var(--sc-gold); }
+.panel .label { margin: 16px 0 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--sc-muted); }
+.panel .reason { color: var(--sc-body); }
+.panel .correction { padding: 10px 12px; border-radius: 12px; font-weight: 500; color: var(--sc-ink); background: var(--sc-ok-bg); box-shadow: inset 0 0 0 1px var(--sc-ok-line); }
+.evidence + .evidence { margin-top: 12px; }
+.evidence .source {
+  display: flex; gap: 10px; align-items: center; padding: 9px 12px; border-radius: 12px; text-decoration: none; color: var(--sc-ink);
+  background: var(--sc-canvas); box-shadow: inset 0 0 0 1px var(--sc-line); transition: box-shadow .15s var(--ease-calm);
+}
+.evidence a.source:hover { box-shadow: inset 0 0 0 1px var(--sc-gold); }
+.evidence .source > svg:first-child { color: var(--sc-gold-text); }
+.evidence .source > svg:last-child { margin-left: auto; color: var(--sc-muted); }
+.source-meta { min-width: 0; display: grid; }
+.source-meta b { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.source-meta small { font-size: 11.5px; color: var(--sc-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.panel blockquote { margin: 8px 0 0 4px; padding: 0 0 0 12px; border-left: 2px solid var(--sc-gold); }
+.panel .quote { font-size: 13px; color: var(--sc-body); }
+.panel .empty { color: var(--sc-muted); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before { animation: none !important; transition: none !important; }

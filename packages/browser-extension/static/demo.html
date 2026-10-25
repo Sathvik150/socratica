@@ -3,37 +3,75 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Offline demo of Hallucination Firewall: claims in a chatbot answer are checked against evidence and annotated in place.">
-  <title>Hallucination Firewall demo</title>
+  <meta name="description" content="Socratica, a firewall against AI hallucinations: every claim in an AI answer is checked against evidence and annotated in place, with the source quote behind each verdict.">
+  <title>Socratica: a firewall against AI hallucinations</title>
   <link rel="icon" href="icons/icon-32.png">
   <link rel="stylesheet" href="theme.css">
 </head>
-<body>
-  <div class="hero">
-    <h1>Hallucination <span>Firewall</span></h1>
-    <p>Offline demo. The answer below is checked against the supplied evidence with a mock judge, and nothing leaves your browser. Click the highlighted claim to see why it was flagged.</p>
-    <ol class="steps"><li><b>1</b> extract claims</li><li><b>2</b> retrieve evidence</li><li><b>3</b> judge with verbatim quotes</li><li><b>4</b> annotate</li></ol>
-  </div>
-  <main>
-    <div class="chat">
-      <div data-message-author-role="user" data-message-id="demo-user-1">
-        <div class="whitespace-pre-wrap">Tell me about the Orrin Library.</div>
-      </div>
-      <div data-message-author-role="assistant" data-message-id="demo-asst-1">
-        <div class="markdown prose">
-          <p>The <strong>Orrin Library</strong> is a public library in Velmora.</p>
-          <p>It was founded by Dalia Moss in 1910. The library holds 2.4 million volumes.</p>
-          <ul><li>I think it is the nicest library in the region.</li></ul>
+<body class="demo">
+  <header class="site-nav">
+    <a class="brand" href="#top" aria-label="Socratica"><svg viewBox="0 0 64 64" width="34" height="34" aria-hidden="true"><path fill="currentColor" d="M22.6 52.4 L20.8 51.4 L19.1 50.2 L17.5 49 L16.1 47.5 L14.8 45.9 L13.6 44.3 L12.6 42.5 L11.8 40.6 L11.2 38.7 L10.8 36.7 L10.5 34.7 L10.5 32.6 L10.6 30.6 L10.9 28.6 L11.4 26.6 L12.1 24.7 L13 22.9 L14 21.1 L15.2 19.5 L16.6 17.9 L18.1 16.6 L19.7 15.3 L21.4 14.2 L23.2 13.3 L23.7 14.3 L22 15.2 L20.3 16.2 L18.8 17.4 L17.4 18.7 L16.1 20.2 L14.9 21.7 L14 23.4 L13.1 25.1 L12.5 26.9 L12 28.8 L11.7 30.7 L11.6 32.6 L11.6 34.6 L11.9 36.5 L12.3 38.4 L12.9 40.2 L13.6 42 L14.6 43.7 L15.7 45.3 L16.9 46.8 L18.3 48.1 L19.7 49.4 L21.3 50.5 L23 51.4ZM18.8 49.3Q13.9 52.4 9.2 49.2Q14 46.1 18.8 49.3ZM18.8 49.3Q14.6 45.4 16.6 40Q20.8 43.9 18.8 49.3ZM14.4 44.5Q9.2 45.9 5.8 41.6Q11.1 40.2 14.4 44.5ZM14.4 44.5Q11.8 39.7 15.2 35.5Q17.8 40.2 14.4 44.5ZM11.8 38.6Q6.7 38.3 4.9 33.5Q10 33.8 11.8 38.6ZM11.8 38.6Q10.8 33.6 15 30.7Q16 35.7 11.8 38.6ZM11 32.2Q6.5 30.4 6.3 25.7Q10.8 27.4 11 32.2ZM11 32.2Q11.6 27.4 16.2 26.1Q15.6 30.8 11 32.2ZM12.3 25.8Q8.8 23 10 18.7Q13.5 21.5 12.3 25.8ZM12.3 25.8Q14.1 21.7 18.6 21.8Q16.7 25.9 12.3 25.8ZM15.4 20.1Q13.1 16.7 15.4 13.2Q17.7 16.6 15.4 20.1ZM15.4 20.1Q18.2 17.1 22.1 18.4Q19.3 21.5 15.4 20.1ZM20.1 15.7Q19.1 12 22.1 9.6Q23.1 13.3 20.1 15.7ZM20.1 15.7Q23.5 13.8 26.5 16.1Q23.2 18 20.1 15.7ZM23.5 13.8Q25.6 10.3 29.6 11.1Q27.5 14.6 23.5 13.8ZM41 51.4 L42.7 50.5 L44.3 49.4 L45.7 48.1 L47.1 46.8 L48.3 45.3 L49.4 43.7 L50.4 42 L51.1 40.2 L51.7 38.4 L52.1 36.5 L52.4 34.6 L52.4 32.6 L52.3 30.7 L52 28.8 L51.5 26.9 L50.9 25.1 L50 23.4 L49.1 21.7 L47.9 20.2 L46.6 18.7 L45.2 17.4 L43.7 16.2 L42 15.2 L40.3 14.3 L40.8 13.3 L42.6 14.2 L44.3 15.3 L45.9 16.6 L47.4 17.9 L48.8 19.5 L50 21.1 L51 22.9 L51.9 24.7 L52.6 26.6 L53.1 28.6 L53.4 30.6 L53.5 32.6 L53.5 34.7 L53.2 36.7 L52.8 38.7 L52.2 40.6 L51.4 42.5 L50.4 44.3 L49.2 45.9 L47.9 47.5 L46.5 49 L44.9 50.2 L43.2 51.4 L41.4 52.4ZM45.2 49.3Q50 46.1 54.8 49.2Q50.1 52.4 45.2 49.3ZM45.2 49.3Q43.2 43.9 47.4 40Q49.4 45.4 45.2 49.3ZM49.6 44.5Q52.9 40.2 58.2 41.6Q54.8 45.9 49.6 44.5ZM49.6 44.5Q46.2 40.2 48.8 35.5Q52.2 39.7 49.6 44.5ZM52.2 38.6Q54 33.8 59.1 33.5Q57.3 38.3 52.2 38.6ZM52.2 38.6Q48 35.7 49 30.7Q53.2 33.6 52.2 38.6ZM53 32.2Q53.2 27.4 57.7 25.7Q57.5 30.4 53 32.2ZM53 32.2Q48.4 30.8 47.8 26.1Q52.4 27.4 53 32.2ZM51.7 25.8Q50.5 21.5 54 18.7Q55.2 23 51.7 25.8ZM51.7 25.8Q47.3 25.9 45.4 21.8Q49.9 21.7 51.7 25.8ZM48.6 20.1Q46.3 16.6 48.6 13.2Q50.9 16.7 48.6 20.1ZM48.6 20.1Q44.7 21.5 41.9 18.4Q45.8 17.1 48.6 20.1ZM43.9 15.7Q40.9 13.3 41.9 9.6Q44.9 12 43.9 15.7ZM43.9 15.7Q40.8 18 37.5 16.1Q40.5 13.8 43.9 15.7ZM40.5 13.8Q36.5 14.6 34.4 11.1Q38.4 10.3 40.5 13.8Z"/></svg><span class="wordmark">Socratica</span></a>
+    <nav aria-label="Page sections"><a href="#features">Features</a><a href="#how">How it works</a><a href="#idea">About</a></nav>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">AI you can trust</p>
+        <h1>A Firewall Against AI Hallucinations</h1>
+        <p class="lede">Socratica verifies AI responses, checks every claim against reliable sources, and helps you think more critically. This page is a live, offline demo: click the underlined claim.</p>
+        <div class="row">
+          <a class="button primary" href="#how">How it works <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          <a class="play-link" href="#idea"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17zM10.3 8.9l4.6 3.1-4.6 3.1z"/></svg>Why Socratica</a>
         </div>
       </div>
-    </div>
-    <aside>
-      <section>
-        <h2>Evidence supplied to <code>verify()</code> <span class="chip checked">fictional</span></h2>
+      <div class="chat" id="demo">
+        <div data-message-author-role="user" data-message-id="demo-user-1">
+          <div class="whitespace-pre-wrap">Tell me about the Orrin Library.</div>
+        </div>
+        <div data-message-author-role="assistant" data-message-id="demo-asst-1">
+          <div class="markdown prose">
+            <p>The <strong>Orrin Library</strong> is a public library in Velmora.</p>
+            <p>It was founded by Dalia Moss in 1910. The library holds 2.4 million volumes.</p>
+            <ul><li>I think it is the nicest library in the region.</li></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="features" id="features" aria-labelledby="features-title">
+      <h2 id="features-title" class="sr-only">Features</h2>
+      <div class="feature"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 20.5h-7a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1H14L18.5 8v3M14 3.5V8h4.5M8.5 9.5h3M8.5 12.5h4M16.8 19.6a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2zM18.7 19.4l2 2"/></svg><div><h3>Verifies claims</h3><p>Checks AI responses against reliable sources on the web.</p></div></div>
+      <div class="feature"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5L5 6.2v5.3c0 4.2 2.9 7.8 7 9 4.1-1.2 7-4.8 7-9V6.2zM9 12l2.2 2.2L15.3 10"/></svg><div><h3>Flags uncertainty</h3><p>Marks claims the evidence contradicts or cannot confirm.</p></div></div>
+      <div class="feature"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.8C10.2 5.5 7.6 4.8 4.5 4.8v13c3.1 0 5.7.7 7.5 2 1.8-1.3 4.4-2 7.5-2v-13c-3.1 0-5.7.7-7.5 2zM12 6.8v13"/></svg><div><h3>Shows sources</h3><p>Every verdict quotes the source text, with a link.</p></div></div>
+      <div class="feature"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 5h15a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4.2 3.5V16H4.5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM10.2 9a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.4M12 13.9v.01"/></svg><div><h3>Encourages critical thinking</h3><p>Helps you ask better questions of any answer.</p></div></div>
+    </section>
+
+    <section class="idea" id="idea">
+      <div>
+        <p class="eyebrow">Built on a simple idea</p>
+        <h2>Question More. Trust Better.</h2>
+        <p>Socratica is inspired by Socrates and the belief that better questions lead to better answers. It brings transparency and evidence to every AI response: each claim is marked supported, contradicted or unverifiable, and missing evidence is never treated as proof of an error.</p>
+      </div>
+      <figure class="quote"><blockquote>The unexamined answer is not worth trusting.</blockquote><figcaption>After Socrates</figcaption></figure>
+    </section>
+
+    <section class="how" id="how">
+      <p class="eyebrow">How it works</p>
+      <h2>Four steps, every answer</h2>
+      <ol class="steps">
+        <li><b>Extract claims</b>Each checkable factual sentence becomes a claim.</li>
+        <li><b>Search for evidence</b>A web search engine and the sources you choose.</li>
+        <li><b>Judge with quotes</b>Every verdict must quote its source word for word.</li>
+        <li><b>Annotate</b>Claims are underlined in place, with the evidence a click away.</li>
+      </ol>
+      <section class="card">
+        <h2>Evidence supplied to <code>verify()</code> in this demo <span class="badge">Fictional</span></h2>
         <ul id="evidence"></ul>
       </section>
-    </aside>
+    </section>
   </main>
+  <footer class="site-foot">Socratica is open source (MIT). This demo runs entirely in your browser with a mock judge; nothing is sent anywhere.</footer>
   <script src="demo.js" defer></script>
 </body>
 </html>

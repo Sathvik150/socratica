@@ -1,5 +1,5 @@
 {
-  "name": "@hallucination-firewall/benchmark",
+  "name": "@socratica/benchmark",
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
@@ -11,7 +11,7 @@
     "bench": "node dist/run.js"
   },
   "dependencies": {
-    "@hallucination-firewall/core": "workspace:*",
+    "@socratica/core": "workspace:*",
     "zod": "4.6.7"
   }
 }

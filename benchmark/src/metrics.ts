@@ -1,4 +1,4 @@
-import { VERDICTS, type Verdict } from '@hallucination-firewall/core';
+import { VERDICTS, type Verdict } from '@socratica/core';
 
 export interface LabelMetrics {
   precision: number | null;

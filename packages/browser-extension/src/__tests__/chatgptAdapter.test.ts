@@ -100,7 +100,7 @@ describe('MessageWatcher', () => {
     await vi.advanceTimersByTimeAsync(100);
     expect(ready).toHaveLength(1);
     const ui = document.createElement('div');
-    ui.setAttribute('data-hf-ui', '');
+    ui.setAttribute('data-socratica-ui', '');
     chatgptAdapter.getContentElement(chatgptAdapter.findAssistantMessages(document)[0]!).appendChild(ui);
     ui.textContent = 'summary bar text';
     await vi.advanceTimersByTimeAsync(100);

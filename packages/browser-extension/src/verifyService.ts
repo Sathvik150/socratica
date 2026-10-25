@@ -1,6 +1,5 @@
 import {
   AnthropicProvider,
-  BraveSearchEvidenceProvider,
   HeuristicLLM,
   OpenAIProvider,
   WikipediaEvidenceProvider,
@@ -9,17 +8,18 @@ import {
   WorldBankEvidenceProvider,
   GovUkEvidenceProvider,
   GoogleFactCheckEvidenceProvider,
-  TavilyEvidenceProvider,
   UrlEvidenceProvider,
+  WEB_SEARCH_ENGINES,
+  createWebSearch,
   trustedUrl,
   runVerification,
   type EvidenceProvider,
   type FetchLike,
   type LLMProvider,
-} from '@hallucination-firewall/core';
+} from '@socratica/core';
 import type { PlatformId } from './adapters/adapter.js';
 import type { TestJudgeResponse, VerifyResponse } from './messages.js';
-import { DEFAULT_MODELS, HOST_PERMISSIONS, hasValidConsent, localOrigin, type Settings } from './settings.js';
+import { DEFAULT_MODELS, HOST_PERMISSIONS, WEB_KEY_FIELD, hasValidConsent, localOrigin, type Settings } from './settings.js';
 
 // One Wikipedia provider per fetch function, so its article cache survives across answers
 // and the extension sends Wikimedia fewer requests.
@@ -94,6 +94,26 @@ function withLocalHints(fetch: FetchLike, baseUrl: string, model: string): Fetch
   };
 }
 
+/**
+ * The required web search engine, or why it can't be used. Web search is mandatory: without it
+ * most real-world claims have nothing to be checked against.
+ */
+export async function webSearchFor(settings: Settings, deps: ServiceDeps): Promise<{ provider: EvidenceProvider } | { error: string }> {
+  const { engine } = settings.evidence.web;
+  const apiKey = settings.evidence.web[WEB_KEY_FIELD[engine]].trim();
+  const name = WEB_SEARCH_ENGINES[engine].name;
+  let provider: EvidenceProvider;
+  try {
+    provider = cachedSource(deps.fetch, `web:${engine}:${apiKey}`, () => createWebSearch(engine, { fetch: deps.fetch, apiKey }));
+  } catch (err) {
+    return { error: `Web search is required. ${err instanceof Error ? err.message : `${name} is not set up.`} Open Settings to fix it.` };
+  }
+  if (!(await deps.hasPermission(HOST_PERMISSIONS[engine]))) {
+    return { error: `Web search is required, but permission to contact ${name} has not been granted. Open Settings and press Save.` };
+  }
+  return { provider };
+}
+
 function evidenceProviders(settings: Settings, deps: ServiceDeps, warnings: string[]): Promise<EvidenceProvider[]> {
   return (async () => {
     const providers: EvidenceProvider[] = [];
@@ -111,14 +131,11 @@ function evidenceProviders(settings: Settings, deps: ServiceDeps, warnings: stri
       if (await deps.hasPermission(HOST_PERMISSIONS[source])) providers.push(cachedSource(deps.fetch, source, create));
       else warnings.push(`${label} is enabled but its permission was not granted.`);
     }
-    for (const [source, label, apiKey, create] of [
-      ['googleFactCheck', 'Google Fact Check', settings.evidence.googleFactCheckApiKey, () => new GoogleFactCheckEvidenceProvider({ apiKey: settings.evidence.googleFactCheckApiKey, fetch: deps.fetch })],
-      ['tavily', 'Tavily', settings.evidence.tavilyApiKey, () => new TavilyEvidenceProvider({ apiKey: settings.evidence.tavilyApiKey, domains: settings.evidence.tavilyDomains, fetch: deps.fetch })],
-    ] as const) {
-      if (!settings.evidence[source]) continue;
-      if (!apiKey.trim()) warnings.push(`${label} is enabled but no API key is set.`);
-      else if (!(await deps.hasPermission(HOST_PERMISSIONS[source]))) warnings.push(`${label} is enabled but its permission was not granted.`);
-      else providers.push(cachedSource(deps.fetch, `${source}:${apiKey}:${source === 'tavily' ? JSON.stringify(settings.evidence.tavilyDomains) : ''}`, create));
+    if (settings.evidence.googleFactCheck) {
+      const apiKey = settings.evidence.googleFactCheckApiKey.trim();
+      if (!apiKey) warnings.push('Google Fact Check is enabled but no API key is set.');
+      else if (!(await deps.hasPermission(HOST_PERMISSIONS.googleFactCheck))) warnings.push('Google Fact Check is enabled but its permission was not granted.');
+      else providers.push(cachedSource(deps.fetch, `googleFactCheck:${apiKey}`, () => new GoogleFactCheckEvidenceProvider({ apiKey, fetch: deps.fetch })));
     }
     if (settings.evidence.urls) {
       if (!settings.evidence.trustedUrls.length) warnings.push('Trusted URLs are enabled but no URLs are set.');
@@ -130,12 +147,6 @@ function evidenceProviders(settings: Settings, deps: ServiceDeps, warnings: stri
         } catch { warnings.push('An invalid trusted URL was skipped. Only public HTTPS sources are allowed.'); }
       }
     }
-    if (settings.evidence.webSearch) {
-      if (!settings.evidence.webSearchApiKey) warnings.push('Web search is enabled but no API key is set.');
-      else if (!(await deps.hasPermission(HOST_PERMISSIONS.webSearch))) warnings.push('Web search is enabled but its permission was not granted.');
-      else providers.push(new BraveSearchEvidenceProvider({ apiKey: settings.evidence.webSearchApiKey, fetch: deps.fetch }));
-    }
-    if (providers.length === 0) warnings.push('No evidence source is active, so every claim will be unverifiable.');
     return providers;
   })();
 }
@@ -147,8 +158,10 @@ async function run(answer: string, question: string | undefined, settings: Setti
   if (settings.llm.provider === 'heuristic') {
     warnings.push('Using the offline heuristic judge: verdicts come from matching names, numbers and wording against the sources, without a language model. It misses paraphrases, so choose a model in Settings for more thorough checks.');
   }
+  const web = await webSearchFor(settings, deps);
+  if ('error' in web) return { status: 'error', message: web.error };
   try {
-    const providers = await evidenceProviders(settings, deps, warnings);
+    const providers = [web.provider, ...(await evidenceProviders(settings, deps, warnings))];
     const result = await runVerification({
       answer,
       llm: judge.llm,

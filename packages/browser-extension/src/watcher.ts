@@ -1,4 +1,4 @@
-import { hashString } from '@hallucination-firewall/core';
+import { hashString } from '@socratica/core';
 import type { ChatAdapter } from './adapters/adapter.js';
 import { extractText } from './textMap.js';
 
@@ -84,5 +84,5 @@ export class MessageWatcher {
 
 function isOwnUi(node: Node): boolean {
   const el = node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement;
-  return !!el?.closest('[data-hf-ui]');
+  return !!el?.closest('[data-socratica-ui]');
 }

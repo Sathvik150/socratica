@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Hallucination Firewall",
-  "version": "0.1.5",
-  "description": "Checks ChatGPT answers against retrieved evidence: claims are marked supported, contradicted or unverifiable, with source quotes.",
+  "name": "Socratica",
+  "version": "0.2.0",
+  "description": "A firewall against AI hallucinations: checks ChatGPT answers against web evidence, with the source quote behind every verdict.",
   "permissions": [
     "storage",
     "activeTab",
@@ -13,12 +13,13 @@
     "https://api.openai.com/*",
     "https://api.anthropic.com/*",
     "https://api.search.brave.com/*",
+    "https://api.firecrawl.dev/*",
+    "https://google.serper.dev/*",
     "https://www.wikidata.org/*",
     "https://www.ebi.ac.uk/*",
     "https://api.worldbank.org/*",
     "https://www.gov.uk/*",
     "https://factchecktools.googleapis.com/*",
-    "https://api.tavily.com/*",
     "https://*/*",
     "http://localhost/*",
     "http://127.0.0.1/*"
@@ -37,12 +38,22 @@
       "run_at": "document_idle"
     }
   ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "fonts/Garogier.ttf"
+      ],
+      "matches": [
+        "https://chatgpt.com/*"
+      ]
+    }
+  ],
   "options_ui": {
     "page": "options.html",
     "open_in_tab": true
   },
   "action": {
-    "default_title": "Hallucination Firewall",
+    "default_title": "Socratica",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon-16.png",

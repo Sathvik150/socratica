@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Post-validate fact-check verdicts (Python port of `hf-verify validate`; stdlib only).
+"""Post-validate fact-check verdicts (Python port of `socratica validate`; stdlib only).
 
 Usage:  python3 validate_verdicts.py verdicts.json [--format json|text]     ("-" reads stdin)
 
@@ -125,10 +125,9 @@ def load_passages(data, base_dir):
 def format_text(result):
     """Human-readable report, contradicted first; safe to paste to the user as-is."""
     order = {"contradicted": 0, "unverifiable": 1, "supported": 2}
-    icon = {"supported": "✔", "contradicted": "✘", "unverifiable": "?"}
     lines = [f'Summary: {result["summary"]["text"]}', ""]
     for v in sorted(result["verdicts"], key=lambda v: order[v["verdict"]]):
-        lines.append(f'{icon[v["verdict"]]} [{v["verdict"].upper()}] {v["claim"]}')
+        lines.append(f'[{v["verdict"].upper()}] {v["claim"]}')
         if v.get("rationale"):
             lines.append(f'    reason: {v["rationale"]}')
         for q in v["quotes"]:

@@ -1,6 +1,6 @@
 {
-  "name": "@hallucination-firewall/browser-extension",
-  "version": "0.1.5",
+  "name": "@socratica/browser-extension",
+  "version": "0.2.0",
   "private": true,
   "description": "Chrome MV3 extension: Review Mode fact verification for ChatGPT answers.",
   "license": "MIT",
@@ -12,7 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@hallucination-firewall/core": "workspace:*"
+    "@socratica/core": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/cli": "4.3.3",

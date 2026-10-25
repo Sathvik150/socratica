@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
-import { MockLLM, scoreResults, verifyClaim, type Claim, type ClaimVerdict, type Passage, type VerificationSummary } from '@hallucination-firewall/core';
+import { MockLLM, scoreResults, verifyClaim, type Claim, type ClaimVerdict, type Passage, type VerificationSummary } from '@socratica/core';
 
 /**
- * Input for `hf-verify validate`: verdicts produced by ANY model (for example,
+ * Input for `socratica validate`: verdicts produced by ANY model (for example,
  * the assistant running this as a skill), plus the passages it was shown.
  */
 export interface ValidateInput {

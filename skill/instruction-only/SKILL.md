@@ -1,10 +1,10 @@
 ---
-name: hallucination-firewall
+name: socratica
 description: Fact-check answers, drafts, and documents against supplied or retrieved evidence, reporting supported, contradicted, or unverifiable claims with verbatim source quotes. Use when asked to verify claims or detect hallucinations. This instruction-only variant does not machine-validate quotes.
 license: MIT
 ---
 
-# Hallucination Firewall
+# Socratica
 
 Check factual claims only against passages actually supplied or retrieved. Background
 knowledge cannot establish a verdict. Missing evidence means `unverifiable`.

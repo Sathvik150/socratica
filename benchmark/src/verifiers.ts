@@ -8,7 +8,7 @@ import {
   type LLMProvider,
   type Verdict,
   type VerifyOptions,
-} from '@hallucination-firewall/core';
+} from '@socratica/core';
 import { contentTokensForBaseline } from './baselineText.js';
 
 /**
@@ -20,7 +20,7 @@ export interface BaselineVerifier {
   verify(claim: string, evidence: EvidenceDocument[]): Promise<Verdict>;
 }
 
-/** Hallucination Firewall's own pipeline (retrieve -> judge -> post-validate) for a single given claim. */
+/** Socratica's own pipeline (retrieve -> judge -> post-validate) for a single given claim. */
 export class FirewallVerifier implements BaselineVerifier {
   readonly name: string;
   constructor(
@@ -28,7 +28,7 @@ export class FirewallVerifier implements BaselineVerifier {
     private readonly options: VerifyOptions = {},
     model?: string,
   ) {
-    this.name = `hallucination-firewall (${llm.id}${model ? `: ${model}` : ''})`;
+    this.name = `socratica (${llm.id}${model ? `: ${model}` : ''})`;
   }
 
   async verify(text: string, evidence: EvidenceDocument[]): Promise<Verdict> {

@@ -1,89 +1,120 @@
 /*
- * Design tokens (see DESIGN.md).
- *   - Values: open-design's Linear token package (vendor/open-design-linear-app.tokens.css, Apache-2.0),
- *     available here as --od-* (generated/od-tokens.css).
- *   - Rules: the Linear DESIGN.md from awesome-design-md (vendor/awesome-design-md-linear.DESIGN.md, MIT).
- *   - Our additions: a light set (both sources are dark-only) and three verdict colours.
- * The --hf-* variables switch between light and dark; Tailwind's @theme maps them onto utilities
- * (bg-surface, text-muted, border-line, text-ok, rounded-card, ...).
+ * Socratica design tokens (see DESIGN.md).
+ *   - Structure and depth: open-design's Claude token package (vendor/open-design-claude.tokens.css,
+ *     Apache-2.0), available here as --od-*: parchment surfaces, ring hairlines, radii, motion.
+ *   - Rules: the Claude DESIGN.md from awesome-design-md (vendor/awesome-design-md-claude.DESIGN.md, MIT):
+ *     serif display over a humanist sans, one accent used sparingly, generous reading line-height.
+ *   - Socratica: a subtle off-white canvas, antique gold instead of terracotta, the laurel mark,
+ *     Garogier for display type, three verdict colours, and a warm dark set for ChatGPT's dark theme.
+ * The --sc-* variables switch between light and dark; Tailwind's @theme maps them onto utilities.
  */
 @import "./generated/od-tokens.css";
 
+/* The display serif is declared per surface: an @font-face in pages.css for extension pages, and
+   loadSerifFont() for the overlay, since a relative font URL inside ChatGPT would point at chatgpt.com. */
+
 @theme {
-  /* No web fonts in the extension: Inter when the user has it installed, then the system UI font. */
-  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Socratica Garogier", "Cormorant Garamond", "EB Garamond", Garamond, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  --color-canvas: var(--hf-bg);
-  --color-surface: var(--hf-surface);
-  --color-surface-2: var(--hf-surface-2);
-  --color-surface-3: var(--hf-surface-3);
-  --color-line: var(--hf-border);
-  --color-line-strong: var(--hf-border-strong);
-  --color-fg: var(--hf-fg);
-  --color-fg-2: var(--hf-fg-2);
-  --color-muted: var(--hf-muted);
-  --color-accent: var(--od-accent);
-  --color-accent-hover: var(--od-accent-hover);
-  --color-accent-active: var(--od-accent-active);
-  --color-ok: var(--hf-ok);
-  --color-ok-bg: var(--hf-ok-bg);
-  --color-ok-line: var(--hf-ok-border);
-  --color-bad: var(--hf-bad);
-  --color-bad-bg: var(--hf-bad-bg);
-  --color-bad-line: var(--hf-bad-border);
-  --color-unk: var(--hf-unk);
-  --color-unk-bg: var(--hf-unk-bg);
-  --color-unk-line: var(--hf-unk-border);
+  --color-canvas: var(--sc-canvas);
+  --color-surface: var(--sc-surface);
+  --color-surface-2: var(--sc-surface-2);
+  --color-line: var(--sc-line);
+  --color-line-strong: var(--sc-line-strong);
+  --color-ink: var(--sc-ink);
+  --color-body: var(--sc-body);
+  --color-muted: var(--sc-muted);
+  --color-gold: var(--sc-gold);
+  --color-gold-strong: var(--sc-gold-strong);
+  --color-gold-text: var(--sc-gold-text);
+  --color-gold-soft: var(--sc-gold-soft);
+  --color-on-gold: var(--sc-on-gold);
+  --color-ok: var(--sc-ok);
+  --color-ok-bg: var(--sc-ok-bg);
+  --color-ok-line: var(--sc-ok-line);
+  --color-ok-solid: var(--sc-ok-solid);
+  --color-bad: var(--sc-bad);
+  --color-bad-bg: var(--sc-bad-bg);
+  --color-bad-line: var(--sc-bad-line);
+  --color-bad-solid: var(--sc-bad-solid);
+  --color-unk: var(--sc-unk);
+  --color-unk-bg: var(--sc-unk-bg);
+  --color-unk-line: var(--sc-unk-line);
+  --color-unk-solid: var(--sc-unk-solid);
 
-  --radius-control: var(--od-radius-sm);
-  --radius-chip: var(--od-radius-md);
+  /* Claude's softness: 8px standard, 12px primary controls, 16px featured containers. */
+  --radius-soft: var(--od-radius-sm);
+  --radius-control: var(--od-radius-md);
   --radius-card: var(--od-radius-lg);
-  /* One step past open-design's panel radius: the floating panel and the popup card read as rounded. */
-  --radius-float: 16px;
+  --radius-float: 20px;
 
-  --shadow-float: var(--hf-shadow);
-  --ease-out-soft: var(--od-ease-standard);
+  --shadow-ring: 0 0 0 1px var(--sc-line);
+  --shadow-whisper: var(--sc-shadow);
+  --ease-calm: var(--od-ease-standard);
 
-  --animate-rise: hf-rise .28s var(--ease-out-soft) both;
-  --animate-pop: hf-pop .16s var(--ease-out-soft) both;
-  --animate-shimmer: hf-shimmer 1.2s linear infinite;
-  --animate-grow: hf-grow .5s var(--ease-out-soft) both;
+  --animate-rise: sc-rise .3s var(--od-ease-standard) both;
+  --animate-pop: sc-pop .18s var(--od-ease-standard) both;
+  --animate-shimmer: sc-shimmer 1.4s linear infinite;
+  --animate-grow: sc-grow .5s var(--od-ease-standard) both;
 
-  @keyframes hf-rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-  @keyframes hf-pop { from { opacity: 0; transform: translateY(4px) scale(.98); } to { opacity: 1; transform: none; } }
-  @keyframes hf-shimmer { to { background-position: -200% 0; } }
-  @keyframes hf-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  @keyframes sc-rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  @keyframes sc-pop { from { opacity: 0; transform: translateY(4px) scale(.985); } to { opacity: 1; transform: none; } }
+  @keyframes sc-shimmer { to { background-position: -200% 0; } }
+  @keyframes sc-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 }
 
-/* Light set (an adaptation: the Linear file is dark-only). */
-@utility hf-light {
-  --hf-bg: #f7f8f8; --hf-surface: #ffffff; --hf-surface-2: #f7f8f8; --hf-surface-3: #f1f2f4;
-  --hf-border: #e6e7ea; --hf-border-strong: #d7d9de;
-  --hf-fg: #1b1c1f; --hf-fg-2: #3c3f45; --hf-muted: #6b6f76;
-  --hf-ok: #1f7a35;  --hf-ok-bg: rgba(39, 166, 68, .08);  --hf-ok-border: rgba(39, 166, 68, .3);
-  --hf-bad: #c42b2b; --hf-bad-bg: rgba(235, 87, 87, .08); --hf-bad-border: rgba(235, 87, 87, .32);
-  --hf-unk: #9a4d0f; --hf-unk-bg: rgba(242, 153, 74, .1); --hf-unk-border: rgba(242, 153, 74, .38);
-  --hf-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 12px 32px -12px rgba(0, 0, 0, .18);
-  --hf-link: #5e6ad2;
+/* Light: a subtle off-white canvas with ivory cards (Claude's parchment structure, Socratica's gold). */
+@utility sc-light {
+  --sc-canvas: #f6f2ea;
+  --sc-surface: var(--od-surface);
+  --sc-surface-2: #efe9de;
+  --sc-line: #e6dfd1;
+  --sc-line-strong: #d6ccb9;
+  --sc-ink: #23211e;
+  --sc-body: var(--od-fg-2);
+  --sc-muted: var(--od-muted);
+  --sc-gold: #a9884f;
+  --sc-gold-strong: #8f6e36;
+  --sc-gold-hover: #7e602e;
+  --sc-gold-text: #7a5d2b;
+  --sc-gold-soft: #f2e9d8;
+  --sc-on-gold: #fffdf8;
+  --sc-ok: #3a7247; --sc-ok-bg: #e9f0e3; --sc-ok-line: #c8dbc1; --sc-ok-solid: #4e9a5e;
+  --sc-bad: #a23b32; --sc-bad-bg: #f7e6e1; --sc-bad-line: #e9c6bd; --sc-bad-solid: #c0503f;
+  --sc-unk: #855f17; --sc-unk-bg: #f6eddb; --sc-unk-line: #e8d6ac; --sc-unk-solid: #c49a3a;
+  --sc-shadow: 0 0 0 1px rgba(60, 45, 20, .06), 0 10px 30px -14px rgba(60, 45, 20, .22);
+  --sc-focus: var(--od-focus-ring);
 }
 
-/* Dark set: open-design's Linear values (canvas, elevated surface, text tiers, translucent borders). */
-@utility hf-dark {
-  --hf-bg: var(--od-bg); --hf-surface: #0f1011; --hf-surface-2: #141516; --hf-surface-3: var(--od-surface);
-  --hf-border: var(--od-border); --hf-border-strong: rgba(255, 255, 255, .14);
-  --hf-fg: var(--od-fg); --hf-fg-2: var(--od-fg-2); --hf-muted: var(--od-muted);
-  --hf-ok: #4cc764;  --hf-ok-bg: rgba(39, 166, 68, .12);  --hf-ok-border: rgba(39, 166, 68, .35);
-  --hf-bad: #f07575; --hf-bad-bg: rgba(235, 87, 87, .12); --hf-bad-border: rgba(235, 87, 87, .36);
-  --hf-unk: #f5ad6b; --hf-unk-bg: rgba(242, 153, 74, .12); --hf-unk-border: rgba(242, 153, 74, .34);
-  --hf-shadow: var(--od-elev-raised), 0 16px 40px -16px rgba(0, 0, 0, .8);
-  --hf-link: var(--od-accent-hover);
+/* Dark: warm charcoal (Claude's dark surfaces), lighter gold, for ChatGPT's dark theme and dark OS. */
+@utility sc-dark {
+  --sc-canvas: #181613;
+  --sc-surface: #211f1b;
+  --sc-surface-2: #2a2723;
+  --sc-line: #36312a;
+  --sc-line-strong: #4a4339;
+  --sc-ink: #f4efe5;
+  --sc-body: #ddd5c6;
+  --sc-muted: #b2a996;
+  --sc-gold: #d2b07a;
+  --sc-gold-strong: #d2b07a;
+  --sc-gold-hover: #e0c08c;
+  --sc-gold-text: #dcbc88;
+  --sc-gold-soft: #3a3226;
+  --sc-on-gold: #1e1b16;
+  --sc-ok: #93cb9b; --sc-ok-bg: rgba(78, 154, 94, .14); --sc-ok-line: rgba(147, 203, 155, .3); --sc-ok-solid: #5aa86a;
+  --sc-bad: #f0a093; --sc-bad-bg: rgba(192, 80, 63, .16); --sc-bad-line: rgba(240, 160, 147, .32); --sc-bad-solid: #cf6655;
+  --sc-unk: #e6c278; --sc-unk-bg: rgba(196, 154, 58, .14); --sc-unk-line: rgba(230, 194, 120, .3); --sc-unk-solid: #c9a24a;
+  --sc-shadow: 0 0 0 1px rgba(0, 0, 0, .3), 0 14px 36px -14px rgba(0, 0, 0, .75);
+  --sc-focus: 0 0 0 3px rgba(210, 176, 122, .45);
 }
 
-/* Skeleton loader: same footprint as the content it stands in for. */
-@utility hf-skeleton {
+/* Skeleton loader: the shape of the content it stands in for, shimmering gently. */
+@utility sc-skeleton {
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--hf-surface-3) 25%, var(--hf-border) 50%, var(--hf-surface-3) 75%);
+  background: linear-gradient(90deg, var(--sc-surface-2) 25%, var(--sc-line) 50%, var(--sc-surface-2) 75%);
   background-size: 200% 100%;
   animation: var(--animate-shimmer);
 }

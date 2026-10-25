@@ -1,6 +1,6 @@
 {
-  "name": "hallucination-firewall",
-  "version": "0.1.5",
+  "name": "socratica",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Model-independent, evidence-linked fact verification for chatbot answers.",
@@ -27,7 +27,7 @@
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
-    "bench": "pnpm --filter @hallucination-firewall/benchmark bench",
+    "bench": "pnpm --filter @socratica/benchmark bench",
     "package": "node scripts/package.mjs",
     "release": "pnpm build && pnpm package"
   },

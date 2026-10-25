@@ -74,7 +74,7 @@ describe('WikipediaEvidenceProvider (fake fetch, no network)', () => {
     expect(passages[0]?.source.url).toBe('https://en.wikipedia.org/wiki/Zentha_Bridge');
     expect(passages[0]?.text).toContain('1991');
     // Wikimedia API policy: every request identifies the client.
-    for (const c of calls) expect(c.headers?.['api-user-agent']).toMatch(/^HallucinationFirewall\//);
+    for (const c of calls) expect(c.headers?.['api-user-agent']).toMatch(/^Socratica\//);
   });
 });
 
@@ -118,6 +118,7 @@ describe('BraveSearchEvidenceProvider (fake fetch, no network)', () => {
     const claims = extractClaims('The Zentha Bridge opened in 1987.');
     const passages = await new BraveSearchEvidenceProvider({ apiKey: 'test-key-placeholder', fetch }).retrieve(claims[0]!, { limit: 2 });
     expect(passages[0]?.text).toBe('The Zentha Bridge opened in 1991.');
+    expect(passages[0]?.source.providerId).toBe('brave');
     expect(calls[0]!.url).not.toContain('test-key-placeholder');
     expect(calls[0]!.headers?.['x-subscription-token']).toBe('test-key-placeholder');
   });

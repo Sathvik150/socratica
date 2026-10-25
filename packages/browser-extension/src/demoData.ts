@@ -1,4 +1,4 @@
-import type { EvidenceDocument } from '@hallucination-firewall/core';
+import type { EvidenceDocument } from '@socratica/core';
 
 /** Synthetic evidence for the offline demo and the end-to-end test. All facts are fictional. */
 export const DEMO_DOCUMENTS: EvidenceDocument[] = [
