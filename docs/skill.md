@@ -26,7 +26,7 @@ quote is not a verbatim substring of a retrieved passage. Missing evidence stays
 ## Claude Code
 
 ```bash
-unzip hallucination-firewall-skill-v0.1.2.zip -d ~/.claude/skills/        # all projects
+unzip hallucination-firewall-skill-v0.1.3.zip -d ~/.claude/skills/        # all projects
 # or: unzip ... -d .claude/skills/                                        # this project only
 ```
 
@@ -39,11 +39,10 @@ For ChatGPT's **Plugins → New Plugin** upload dialog, use
 The standalone `hallucination-firewall-skill-vX.zip` is for Agent Skills hosts and
 is missing the plugin manifest required by that dialog.
 
-1. Build with `pnpm build && pnpm package`.
-2. Download `release/hallucination-firewall-plugin-vX.zip` without extracting it.
+1. Open the [latest release](https://github.com/sathvik150/cac26/releases/latest).
+2. Download `hallucination-firewall-plugin-v0.1.3.zip` without extracting it. To build locally instead, run `pnpm build && pnpm package`; the ZIP will be in `release/`.
 3. In **Plugins → New Plugin**, choose that ZIP and select **Add plugin**.
-4. If it fails, capture the exact error. The plugin bundles have local archive checks,
-   but successful installation in a logged-in ChatGPT account remains unverified.
+4. Start a new chat, select the plugin, and ask it to fact-check an answer against attached sources. Plugin upload has been confirmed; fact-checking behavior after installation still needs verification. If it fails, record the exact error and ZIP filename.
 
 For a plugin without bundled code, use `hallucination-firewall-plugin-instructions-vX.zip`.
 It performs manual quote checks and discloses that quotes are not machine-validated.

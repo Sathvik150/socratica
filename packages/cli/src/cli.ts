@@ -29,7 +29,7 @@ import {
 import { loadEvidence } from './evidence.js';
 import { validateVerdicts, type ValidateInput } from './validate.js';
 
-export const VERSION = '0.1.2';
+export const VERSION = '0.1.3';
 
 export const HELP = `hf-verify ${VERSION} - evidence-linked fact checking (supported / contradicted / unverifiable)
 

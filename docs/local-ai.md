@@ -3,7 +3,7 @@
 Download `hf-verify-cli-vX.zip`, unzip it, and run it with Node.js 20+. It needs no install and no account.
 
 ```bash
-unzip hf-verify-cli-v0.1.2.zip && cd hf-verify
+unzip hf-verify-cli-v0.1.3.zip && cd hf-verify
 node hf-verify.mjs verify --answer examples/answer.txt --evidence examples/evidence/
 ```
 
