@@ -3,35 +3,53 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Offline demo of Hallucination Firewall: claims in a chatbot answer are checked against evidence and annotated in place.">
   <title>Hallucination Firewall demo</title>
+  <link rel="icon" href="icons/icon-32.png">
+  <link rel="stylesheet" href="theme.css">
   <style>
-    body { margin: 0; background: #212121; color: #ececec; font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
-    header { padding: 12px 16px; background: #171717; font-size: 14px; color: #b4b4b4; }
-    main { max-width: 760px; margin: 0 auto; padding: 24px 16px 80px; }
-    [data-message-author-role="user"] { background: #303030; border-radius: 18px; padding: 10px 16px; margin: 0 0 24px auto; width: fit-content; max-width: 80%; }
+    .hero { text-align: center; padding: 36px 16px 0; }
+    main { padding-top: 0; }
+    .hero h1 { justify-content: center; font-size: 30px; }
+    .hero h1 span { background: var(--hf-brand); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .hero p { max-width: 560px; margin: 8px auto 0; color: var(--hf-muted); }
+    .steps { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 16px 0 0; padding: 0; list-style: none; }
+    .steps li { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: var(--hf-surface); border: 1px solid var(--hf-border); color: var(--hf-muted); }
+    .steps b { color: var(--hf-fg); }
+    .chat { background: var(--hf-surface); border: 1px solid var(--hf-border); border-radius: 18px; box-shadow: var(--hf-shadow); padding: 22px 22px 14px; margin-top: 24px; font-size: 16px; }
+    [data-message-author-role="user"] { background: var(--hf-surface-2); border: 1px solid var(--hf-border); border-radius: 18px; padding: 10px 16px; margin: 0 0 20px auto; width: fit-content; max-width: 80%; }
     .markdown p, .markdown li { margin: 0 0 10px; }
-    pre { background: #0d0d0d; padding: 12px; border-radius: 8px; overflow: auto; }
-    aside { margin-top: 40px; font-size: 13px; color: #b4b4b4; border-top: 1px solid #444; padding-top: 12px; }
+    aside { margin-top: 20px; }
+    aside h2 { display: flex; align-items: center; gap: 8px; }
+    aside li { color: var(--hf-muted); font-size: 13px; }
   </style>
 </head>
 <body>
-  <header>Hallucination Firewall · offline demo (mock judge, supplied documents, no network). Click the red highlight.</header>
+  <div class="hero">
+    <h1>Hallucination <span>Firewall</span></h1>
+    <p>Offline demo. The answer below is checked against the supplied evidence with a mock judge, and nothing leaves your browser. Click the highlighted claim to see why it was flagged.</p>
+    <ol class="steps"><li><b>1</b> extract claims</li><li><b>2</b> retrieve evidence</li><li><b>3</b> judge with verbatim quotes</li><li><b>4</b> annotate</li></ol>
+  </div>
   <main>
-    <div data-message-author-role="user" data-message-id="demo-user-1">
-      <div class="whitespace-pre-wrap">Tell me about the Orrin Library.</div>
-    </div>
-    <div data-message-author-role="assistant" data-message-id="demo-asst-1">
-      <div class="markdown prose">
-        <p>The <strong>Orrin Library</strong> is a public library in Velmora.</p>
-        <p>It was founded by Dalia Moss in 1910. The library holds 2.4 million volumes.</p>
-        <ul><li>I think it is the nicest library in the region.</li></ul>
+    <div class="chat">
+      <div data-message-author-role="user" data-message-id="demo-user-1">
+        <div class="whitespace-pre-wrap">Tell me about the Orrin Library.</div>
+      </div>
+      <div data-message-author-role="assistant" data-message-id="demo-asst-1">
+        <div class="markdown prose">
+          <p>The <strong>Orrin Library</strong> is a public library in Velmora.</p>
+          <p>It was founded by Dalia Moss in 1910. The library holds 2.4 million volumes.</p>
+          <ul><li>I think it is the nicest library in the region.</li></ul>
+        </div>
       </div>
     </div>
     <aside>
-      <strong>Evidence supplied to <code>verify()</code> (fictional):</strong>
-      <ul id="evidence"></ul>
+      <section>
+        <h2>Evidence supplied to <code>verify()</code> <span class="chip checked">fictional</span></h2>
+        <ul id="evidence"></ul>
+      </section>
     </aside>
   </main>
-  <script src="demo.js"></script>
+  <script src="demo.js" defer></script>
 </body>
 </html>

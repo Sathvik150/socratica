@@ -1,4 +1,5 @@
-import { z } from 'zod';
+// zod/mini: same validation as full Zod at ~13 KB instead of ~440 KB in browser bundles.
+import * as z from 'zod/mini';
 import type { Claim, Passage } from './types.js';
 
 export const INPUT_START = '<<<INPUT_JSON';
@@ -14,13 +15,10 @@ export interface JudgeInput {
 /** Schema the LLM's JSON verdict must satisfy. Anything else is treated as invalid output. */
 export const LLMVerdictSchema = z.object({
   verdict: z.enum(['supported', 'contradicted', 'unverifiable']),
-  confidence: z.number().min(0).max(1),
-  rationale: z.string().max(600),
-  quotes: z
-    .array(z.object({ passage_id: z.string(), quote: z.string() }))
-    .max(5)
-    .default([]),
-  correction: z.string().max(400).nullable().optional(),
+  confidence: z.number().check(z.minimum(0), z.maximum(1)),
+  rationale: z.string().check(z.maxLength(600)),
+  quotes: z._default(z.array(z.object({ passage_id: z.string(), quote: z.string() })).check(z.maxLength(5)), []),
+  correction: z.optional(z.nullable(z.string().check(z.maxLength(400)))),
 });
 export type LLMVerdict = z.infer<typeof LLMVerdictSchema>;
 

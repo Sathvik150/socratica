@@ -1,6 +1,7 @@
 import type { ClaimVerdict } from '@hallucination-firewall/core';
 import type { PageStatus, VerifyResponse } from './messages.js';
 import { DEFAULT_MODELS, hasValidConsent, type Settings } from './settings.js';
+import { friendlyWarning } from './ui/theme.js';
 
 /** Everything the popup needs from the browser, injected so the view can be tested without chrome.*. */
 export interface PopupApi {
@@ -86,7 +87,7 @@ export function renderResult(doc: Document, res: VerifyResponse): HTMLElement {
     list.append(li);
   }
   box.append(list);
-  for (const w of res.warnings) box.append(h(doc, 'p', { className: 'warn' }, w));
+  for (const w of [...new Set(res.warnings.map(friendlyWarning))]) box.append(h(doc, 'p', { className: 'warn' }, w));
   return box;
 }
 

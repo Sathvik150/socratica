@@ -16,18 +16,27 @@ for (const d of DEMO_DOCUMENTS) {
   evidenceList?.append(li);
 }
 
+// Show the "checking" bar before first paint (same height as the result), so the page doesn't shift.
+const overlays = new Map<HTMLElement, AnswerOverlay>();
+for (const message of chatgptAdapter.findAssistantMessages(document)) {
+  const content = chatgptAdapter.getContentElement(message);
+  const overlay = new AnswerOverlay({ content, onRecheck: () => location.reload() });
+  overlay.showStatus('Checking claims against evidence…');
+  overlays.set(content, overlay);
+}
+
 const watcher = new MessageWatcher(chatgptAdapter, document, {
-  debounceMs: 300,
+  debounceMs: 50,
   async onReady(m) {
-    const overlay = new AnswerOverlay({ content: m.content, onRecheck: () => location.reload() });
-    overlay.showStatus('Checking claims against evidence…');
+    const overlay = overlays.get(m.content) ?? new AnswerOverlay({ content: m.content, onRecheck: () => location.reload() });
+    if (!overlays.has(m.content)) overlay.showStatus('Checking claims against evidence…');
     const result = await runVerification({
       answer: m.text,
       ...(m.question ? { question: m.question } : {}),
       documents: DEMO_DOCUMENTS,
       llm: new MockLLM(),
     });
-    overlay.render(result, m.text, ['Demo mode: MockLLM judge, supplied documents only, no network.']);
+    overlay.render(result, m.text);
     document.body.dataset.hfDemo = result.summary.text;
   },
 });
