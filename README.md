@@ -1,8 +1,10 @@
 <div align="center">
 
-# 🛡️ Hallucination Firewall
+<img src="packages/browser-extension/static/icons/icon-128.png" alt="" width="88" height="88">
 
-**Evidence-linked fact checking for AI answers.**
+<h1>Hallucination Firewall</h1>
+
+**Evidence-linked fact checking for AI answers, right inside ChatGPT.**
 Every claim gets a verdict of ✔ supported, ✘ contradicted, or ? unverifiable, and every verdict cites the exact source text behind it.
 
 [![CI](https://github.com/sathvik150/cac26/actions/workflows/ci.yml/badge.svg)](https://github.com/sathvik150/cac26/actions/workflows/ci.yml)
@@ -175,6 +177,17 @@ All of these judges are in-repo or local; **no hosted LLM (OpenAI or Anthropic A
 
 > ⚠️ This is a tiny synthetic set. The heuristic judge was written by the same author, and some fixes came after seeing its errors, so its number is **in-sample**. The local models were not tuned on it. It shows the three-way design working, **not** real-world accuracy. See [docs/benchmark.md](docs/benchmark.md) to reproduce it or plug in your own verifier.
 
+### Offline judge on encyclopedia-style wording
+
+Real Wikipedia text says "the tower is 330 metres (1,083 ft) tall", while ChatGPT says "the Eiffel Tower is about 330 meters tall". Two hand-written sets test that gap. The claims are about real topics, but the evidence text was **written for testing in Wikipedia's style, not copied from Wikipedia**, and the labels are what the given evidence establishes.
+
+| Set | Offline judge before (v0.1.4) | After | False-positive rate on contradicted |
+|---|---|---|---|
+| [`wiki-style.jsonl`](benchmark/data/wiki-style.jsonl), 46 items, **used while improving the judge** | 50.0% | 82.6% | 6.3% → **0.0%** |
+| [`wiki-style-holdout.jsonl`](benchmark/data/wiki-style-holdout.jsonl), 24 items, **written after the rules were frozen and run once** | 45.8% | **75.0%** | 6.7% → **0.0%** |
+
+On the held-out set, true claims are now marked supported 90% of the time instead of 40%. Every remaining miss is a safe `unverifiable`, mostly swapped places or people ("located in Abu Dhabi") that need world knowledge. Reproduce with `pnpm bench -- --data data/wiki-style-holdout.jsonl`. These are small sets written by the same author, so treat them as a sanity check, not a measure of real-world accuracy.
+
 ## ✅ What has been tested
 
 | Surface | How it was tested | Result |
@@ -195,7 +208,7 @@ All of these judges are in-repo or local; **no hosted LLM (OpenAI or Anthropic A
 - **Review Mode only.** You see the answer before it's checked.
 - **ChatGPT's page can change.** The adapter was verified on live chatgpt.com in logged-out and logged-in UIs on 2026-10-24, with sanitized fixtures for both. This covers the tested layouts; other accounts or rollouts may differ. Older selectors are kept as a fallback. Fixes go in [`adapters/chatgpt.ts`](packages/browser-extension/src/adapters/chatgpt.ts).
 - **Wikimedia rate limits.** Wikipedia and Wikidata can be throttled by IP (HTTP 429). Requests are cached and backed off; independent sources continue when a source fails. Claims without sufficient evidence remain `unverifiable`.
-- **The offline heuristic judge is literal.** It handles simple number, name and negation conflicts, but real encyclopedia wording usually comes out `unverifiable`. It abstains on publisher reviews, publication metadata and qualified statistics. For real-world answers, use an LLM judge: OpenAI or Anthropic in the extension, or a local model with the CLI.
+- **The offline heuristic judge is lexical.** It understands units, spelling variants ("metres"), rounding, "the tower"-style back-references and simple number, name and negation conflicts, but not paraphrase that needs world knowledge (see the benchmark above). It abstains on publisher reviews, publication metadata and qualified statistics. For real-world answers, use an LLM judge: OpenAI or Anthropic in the extension, or a local model with the CLI.
 - **Local models need one setting.** Ollama refuses browser extensions unless started with `OLLAMA_ORIGINS="chrome-extension://*"`; LM Studio needs **Enable CORS**. The extension tells you this if it hits the error. Only servers on `localhost` / `127.0.0.1` are allowed. The first request can take minutes while the model loads.
 - **Small local models are unreliable judges.** In testing, `qwen2.5:3b` fabricated a quote, which the validator caught and downgraded, and it missed most contradictions. 7B-class models did far better.
 - **Claim extraction is rule-based.** It can miss claims, such as pronoun clauses without a named entity.

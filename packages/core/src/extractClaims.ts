@@ -61,6 +61,12 @@ export function isCheckable(sentence: string): boolean {
   if (HEDGES.test(s.replace(/\bMay(?=\s+\d|,?\s+(?:of\s+)?\d{4})/g, ''))) return false;
   if (SECOND_PERSON_INSTRUCTION.test(s)) return false;
   if (/^(?:i|we|you)\b/i.test(s)) return false;
+  // A markdown heading ("The History of the Eiffel Tower: Six Detailed Paragraphs") is a title, not a claim:
+  // no sentence punctuation, and nearly every longer word capitalised.
+  if (!/[.!?]["')\]’”]*$/.test(s)) {
+    const long = s.split(/\s+/).filter((w) => /^\p{L}{4,}/u.test(w));
+    if (long.length >= 2 && long.filter((w) => /^\p{Lu}/u.test(w)).length / long.length >= 0.75) return false;
+  }
   const hasNumber = numbers(s).length > 0;
   if (OPINION.test(s) && !hasNumber) return false;
   // Needs something concrete to check: a number or a named entity.

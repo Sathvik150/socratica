@@ -44,6 +44,23 @@ export function scorePassage(claim: Claim, passage: string): number {
 }
 
 /** A compact search query string for external search APIs. */
+const NOT_SUBJECTS = /^(?:january|february|march|april|may|june|july|august|september|october|november|december|monday|tuesday|wednesday|thursday|friday|saturday|sunday|i)$/;
+
+/**
+ * The named thing a claim is about ("eiffel tower", "neil armstrong"), for
+ * encyclopedia lookups: claims about the same subject share one search and one
+ * cached article. Pronoun-led claims use the context's subject. Undefined when
+ * no name is present.
+ */
+export function subjectQuery(claim: Claim): string | undefined {
+  const pick = (text: string) =>
+    properNouns(text)
+      .map((n) => n.replace(/^(?:the|a|an)\s+/, '').replace(/['’]s$/, ''))
+      .find((n) => n.length > 1 && !NOT_SUBJECTS.test(n));
+  const own = /^(?:it|its|they|their|he|she|his|her|this|these|those)\b/i.test(claim.text) ? undefined : pick(claim.text);
+  return own ?? pick(claim.context);
+}
+
 export function searchQuery(claim: Claim): string {
   const entities = properNouns(claim.context);
   const base = /^(?:it|its|they|their|he|she|his|her|this|these|those)\b/i.test(claim.text)

@@ -17,6 +17,8 @@ export const TRUSTED_SOURCE_PRESETS = [
 
 export interface Settings {
   consent: { granted: boolean; version: number; grantedAt?: string };
+  /** Master switch in the popup header. Off: nothing is read, highlighted or sent anywhere. */
+  enabled: boolean;
   platforms: Record<PlatformId, boolean>;
   autoCheck: boolean;
   /** `baseUrl` is only used by `local` (an OpenAI-compatible server such as Ollama or LM Studio). */
@@ -32,6 +34,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   consent: { granted: false, version: CONSENT_VERSION },
+  enabled: true,
   platforms: { chatgpt: true, claude: false, gemini: false },
   autoCheck: true,
   llm: { provider: 'heuristic', model: '', apiKey: '', baseUrl: 'http://localhost:11434/v1' },
@@ -102,6 +105,7 @@ function merge(stored: Partial<Settings> | undefined): Settings {
   const s = stored ?? {};
   return {
     consent: { ...DEFAULT_SETTINGS.consent, ...s.consent },
+    enabled: s.enabled ?? DEFAULT_SETTINGS.enabled,
     platforms: { ...DEFAULT_SETTINGS.platforms, ...s.platforms },
     autoCheck: s.autoCheck ?? DEFAULT_SETTINGS.autoCheck,
     llm: { ...DEFAULT_SETTINGS.llm, ...s.llm },

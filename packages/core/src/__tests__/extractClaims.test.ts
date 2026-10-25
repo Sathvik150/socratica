@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { extractClaims } from '../index.js';
 
 describe('extractClaims', () => {
+  it('skips a markdown heading, which is a title rather than a claim', () => {
+    const answer = 'The History of the Eiffel Tower: Six Detailed Paragraphs\nThe Eiffel Tower opened in 1889. The tower was designed by Maurice Koechlin.';
+    expect(extractClaims(answer).map((c) => c.text)).toEqual(['The Eiffel Tower opened in 1889.', 'The tower was designed by Maurice Koechlin.']);
+  });
+
   it('extracts factual sentences with exact spans', () => {
     const answer = 'The Zentha Bridge opened in 1987. It spans 1,240 meters across the Corvel River.';
     const claims = extractClaims(answer);

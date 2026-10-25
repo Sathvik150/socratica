@@ -1,0 +1,89 @@
+/*
+ * Design tokens (see DESIGN.md).
+ *   - Values: open-design's Linear token package (vendor/open-design-linear-app.tokens.css, Apache-2.0),
+ *     available here as --od-* (generated/od-tokens.css).
+ *   - Rules: the Linear DESIGN.md from awesome-design-md (vendor/awesome-design-md-linear.DESIGN.md, MIT).
+ *   - Our additions: a light set (both sources are dark-only) and three verdict colours.
+ * The --hf-* variables switch between light and dark; Tailwind's @theme maps them onto utilities
+ * (bg-surface, text-muted, border-line, text-ok, rounded-card, ...).
+ */
+@import "./generated/od-tokens.css";
+
+@theme {
+  /* No web fonts in the extension: Inter when the user has it installed, then the system UI font. */
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --color-canvas: var(--hf-bg);
+  --color-surface: var(--hf-surface);
+  --color-surface-2: var(--hf-surface-2);
+  --color-surface-3: var(--hf-surface-3);
+  --color-line: var(--hf-border);
+  --color-line-strong: var(--hf-border-strong);
+  --color-fg: var(--hf-fg);
+  --color-fg-2: var(--hf-fg-2);
+  --color-muted: var(--hf-muted);
+  --color-accent: var(--od-accent);
+  --color-accent-hover: var(--od-accent-hover);
+  --color-accent-active: var(--od-accent-active);
+  --color-ok: var(--hf-ok);
+  --color-ok-bg: var(--hf-ok-bg);
+  --color-ok-line: var(--hf-ok-border);
+  --color-bad: var(--hf-bad);
+  --color-bad-bg: var(--hf-bad-bg);
+  --color-bad-line: var(--hf-bad-border);
+  --color-unk: var(--hf-unk);
+  --color-unk-bg: var(--hf-unk-bg);
+  --color-unk-line: var(--hf-unk-border);
+
+  --radius-control: var(--od-radius-sm);
+  --radius-chip: var(--od-radius-md);
+  --radius-card: var(--od-radius-lg);
+  /* One step past open-design's panel radius: the floating panel and the popup card read as rounded. */
+  --radius-float: 16px;
+
+  --shadow-float: var(--hf-shadow);
+  --ease-out-soft: var(--od-ease-standard);
+
+  --animate-rise: hf-rise .28s var(--ease-out-soft) both;
+  --animate-pop: hf-pop .16s var(--ease-out-soft) both;
+  --animate-shimmer: hf-shimmer 1.2s linear infinite;
+  --animate-grow: hf-grow .5s var(--ease-out-soft) both;
+
+  @keyframes hf-rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  @keyframes hf-pop { from { opacity: 0; transform: translateY(4px) scale(.98); } to { opacity: 1; transform: none; } }
+  @keyframes hf-shimmer { to { background-position: -200% 0; } }
+  @keyframes hf-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+}
+
+/* Light set (an adaptation: the Linear file is dark-only). */
+@utility hf-light {
+  --hf-bg: #f7f8f8; --hf-surface: #ffffff; --hf-surface-2: #f7f8f8; --hf-surface-3: #f1f2f4;
+  --hf-border: #e6e7ea; --hf-border-strong: #d7d9de;
+  --hf-fg: #1b1c1f; --hf-fg-2: #3c3f45; --hf-muted: #6b6f76;
+  --hf-ok: #1f7a35;  --hf-ok-bg: rgba(39, 166, 68, .08);  --hf-ok-border: rgba(39, 166, 68, .3);
+  --hf-bad: #c42b2b; --hf-bad-bg: rgba(235, 87, 87, .08); --hf-bad-border: rgba(235, 87, 87, .32);
+  --hf-unk: #9a4d0f; --hf-unk-bg: rgba(242, 153, 74, .1); --hf-unk-border: rgba(242, 153, 74, .38);
+  --hf-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 12px 32px -12px rgba(0, 0, 0, .18);
+  --hf-link: #5e6ad2;
+}
+
+/* Dark set: open-design's Linear values (canvas, elevated surface, text tiers, translucent borders). */
+@utility hf-dark {
+  --hf-bg: var(--od-bg); --hf-surface: #0f1011; --hf-surface-2: #141516; --hf-surface-3: var(--od-surface);
+  --hf-border: var(--od-border); --hf-border-strong: rgba(255, 255, 255, .14);
+  --hf-fg: var(--od-fg); --hf-fg-2: var(--od-fg-2); --hf-muted: var(--od-muted);
+  --hf-ok: #4cc764;  --hf-ok-bg: rgba(39, 166, 68, .12);  --hf-ok-border: rgba(39, 166, 68, .35);
+  --hf-bad: #f07575; --hf-bad-bg: rgba(235, 87, 87, .12); --hf-bad-border: rgba(235, 87, 87, .36);
+  --hf-unk: #f5ad6b; --hf-unk-bg: rgba(242, 153, 74, .12); --hf-unk-border: rgba(242, 153, 74, .34);
+  --hf-shadow: var(--od-elev-raised), 0 16px 40px -16px rgba(0, 0, 0, .8);
+  --hf-link: var(--od-accent-hover);
+}
+
+/* Skeleton loader: same footprint as the content it stands in for. */
+@utility hf-skeleton {
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--hf-surface-3) 25%, var(--hf-border) 50%, var(--hf-surface-3) 75%);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}

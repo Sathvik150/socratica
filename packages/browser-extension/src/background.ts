@@ -19,7 +19,7 @@ chrome.runtime.onMessage.addListener((msg: Request, sender, sendResponse) => {
     switch (msg.type) {
       case 'hf/get-state': {
         const state: StateResponse = {
-          platformEnabled: settings.platforms[msg.platform],
+          platformEnabled: settings.enabled && settings.platforms[msg.platform],
           autoCheck: settings.autoCheck,
           consentGranted: hasValidConsent(settings),
         };

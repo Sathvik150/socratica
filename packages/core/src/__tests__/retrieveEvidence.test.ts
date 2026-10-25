@@ -96,7 +96,8 @@ describe('WikipediaEvidenceProvider rate limiting', () => {
     const [c1, c2] = extractClaims('The Zentha Bridge opened in 1987. The Zentha Bridge is in Velmora.');
     expect((await wiki.retrieve(c1!, { limit: 2 })).length).toBeGreaterThan(0);
     await wiki.retrieve(c2!, { limit: 2 });
-    expect(urls.filter((u) => u.includes('list=search'))).toHaveLength(3); // 429, retry, second claim
+    // 429, then the retry; the second claim is about the same subject and reuses that search.
+    expect(urls.filter((u) => u.includes('list=search'))).toHaveLength(2);
     expect(urls.filter((u) => u.includes('prop=extracts'))).toHaveLength(1); // article cached
   });
 

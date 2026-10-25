@@ -16,7 +16,6 @@ async function main(): Promise<void> {
   const adapter = adapterFor(new URL(location.href));
   if (!adapter) return;
   const state = await send<StateResponse>({ type: 'hf/get-state', platform: adapter.platform });
-  if (!state.platformEnabled) return;
 
   const overlays = new Map<string, AnswerOverlay>();
   const latest = new Map<string, string>();
@@ -25,9 +24,10 @@ async function main(): Promise<void> {
   const force = new Set<string>();
   const openOptions = () => void send({ type: 'hf/open-options' });
   // What the popup shows for this tab.
-  const status: Omit<PageStatus, 'answers' | 'platform'> = { state: state.consentGranted ? 'idle' : 'consent-required' };
+  const status: Omit<PageStatus, 'answers' | 'platform'> = { state: !state.platformEnabled ? 'disabled' : state.consentGranted ? 'idle' : 'consent-required' };
 
   const verify = async (m: ReadyMessage, overlay: AnswerOverlay) => {
+    if (!state.platformEnabled) return;
     overlay.showStatus('Checking claims against evidence…');
     status.state = 'checking';
     const res = await send<VerifyResponse>({
@@ -36,7 +36,8 @@ async function main(): Promise<void> {
       answer: m.text,
       ...(m.question ? { question: m.question } : {}),
     });
-    if (latest.get(m.id) !== m.hash) return; // answer changed while we were checking; a newer run will render
+    // The answer changed while we were checking (a newer run will render), or checking was switched off.
+    if (latest.get(m.id) !== m.hash || !state.platformEnabled) return;
     status.state = res.status === 'ok' ? 'idle' : res.status;
     delete status.lastError;
     switch (res.status) {
@@ -57,31 +58,47 @@ async function main(): Promise<void> {
     }
   };
 
-  const watcher = new MessageWatcher(adapter, document, {
-    onReady(m) {
-      latest.set(m.id, m.hash);
-      current.set(m.id, m);
-      let overlay = overlays.get(m.id);
-      if (overlay && overlay.content !== m.content) {
-        overlay.destroy(); // the page re-rendered this answer into a new element
-        overlay = undefined;
-      }
-      if (!overlay) {
-        overlay = new AnswerOverlay({
-          content: m.content,
-          onRecheck: () => void verify(current.get(m.id)!, overlays.get(m.id)!),
-          onOpenOptions: openOptions,
-        });
-        overlays.set(m.id, overlay);
-      } else {
-        overlay.ensureAttached();
-      }
-      if (!state.consentGranted) return overlay.showConsentRequired();
-      if (!state.autoCheck && !force.delete(m.id)) return overlay.showStatus('Auto-check is off.', { label: 'Check this answer', run: () => void verify(m, overlay!) });
-      void verify(m, overlay);
-    },
-  });
-  watcher.start();
+  const onReady = (m: ReadyMessage) => {
+    latest.set(m.id, m.hash);
+    current.set(m.id, m);
+    let overlay = overlays.get(m.id);
+    if (overlay && overlay.content !== m.content) {
+      overlay.destroy(); // the page re-rendered this answer into a new element
+      overlay = undefined;
+    }
+    if (!overlay) {
+      overlay = new AnswerOverlay({
+        content: m.content,
+        onRecheck: () => void verify(current.get(m.id)!, overlays.get(m.id)!),
+        onOpenOptions: openOptions,
+      });
+      overlays.set(m.id, overlay);
+    } else {
+      overlay.ensureAttached();
+    }
+    if (!state.consentGranted) return overlay.showConsentRequired();
+    if (!state.autoCheck && !force.delete(m.id)) return overlay.showStatus('Auto-check is off.', { label: 'Check this answer', run: () => void verify(m, overlay!) });
+    void verify(m, overlay);
+  };
+
+  // Switched on: watch the page (a fresh watcher reports every answer again). Off: remove all of our UI.
+  let watcher: MessageWatcher | undefined;
+  const setRunning = (on: boolean) => {
+    if (on && !watcher) {
+      watcher = new MessageWatcher(adapter, document, { onReady });
+      watcher.start();
+    } else if (!on && watcher) {
+      watcher.stop();
+      watcher = undefined;
+      for (const overlay of overlays.values()) overlay.destroy();
+      overlays.clear();
+      latest.clear();
+      current.clear();
+      delete status.lastSummary;
+      delete status.lastError;
+    }
+  };
+  setRunning(state.platformEnabled);
 
   // Requests from the toolbar popup.
   chrome.runtime.onMessage.addListener((msg: TabRequest, sender, sendResponse) => {
@@ -93,6 +110,10 @@ async function main(): Promise<void> {
     }
     if (msg.type === 'hf/check-latest') {
       // Re-check only the newest answer, even if auto-check is off.
+      if (!watcher) {
+        sendResponse({ ok: false, message: 'Checking is switched off. Turn it on at the top of this popup.' });
+        return false;
+      }
       const all = adapter.findAssistantMessages(document);
       const last = all[all.length - 1];
       if (!last) {
@@ -109,15 +130,17 @@ async function main(): Promise<void> {
     return false;
   });
 
-  // Consent or settings may change in the options page; pick that up without a reload.
+  // The on/off switch, consent or settings may change in the popup or options page; pick that up without a reload.
   chrome.storage.onChanged.addListener(async (_changes, area) => {
     if (area !== 'local') return;
     const next = await send<StateResponse>({ type: 'hf/get-state', platform: adapter.platform });
     const consentNowGranted = next.consentGranted && !state.consentGranted;
     Object.assign(state, next);
-    if (!state.consentGranted) status.state = 'consent-required';
-    else if (status.state === 'consent-required') status.state = 'idle';
-    if (consentNowGranted) {
+    setRunning(state.platformEnabled);
+    if (!state.platformEnabled) status.state = 'disabled';
+    else if (!state.consentGranted) status.state = 'consent-required';
+    else if (status.state === 'consent-required' || status.state === 'disabled') status.state = 'idle';
+    if (consentNowGranted && watcher) {
       for (const id of overlays.keys()) watcher.forget(id);
       watcher.check();
     }

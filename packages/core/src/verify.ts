@@ -31,6 +31,8 @@ export async function runVerification(input: VerifyInput): Promise<VerifyOutput>
   const evidence = await retrieveEvidence(claims, providers, {
     limit: opts.passagesPerClaim ?? 4,
     ...(input.question ? { question: input.question } : {}),
+    ...(opts.concurrency ? { concurrency: opts.concurrency } : {}),
+    ...(opts.retrievalDeadlineMs ? { deadlineMs: opts.retrievalDeadlineMs } : {}),
   });
   const raw = await verifyClaims(claims, evidence.byClaim, input.llm, {
     ...opts,

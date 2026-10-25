@@ -14,7 +14,7 @@
  */
 import type { ClaimVerdict, VerifyOutput } from '@hallucination-firewall/core';
 import { extractText, rangeForSpan, type TextMap } from './textMap.js';
-import { HIGHLIGHT_CSS, OVERLAY_CSS, friendlyWarning, icon, pageIsDark, type IconName } from './ui/theme.js';
+import { HIGHLIGHT_CSS, OVERLAY_CSS, icon, pageIsDark, summarizeWarnings, type IconName } from './ui/theme.js';
 
 const VERDICT_LABEL: Record<ClaimVerdict['verdict'], string> = {
   supported: 'Supported',
@@ -169,12 +169,30 @@ function nativeFor(doc: Document): NativeHighlights {
 /* Shared layer: evidence panel + fallback boxes                       */
 /* ------------------------------------------------------------------ */
 
+/** Where the panel points, in viewport coordinates. Undefined when the anchor is gone. */
+export type Anchor = () => { left: number; top: number; bottom: number } | undefined;
+
 /** One shared, page-wide layer for the evidence panel and (fallback) highlight boxes. */
 class HighlightLayer {
   readonly host: HTMLElement;
   readonly root: ShadowRoot;
   readonly marks: HTMLElement;
   panel: HTMLElement | undefined;
+  /** The answer overlay that opened the panel, so destroying that answer also closes it. */
+  owner: unknown;
+  #anchor: Anchor | undefined;
+  #above = false;
+  #frame = 0;
+  // Chat apps scroll an inner element, not the window, so listen in the capture phase.
+  readonly #onViewportChange = (): void => {
+    if (!this.panel || !this.#anchor || this.#frame) return;
+    const win = this.doc.defaultView;
+    const raf = win?.requestAnimationFrame?.bind(win) ?? ((cb: FrameRequestCallback) => setTimeout(() => cb(0), 16) as unknown as number);
+    this.#frame = raf(() => {
+      this.#frame = 0;
+      this.place();
+    });
+  };
 
   constructor(readonly doc: Document) {
     this.host = doc.createElement('div');
@@ -192,12 +210,60 @@ class HighlightLayer {
     doc.addEventListener('pointerdown', (e) => {
       if (this.panel && !e.composedPath().includes(this.panel)) this.closePanel();
     });
+    doc.defaultView?.addEventListener('scroll', this.#onViewportChange, { capture: true, passive: true });
+    doc.defaultView?.addEventListener('resize', this.#onViewportChange, { passive: true });
+  }
+
+  /** Show a panel next to its anchor; it then follows the anchor while the page scrolls. */
+  showPanel(panel: HTMLElement, anchor: Anchor | undefined, owner?: unknown): void {
+    this.closePanel();
+    this.root.append(panel);
+    this.panel = panel;
+    this.owner = owner;
+    this.#anchor = anchor;
+    const rect = anchor?.();
+    const vh = this.doc.defaultView?.innerHeight ?? 600;
+    const h = panel.offsetHeight || Math.min(vh * 0.7, 420);
+    // Pick a side once, so the panel doesn't flip back and forth while scrolling.
+    this.#above = !!rect && rect.bottom + 8 + h > vh && rect.top - 8 - h >= 12;
+    this.place();
+  }
+
+  /** Position the open panel against its anchor. Public for tests. */
+  place(): void {
+    const panel = this.panel;
+    if (!panel) return;
+    const vw = this.doc.defaultView?.innerWidth ?? 800;
+    const rect = this.#anchor?.();
+    if (!rect) {
+      // No anchor (or it left the page): keep the panel where it is, or centre it near the top.
+      if (!panel.style.top) Object.assign(panel.style, { left: `${Math.max(12, vw / 2 - 220)}px`, top: '80px' });
+      return;
+    }
+    const x = Math.max(12, Math.min(rect.left, vw - Math.min(440, vw - 24) - 12));
+    const y = this.#above ? rect.top - 8 - panel.offsetHeight : rect.bottom + 8;
+    Object.assign(panel.style, { left: `${Math.round(x)}px`, top: `${Math.round(y)}px` });
   }
 
   closePanel(): void {
     this.panel?.remove();
     this.panel = undefined;
+    this.owner = undefined;
+    this.#anchor = undefined;
   }
+}
+
+/** Anchor to one visual line of a range (the line that was clicked), falling back to its first line. */
+function rangeAnchor(range: Range, line: number): Anchor {
+  return () => {
+    if (!range.startContainer.isConnected || typeof range.getClientRects !== 'function') return undefined;
+    const rects = mergeLineRects(Array.from(range.getClientRects()));
+    return rects[line] ?? rects[0];
+  };
+}
+
+function elementAnchor(node: Element): Anchor {
+  return () => (node.isConnected ? node.getBoundingClientRect() : undefined);
 }
 
 export interface Box {
@@ -323,10 +389,13 @@ export class AnswerOverlay {
     if (action) extra.push(this.#button(action.label, undefined, action.run));
     this.#bar.append(this.#head(...extra));
     if (busy) {
-      // Same height as the finished bar (meter + chip row), so results replace it without shifting the page.
+      // Same footprint as the finished bar (meter, chip row, details toggle), so results replace it without shifting the page.
       const row = el(this.#doc, 'div', 'skeleton-row');
-      for (let i = 0; i < 3; i++) row.append(el(this.#doc, 'span', 'skeleton chip-ph'));
-      this.#bar.append(el(this.#doc, 'div', 'skeleton meter-ph'), row);
+      for (let i = 0; i < 4; i++) row.append(el(this.#doc, 'span', 'skeleton chip-ph'));
+      this.#bar.append(el(this.#doc, 'div', 'skeleton meter-ph'), row, el(this.#doc, 'div', 'skeleton toggle-ph'));
+      this.#bar.setAttribute('aria-busy', 'true');
+    } else {
+      this.#bar.removeAttribute('aria-busy');
     }
   }
 
@@ -355,15 +424,8 @@ export class AnswerOverlay {
     this.#bar.className = 'bar';
     this.#bar.replaceChildren();
 
-    const details = el(doc, 'ul', 'details');
-    details.hidden = true;
-    const toggle = this.#button(details.hidden ? 'Details' : 'Hide details', 'chevron', () => {
-      details.hidden = !details.hidden;
-      toggle.lastChild!.textContent = details.hidden ? 'Details' : 'Hide details';
-      toggle.setAttribute('aria-expanded', String(!details.hidden));
-    }, 'ghost');
-    toggle.setAttribute('aria-expanded', String(!details.hidden));
-    const buttons: Node[] = [el(doc, 'span', 'spacer'), toggle];
+    const { notes, offlineJudge } = summarizeWarnings(warnings);
+    const buttons: Node[] = [el(doc, 'span', 'spacer')];
     if (this.#opts.onRecheck) buttons.push(this.#button('Re-check', 'refresh', this.#opts.onRecheck, 'ghost'));
     this.#bar.append(this.#head(...buttons));
 
@@ -388,8 +450,18 @@ export class AnswerOverlay {
       row.append(chip);
     }
     row.append(el(doc, 'span', 'chip checked', `${s.checked} checked`));
+    // Say how the verdicts were reached, so offline results aren't mistaken for a full model check.
+    if (offlineJudge) {
+      const tag = el(doc, 'span', 'tag', 'Offline judge');
+      tag.title = offlineJudge;
+      row.append(tag);
+    }
     this.#bar.append(row);
 
+    // Everything else sits behind "Show details" at the bottom: the claim list, how the check ran, and source notes.
+    const more = el(doc, 'div', 'more');
+    more.hidden = true;
+    const details = el(doc, 'ul', 'details');
     for (const v of result.verdicts) {
       const li = el(doc, 'li');
       li.dataset.claimId = v.claimId;
@@ -402,13 +474,28 @@ export class AnswerOverlay {
       details.append(li);
     }
     if (s.checked === 0) details.append(el(doc, 'li', undefined, 'No checkable factual claims were found in this answer.'));
-    this.#bar.append(details);
-
-    for (const w of [...new Set(warnings.map(friendlyWarning))]) {
+    more.append(details);
+    if (offlineJudge) {
+      const info = el(doc, 'div', 'note info');
+      info.append(icon(doc, 'question', 13), el(doc, 'span', undefined, offlineJudge));
+      more.append(info);
+    }
+    for (const w of notes) {
       const note = el(doc, 'div', 'note');
       note.append(icon(doc, 'alert', 13), el(doc, 'span', undefined, w));
-      this.#bar.append(note);
+      more.append(note);
     }
+
+    const extras = notes.length + (offlineJudge ? 1 : 0);
+    const label = (open: boolean) => `${open ? 'Hide' : 'Show'} details${!open && extras ? ` · ${extras} note${extras === 1 ? '' : 's'}` : ''}`;
+    const toggle = this.#button(label(false), 'chevron', () => {
+      more.hidden = !more.hidden;
+      toggle.lastChild!.textContent = label(!more.hidden);
+      toggle.setAttribute('aria-expanded', String(!more.hidden));
+      toggle.classList.toggle('open', !more.hidden);
+    }, 'ghost more-toggle');
+    toggle.setAttribute('aria-expanded', 'false');
+    this.#bar.append(toggle, more);
   }
 
   /** Flagged claims and their live DOM ranges. */
@@ -552,19 +639,37 @@ export class AnswerOverlay {
       panel.append(el(doc, 'div', 'label', 'Evidence'), el(doc, 'div', undefined, 'No relevant passages were found in the enabled sources.'));
     }
 
-    const vw = doc.defaultView?.innerWidth ?? 800;
-    const vh = doc.defaultView?.innerHeight ?? 600;
-    const x = Math.max(12, Math.min(at?.x ?? vw / 2 - 220, vw - 452));
-    const y = at ? (at.y + 8 > vh * 0.55 ? Math.max(12, at.y - 8 - Math.min(vh * 0.7, 420)) : at.y + 8) : 80;
-    Object.assign(panel.style, { left: `${x}px`, top: `${y}px` });
-    layer.root.append(panel);
-    layer.panel = panel;
-    close.focus({ preventScroll: true });
+    layer.showPanel(panel, this.#anchorFor(claimId, at), this);
+    // Focus for keyboard users (Escape / Tab), without drawing a focus ring after a mouse click.
+    close.focus({ preventScroll: true, focusVisible: false } as FocusOptions);
     return panel;
+  }
+
+  /**
+   * What the panel should stay attached to: the claim's text (the clicked line,
+   * when opened from a highlight), or its row in the details list when the
+   * claim's text is scrolled out of view.
+   */
+  #anchorFor(claimId: string, at?: { x: number; y: number }): Anchor | undefined {
+    const claim = this.#result?.claims.find((c) => c.id === claimId);
+    const range = claim && this.#map ? rangeForSpan(this.#map, claim.span.start, claim.span.end, this.#doc) : undefined;
+    if (range && typeof range.getClientRects === 'function') {
+      const lines = mergeLineRects(Array.from(range.getClientRects()));
+      const vh = this.#doc.defaultView?.innerHeight ?? 600;
+      let line = 0;
+      if (at) lines.forEach((r, i) => { if (Math.abs(r.bottom - at.y) < Math.abs(lines[line]!.bottom - at.y)) line = i; });
+      const visible = lines.some((r) => r.bottom > 0 && r.top < vh);
+      if (at || visible) return rangeAnchor(range, line);
+    }
+    const row = Array.from(this.root.querySelectorAll('li')).find((li) => li.dataset.claimId === claimId);
+    if (row && !row.closest('[hidden]')) return elementAnchor(row);
+    return at ? () => ({ left: at.x, top: at.y, bottom: at.y }) : undefined;
   }
 
   destroy(): void {
     this.#clearHighlights();
+    const layer = layers.get(this.#doc);
+    if (layer?.owner === this) layer.closePanel();
     this.host.remove();
     if (this.#listening) {
       this.#doc.defaultView?.removeEventListener('scroll', this.#onViewportChange, { capture: true });

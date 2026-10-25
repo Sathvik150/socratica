@@ -8,7 +8,15 @@
   <link rel="stylesheet" href="theme.css">
 </head>
 <body>
-  <main id="app"></main>
+  <main id="app" aria-busy="true">
+    <!-- Skeleton until settings load: title, privacy notice and the settings cards. -->
+    <div aria-hidden="true">
+      <span class="sk-line h-7 w-72 mt-1"></span><span class="sk-line w-96 max-w-full"></span>
+      <section class="sk-card p-[18px]"><span class="sk-title"></span><span class="sk-line w-11/12"></span><span class="sk-line w-4/5"></span><span class="sk-line w-2/3"></span><span class="sk-button mt-2"></span></section>
+      <section class="sk-card p-[18px]"><span class="sk-title"></span><span class="sk-line w-1/2"></span><span class="sk-line w-3/5"></span></section>
+      <section class="sk-card p-[18px]"><span class="sk-title"></span><span class="sk-line w-2/3"></span><span class="sk-line w-1/2"></span><span class="sk-line w-3/4"></span></section>
+    </div>
+  </main>
   <script src="options.js"></script>
 </body>
 </html>

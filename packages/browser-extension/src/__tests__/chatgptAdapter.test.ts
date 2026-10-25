@@ -107,6 +107,19 @@ describe('MessageWatcher', () => {
     expect(ready).toHaveLength(1);
     watcher.stop();
   });
+
+  it('checks a turn within 150 ms when ChatGPT marks it complete, instead of waiting out the quiet period', async () => {
+    vi.useFakeTimers();
+    loadFixture('chatgpt-finished.html');
+    const ready: ReadyMessage[] = [];
+    const watcher = new MessageWatcher(chatgptAdapter, document, { debounceMs: 2_000, onReady: (m) => ready.push(m) });
+    watcher.start();
+    await vi.advanceTimersByTimeAsync(10);
+    document.querySelector('[data-message-author-role="assistant"]')!.setAttribute('data-message-complete', 'true');
+    await vi.advanceTimersByTimeAsync(200);
+    expect(ready).toHaveLength(1);
+    watcher.stop();
+  });
 });
 
 describe('adapter registry and stubs', () => {

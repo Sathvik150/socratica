@@ -12,7 +12,7 @@ export class GovUkEvidenceProvider implements EvidenceProvider {
   readonly id = 'gov-uk';
   readonly #http: EvidenceHttp;
   readonly #count: number;
-  constructor(opts: GovUkOptions) { this.#http = new EvidenceHttp('GOV.UK', opts.fetch); this.#count = count(opts.count, 2); }
+  constructor(opts: GovUkOptions) { this.#http = new EvidenceHttp('GOV.UK', opts.fetch, false, 2); this.#count = count(opts.count, 2); }
 
   async retrieve(claim: Claim, options: RetrieveOptions): Promise<Array<Omit<Passage, 'id'>>> {
     // GOV.UK searches document titles/descriptions. Sending a false number and

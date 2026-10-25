@@ -11,7 +11,7 @@ export class EuropePmcEvidenceProvider implements EvidenceProvider {
   readonly id = 'europe-pmc';
   readonly #http: EvidenceHttp;
   readonly #count: number;
-  constructor(opts: ScholarlyOptions) { this.#http = new EvidenceHttp('Europe PMC', opts.fetch); this.#count = count(opts.count); }
+  constructor(opts: ScholarlyOptions) { this.#http = new EvidenceHttp('Europe PMC', opts.fetch, false, 4); this.#count = count(opts.count); }
   async retrieve(claim: Claim, options: RetrieveOptions): Promise<Array<Omit<Passage, 'id'>>> {
     const data = record(await this.#http.json(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?format=json&resultType=core&pageSize=${this.#count}&query=${encodeURIComponent(searchQuery(claim))}`));
     const passages: Array<Omit<Passage, 'id'>> = [];

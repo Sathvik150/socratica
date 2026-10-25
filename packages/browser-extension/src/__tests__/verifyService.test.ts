@@ -37,6 +37,14 @@ describe('background verify service', () => {
     expect(calls).toEqual([]);
   });
 
+  it('does nothing anywhere when switched off in the popup', async () => {
+    const { calls, deps: d } = deps();
+    const off = { ...consented, enabled: false };
+    expect((await handleVerify(req, off, d)).status).toBe('disabled');
+    expect((await handleVerifyText({ text: 'The Eiffel Tower is in Paris.' }, off, d)).status).toBe('disabled');
+    expect(calls).toEqual([]);
+  });
+
   it('after consent, uses Wikipedia with only claim-derived queries', async () => {
     const { calls, deps: d } = deps();
     const res = await handleVerify(req, consented, d);
