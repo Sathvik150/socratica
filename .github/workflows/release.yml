@@ -2,14 +2,15 @@ name: Release
 
 # Publishes the downloadable zips as a GitHub Release. Three ways to trigger it:
 #   1. push a tag like v0.1.0
-#   2. push a commit whose message contains "[release]": the workflow creates the
-#      tag v<version from package.json> on that commit
+#   2. push (or merge a PR into) main with "[release]" in the commit message or PR title: the
+#      workflow creates the tag v<version from package.json> on that commit. Only main counts,
+#      so an unreviewed branch can't publish a release.
 #   3. run it manually (Actions tab -> Release -> Run workflow); tick "recreate" to replace an
 #      existing release + tag of the same version (e.g. after rewriting history)
 on:
   push:
     tags: ['v*']
-    branches: ['**']
+    branches: [main]
   workflow_dispatch:
     inputs:
       recreate:

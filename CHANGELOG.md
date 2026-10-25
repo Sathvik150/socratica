@@ -3,7 +3,7 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.1.5] - 2026-10-25
 
 ### Added
 - **On/off switch** at the top of the popup. Off means nothing is read, highlighted or sent anywhere; open ChatGPT
@@ -120,6 +120,7 @@ All notable changes to this project are documented here. The format follows
 - **Benchmark**: 37 labeled synthetic items, a runner, and a `BaselineVerifier` plug-in interface.
 - Release packaging (`pnpm package`) and GitHub Actions for CI and tagged releases.
 
+[0.1.5]: https://github.com/sathvik150/cac26/releases/tag/v0.1.5
 [0.1.4]: https://github.com/sathvik150/cac26/releases/tag/v0.1.4
 [0.1.3]: https://github.com/sathvik150/cac26/releases/tag/v0.1.3
 [0.1.2]: https://github.com/sathvik150/cac26/releases/tag/v0.1.2

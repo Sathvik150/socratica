@@ -26,7 +26,7 @@ quote is not a verbatim substring of a retrieved passage. Missing evidence stays
 ## Claude Code
 
 ```bash
-unzip hallucination-firewall-skill-v0.1.4.zip -d ~/.claude/skills/        # all projects
+unzip hallucination-firewall-skill-v0.1.5.zip -d ~/.claude/skills/        # all projects
 # or: unzip ... -d .claude/skills/                                        # this project only
 ```
 
@@ -40,7 +40,7 @@ The standalone `hallucination-firewall-skill-vX.zip` is for Agent Skills hosts a
 is missing the plugin manifest required by that dialog.
 
 1. Open the [latest release](https://github.com/sathvik150/cac26/releases/latest).
-2. Download `hallucination-firewall-plugin-v0.1.4.zip` without extracting it. To build locally instead, run `pnpm build && pnpm package`; the ZIP will be in `release/`.
+2. Download `hallucination-firewall-plugin-v0.1.5.zip` without extracting it. To build locally instead, run `pnpm build && pnpm package`; the ZIP will be in `release/`.
 3. In **Plugins → New Plugin**, choose that ZIP and select **Add plugin**.
 4. Start a new chat, select the plugin, and ask it to fact-check an answer against attached sources. Plugin upload has been confirmed; fact-checking behavior after installation still needs verification. If it fails, record the exact error and ZIP filename.
 
