@@ -1,9 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MockLLM, runVerification } from '@hallucination-firewall/core';
 import { chatgptAdapter } from '../adapters/chatgpt.js';
 import { AnswerOverlay } from '../overlay.js';
 import { MessageWatcher, type ReadyMessage } from '../watcher.js';
 import { loadFixture } from './fixtures.js';
+
+afterEach(() => vi.useRealTimers());
 
 // Fixtures captured from live chatgpt.com on 2026-10-24 (see fixtures/README.md).
 describe('chatgpt adapter on HTML captured from live chatgpt.com', () => {
@@ -24,6 +26,103 @@ describe('chatgpt adapter on HTML captured from live chatgpt.com', () => {
     loadFixture('chatgpt-live-streaming.html');
     const [msg] = chatgptAdapter.findAssistantMessages(document);
     expect(chatgptAdapter.isStreaming(msg!, document)).toBe(true);
+  });
+
+  it('detects the logged-in search-unit UI without counting attribution headings or nested content twice', () => {
+    loadFixture('chatgpt-live-logged-in-finished.html');
+    const messages = chatgptAdapter.findAssistantMessages(document);
+    expect(messages).toHaveLength(1);
+    const message = messages[0]!;
+    expect(chatgptAdapter.getMessageId(message, 0)).toBe('assistant-1');
+    expect(chatgptAdapter.getContentElement(message).getAttribute('data-markdown-text-style')).toBe('assistant-message');
+    expect(chatgptAdapter.getQuestionFor(message, document)).toBe(
+      'Write four sentences about the history of the Brooklyn Bridge, including when it opened and its main span length.',
+    );
+    expect(chatgptAdapter.isStreaming(message, document)).toBe(false);
+    const stop = document.createElement('button');
+    stop.setAttribute('aria-label', 'Stop generating');
+    document.body.append(stop);
+    expect(chatgptAdapter.isStreaming(message, document)).toBe(true);
+  });
+
+  it('waits for the logged-in ancestor completion state after initial generation, regenerate, and editing', async () => {
+    vi.useFakeTimers();
+    loadFixture('chatgpt-live-logged-in-finished.html');
+    const message = chatgptAdapter.findAssistantMessages(document)[0]!;
+    const turn = message.closest('[data-talvt-turn-state]')!;
+    const content = chatgptAdapter.getContentElement(message);
+    const ready: ReadyMessage[] = [];
+    const watcher = new MessageWatcher(chatgptAdapter, document, { debounceMs: 50, onReady: (m) => ready.push(m) });
+    // Non-complete states are simulated from the captured finished turn.
+    turn.removeAttribute('data-talvt-turn-state');
+    expect(chatgptAdapter.isStreaming(message, document)).toBe(true);
+    turn.setAttribute('data-talvt-turn-state', 'streaming');
+    watcher.start();
+    try {
+      for (const action of ['initial', 'regenerate', 'edit'] as const) {
+        turn.setAttribute('data-talvt-turn-state', 'streaming');
+        if (action === 'regenerate') content.querySelector('p')!.textContent = 'The Brooklyn Bridge opened in 1883.';
+        if (action === 'edit') {
+          document.querySelector('[data-user-message-bubble]')!.textContent = 'When did the Brooklyn Bridge open?';
+          content.querySelector('p')!.textContent = 'The Brooklyn Bridge opened on May 24, 1883.';
+        }
+        const previousCount = ready.length;
+        await vi.advanceTimersByTimeAsync(200);
+        expect(ready).toHaveLength(previousCount);
+        turn.setAttribute('data-talvt-turn-state', 'complete');
+        await vi.advanceTimersByTimeAsync(25);
+        expect(ready).toHaveLength(previousCount);
+        await vi.advanceTimersByTimeAsync(100);
+        expect(ready).toHaveLength(previousCount + 1);
+        expect(ready.at(-1)!.text).not.toContain('ChatGPT said:');
+      }
+      expect(ready.at(-1)!.question).toBe('When did the Brooklyn Bridge open?');
+    } finally {
+      watcher.stop();
+    }
+  });
+
+  it('checks only after the completion attribute appears, including regenerate and prompt edits', async () => {
+    vi.useFakeTimers();
+    loadFixture('chatgpt-live-streaming.html');
+    const message = chatgptAdapter.findAssistantMessages(document)[0]!;
+    const content = chatgptAdapter.getContentElement(message);
+    const question = document.querySelector('[data-user-message-copy]')!;
+    const ready: ReadyMessage[] = [];
+    const watcher = new MessageWatcher(chatgptAdapter, document, { debounceMs: 50, onReady: (m) => ready.push(m) });
+    watcher.start();
+    try {
+      await vi.advanceTimersByTimeAsync(200);
+      expect(ready).toHaveLength(0);
+
+      // No text or child-list mutation accompanies this completion signal.
+      message.setAttribute('data-message-complete', '');
+      await vi.advanceTimersByTimeAsync(25);
+      expect(ready).toHaveLength(0);
+      await vi.advanceTimersByTimeAsync(50);
+      expect(ready).toHaveLength(1);
+
+      for (const action of ['regenerate', 'edit'] as const) {
+        message.removeAttribute('data-message-complete');
+        if (action === 'edit') question.textContent = 'When did the Brooklyn Bridge open?';
+        content.querySelector('p')!.textContent = action === 'regenerate'
+          ? 'The Brooklyn Bridge opened in 1883.'
+          : 'The Brooklyn Bridge opened on May 24, 1883.';
+        const previousCount = ready.length;
+        // A pause longer than the debounce must not check a partial answer.
+        await vi.advanceTimersByTimeAsync(200);
+        expect(ready).toHaveLength(previousCount);
+        message.setAttribute('data-message-complete', '');
+        await vi.advanceTimersByTimeAsync(100);
+        expect(ready).toHaveLength(previousCount + 1);
+        expect(ready.at(-1)!.text).toContain(content.querySelector('p')!.textContent);
+      }
+      expect(ready.at(-1)!.question).toBe('When did the Brooklyn Bridge open?');
+      await vi.advanceTimersByTimeAsync(200);
+      expect(ready).toHaveLength(3);
+    } finally {
+      watcher.stop();
+    }
   });
 
   it('reports the finished answer through the watcher and extracts checkable claims', async () => {

@@ -172,14 +172,15 @@ All of these judges are in-repo or local; **no hosted LLM (OpenAI or Anthropic A
 | Agent Skill in **Claude Code** | Installed from the release zip into `.claude/skills`, then a fact-check request run headless | ✅ skill auto-loaded, validator ran, semantic contradiction caught |
 | CLI with a **local model** | Ollama 0.40.10, `qwen2.5:3b` and `qwen2.5:7b`, from the unzipped release | ✅ works; quality depends on the model (see benchmark) |
 | Skill upload to **claude.ai / ChatGPT** | Not tested | ⏳ needs a logged-in account (see [docs/skill.md](docs/skill.md)) |
-| Logged-in ChatGPT, hosted OpenAI/Anthropic judges | Not tested | ⏳ needs your account / API key |
+| Logged-in ChatGPT | Chrome with the unpacked extension, 2026-10-24; public Brooklyn Bridge test conversation | ✅ popup detects 1 answer; fresh checks after regeneration and prompt editing, following completion (see [verification notes](docs/chatgpt-logged-in.md)) |
+| Hosted OpenAI/Anthropic judges | Not tested | ⏳ needs your API key |
 
 <img src="docs/images/live-chatgpt.png" alt="The extension running on live chatgpt.com: dashed underlines on claims, the evidence panel, and the summary bar under the answer" width="760">
 
 ## ⚠️ Known limitations
 
 - **Review Mode only.** You see the answer before it's checked.
-- **ChatGPT's page can change.** The adapter was verified on live chatgpt.com (logged-out UI) on 2026-10-24, and that page is saved as test fixtures. The **logged-in UI was not tested** and may differ. Older selectors are kept as a fallback. Fixes go in [`adapters/chatgpt.ts`](packages/browser-extension/src/adapters/chatgpt.ts).
+- **ChatGPT's page can change.** The adapter was verified on live chatgpt.com in logged-out and logged-in UIs on 2026-10-24, with sanitized fixtures for both. This covers the tested layouts; other accounts or rollouts may differ. Older selectors are kept as a fallback. Fixes go in [`adapters/chatgpt.ts`](packages/browser-extension/src/adapters/chatgpt.ts).
 - **Wikipedia rate limits.** Wikimedia throttles clients by IP. In testing from a cloud machine, requests were rate-limited (HTTP 429) after a few bursts. The extension identifies itself as Wikimedia's API policy asks, caches articles and backs off; rate-limited claims fall back to `unverifiable`.
 - **The offline heuristic judge is literal.** It handles simple number, name and negation conflicts, but real encyclopedia wording usually comes out `unverifiable`. For real-world answers, use an LLM judge: OpenAI or Anthropic in the extension, or a local model with the CLI.
 - **Local models need one setting.** Ollama refuses browser extensions unless started with `OLLAMA_ORIGINS="chrome-extension://*"`; LM Studio needs **Enable CORS**. The extension tells you this if it hits the error. Only servers on `localhost` / `127.0.0.1` are allowed. The first request can take minutes while the model loads.
