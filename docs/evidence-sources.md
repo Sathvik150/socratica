@@ -18,13 +18,14 @@ accepts your own `--evidence` files instead).
 | Engine | Evidence returned | Key | Notes |
 |---|---|---|---|
 | Socratica search (default) | Google's answer box, knowledge panel and result snippets, through Socratica's relay | None | The relay ([`relay/`](../relay/README.md), a Vercel Function) asks Serper with the project's key, so nobody needs one. 30 searches a minute and 400 a day per network address; when it's busy or out of credits, DuckDuckGo backs it up |
-| Firecrawl | Result titles, links and snippets | None. An optional free Firecrawl key (sign up with Google or GitHub, 1,000 credits) works on any network | No sign-up. Keyless use has a daily limit per network address, and Firecrawl turns away keyless requests from VPN, proxy and IPv6 addresses (HTTP 403 or 401). Without a key, DuckDuckGo backs it up (below) address; when it runs out, the check continues with the other sources and says so |
+| Firecrawl | Result titles, links and snippets | None. An optional free Firecrawl key (sign up with Google or GitHub, 1,000 credits) works on any network | No sign-up. Keyless use has a daily limit per network address, and Firecrawl turns away keyless requests from VPN, proxy and IPv6 addresses (HTTP 403 or 401). Without a key, DuckDuckGo backs it up (below) |
 | Google results via Serper | Google's answer box, knowledge panel and result snippets | Free Serper key (2,500 searches, no card) | The closest thing to Google web search with a free key. Google's own Custom Search JSON API is closed to new customers, so it is not offered |
 | Brave Search | Result snippets | Brave Search API key | Brave's independent index |
 
 Search snippets are short. A snippet only decides a verdict when it states the fact itself and the
 quote is verbatim; otherwise the claim stays `unverifiable`. Results are restricted to `http(s)`
-links, cleaned of markup, and ranked by how closely they match the claim's subject.
+links, cleaned of markup, and ranked by how closely they match the fact the claim states, counting the
+page title ("Atmosphere of Earth"); a snippet that gives a figure for that fact ("20.95% oxygen") ranks first.
 
 ### The DuckDuckGo backup
 

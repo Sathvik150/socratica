@@ -1,5 +1,5 @@
 import type { Claim } from './types.js';
-import { contentTokens, coverage, isStopword, properNouns, splitSentences, tokenize } from './text.js';
+import { contentTokens, coverage, isStopword, properNouns, splitSentences, stem, tokenize } from './text.js';
 
 const PRONOUN_START = /^(?:it|its|they|their|he|she|his|her|this|these|those)\b/i;
 
@@ -33,8 +33,13 @@ export function queryTerms(claim: Claim): { primary: string[]; secondary: string
  * Lexical relevance in [0, 1]: weighted fraction of query terms present in the passage. A long
  * claim ("Researchers at Harvard concluded that the Earth's atmospheric oxygen…") is also scored
  * against each of its focused fact queries, so a passage about just that fact still counts.
+ *
+ * `title` is the page the passage comes from: a snippet from "Atmosphere of Earth" is about the
+ * Earth even when its own words never say so. A passage that gives a figure of the same kind right
+ * next to what the claim measures ("20.95% oxygen" for "oxygen concentration has increased to 35%")
+ * ranks above ones that only mention the topic, since it is the one that can settle the claim.
  */
-export function scorePassage(claim: Claim, passage: string): number {
+export function scorePassage(claim: Claim, passage: string, title?: string): number {
   const { primary, secondary } = queryTerms(claim);
   // The number in a hallucination may be wrong. Matching it in an unrelated
   // measurement must not outweigh matching the claim's subject and property.
@@ -47,7 +52,9 @@ export function scorePassage(claim: Claim, passage: string): number {
   for (const t of primary) if (have.has(t)) hit += weight(t);
   for (const t of secondary) if (have.has(t)) hit += 0.5 * weight(t);
   let score = hit / total;
-  for (const terms of focusTerms(claim)) score = Math.max(score, 0.9 * coverage(terms, [...have]));
+  const about = title ? [...have, ...contentTokens(title)] : [...have];
+  for (const terms of focusTerms(claim)) score = Math.max(score, 0.9 * coverage(terms, about));
+  if (statesFigure(claim, passage)) score = Math.min(1, score + 0.1);
   return score;
 }
 
@@ -57,6 +64,41 @@ function focusTerms(claim: Claim): string[][] {
   let terms = focusCache.get(claim);
   if (!terms) focusCache.set(claim, (terms = factQueries(claim).map((q) => contentTokens(q))));
   return terms;
+}
+
+/** What each of a claim's numbers measures, stemmed, and its kind, worked out once per claim. */
+const figureCache = new WeakMap<Claim, Array<{ words: Set<string>; kind: NumberKind }>>();
+const NUMBER = /\d[\d,]*(?:\.\d+)?/g;
+const WORD = /[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu;
+
+/** Whether the passage puts a number of the kind the claim uses right next to a word the claim measures. */
+function statesFigure(claim: Claim, passage: string): boolean {
+  let wanted = figureCache.get(claim);
+  if (!wanted) figureCache.set(claim, (wanted = factUnits(claim).map((u) => ({ words: new Set(u.words.map(stem)), kind: u.kind }))));
+  if (!wanted.length) return false;
+  const lower = passage.toLowerCase();
+  const words = [...lower.matchAll(WORD)].filter((m) => !/^\d/.test(m[0])).map((m) => ({ stem: stem(m[0].replace(/['’]s$/, '')), at: m.index }));
+  for (const m of lower.matchAll(NUMBER)) {
+    const written = m[0].replace(/,+$/, '');
+    const kind = numberKind(written, lower.slice(m.index + m[0].length));
+    const k = words.findIndex((w) => w.at >= m.index);
+    const at = k === -1 ? words.length : k;
+    // A year sits a little further off in a full date ("launched on 25 December 2021").
+    const reach = kind === 'year' ? 5 : 3;
+    for (const f of wanted) {
+      if (f.kind === kind && words.some((w, i) => f.words.has(w.stem) && Math.abs(i - at) <= reach)) return true;
+    }
+  }
+  return false;
+}
+
+export type NumberKind = 'percent' | 'year' | 'number';
+
+/** "35%" and "35 percent" are percentages, "2021" is a year, anything else a plain number. */
+function numberKind(written: string, after: string): NumberKind {
+  if (/^\s*(?:%|percent\b|per\s+cent\b)/.test(after)) return 'percent';
+  if (/^(?:1\d{3}|20\d{2}|2100)$/.test(written)) return 'year';
+  return 'number';
 }
 
 /** Verbs that report a statement rather than make it ("NASA announced that…", "Scientists confirmed that…"). */
@@ -123,6 +165,8 @@ export interface FactUnit {
   words: string[];
   /** The number as written, without thousands separators ("2018", "8849", "27.3"). */
   number: string;
+  /** Whether the number is a percentage, a year or a plain number. */
+  kind: NumberKind;
   /** "decreased by 15%" states an amount of change, not a value. */
   change: boolean;
 }
@@ -168,6 +212,7 @@ function propositionUnits(prop: string, claim: Claim): FactUnit[] {
         ...(owner ?? named[0]?.text ? { subject: owner ?? named[0]!.text } : {}),
         words: words.sort((a, b) => a.at - b.at).map((w) => w.text),
         number: written.replace(/,/g, ''),
+        kind: numberKind(written, lower.slice(t.at + written.length)),
         change: /\bby\s+(?:about\s+|approximately\s+|roughly\s+|nearly\s+|around\s+|some\s+)?$/.test(lower.slice(0, t.at)),
       });
     });

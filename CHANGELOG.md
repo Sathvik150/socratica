@@ -3,6 +3,16 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [SemVer](https://semver.org/).
 
+## [0.3.1] - 2026-10-25
+
+### Fixed
+- **A false figure could slip through when vaguer results came first.** Checking "the Earth's atmospheric oxygen
+  concentration has increased to 35%" live, Google sometimes returned four snippets that only mention Earth's oxygen
+  ahead of the one that gives the figure ("dry air contains 78.08% nitrogen, 20.95% oxygen", from the "Atmosphere of
+  Earth" page). Only the top four passages reach the judge, so the claim came back unverifiable. A web or Wikipedia
+  passage now also counts the subject in its page title, and a passage that gives a figure of the same kind right next
+  to what the claim measures ranks above ones that only mention the topic. Benchmark numbers are unchanged.
+
 ## [0.3.0] - 2026-10-25
 
 ### Added
@@ -189,6 +199,7 @@ Hallucination Firewall is now **Socratica**. This release also replaces the unre
 - **Benchmark**: 37 labeled synthetic items, a runner, and a `BaselineVerifier` plug-in interface.
 - Release packaging (`pnpm package`) and GitHub Actions for CI and tagged releases.
 
+[0.3.1]: https://github.com/sathvik150/cac26/releases/tag/v0.3.1
 [0.3.0]: https://github.com/sathvik150/cac26/releases/tag/v0.3.0
 [0.2.0]: https://github.com/sathvik150/cac26/releases/tag/v0.2.0
 [0.1.5]: https://github.com/sathvik150/cac26/releases/tag/v0.1.5

@@ -67,7 +67,7 @@ export class WikipediaEvidenceProvider implements EvidenceProvider {
       if (!page.title || !page.extract) continue;
       const url = `${this.#base}/wiki/${encodeURIComponent(page.title.replace(/ /g, '_'))}`;
       for (const chunk of chunkText(page.extract)) {
-        const score = scorePassage(claim, chunk);
+        const score = scorePassage(claim, chunk, page.title);
         if (score >= MIN_RELEVANCE) passages.push({ text: chunk, score, source: { title: page.title, url, providerId: this.id } });
       }
     }

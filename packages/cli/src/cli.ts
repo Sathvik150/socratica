@@ -31,7 +31,7 @@ import {
 import { loadEvidence } from './evidence.js';
 import { validateVerdicts, type ValidateInput } from './validate.js';
 
-export const VERSION = '0.3.0';
+export const VERSION = '0.3.1';
 
 export const HELP = `socratica ${VERSION} - evidence-linked fact checking (supported / contradicted / unverifiable)
 

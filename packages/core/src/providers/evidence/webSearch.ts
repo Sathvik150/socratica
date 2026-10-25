@@ -17,7 +17,7 @@ function toPassages(claim: Claim, hits: Hit[], providerId: string, limit: number
     if (!/^https?:\/\//i.test(hit.url)) continue;
     const snippet = cleanSnippet(hit.snippet);
     if (!snippet) continue;
-    const score = scorePassage(claim, snippet);
+    const score = scorePassage(claim, snippet, hit.title);
     if (score >= MIN_RELEVANCE) passages.push({ text: snippet, score, source: { title: hit.title || hit.url, url: hit.url, providerId } });
   }
   return passages.sort((a, b) => b.score - a.score).slice(0, limit);
