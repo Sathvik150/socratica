@@ -3,13 +3,14 @@ import type { PlatformId } from './adapters/adapter.js';
 /** Bump when the consent text changes materially; users must consent again. */
 export const CONSENT_VERSION = 1;
 
-export type LLMChoice = 'heuristic' | 'openai' | 'anthropic';
+export type LLMChoice = 'heuristic' | 'openai' | 'anthropic' | 'local';
 
 export interface Settings {
   consent: { granted: boolean; version: number; grantedAt?: string };
   platforms: Record<PlatformId, boolean>;
   autoCheck: boolean;
-  llm: { provider: LLMChoice; model: string; apiKey: string };
+  /** `baseUrl` is only used by `local` (an OpenAI-compatible server such as Ollama or LM Studio). */
+  llm: { provider: LLMChoice; model: string; apiKey: string; baseUrl: string };
   evidence: { wikipedia: boolean; webSearch: boolean; webSearchApiKey: string };
 }
 
@@ -17,13 +18,14 @@ export const DEFAULT_SETTINGS: Settings = {
   consent: { granted: false, version: CONSENT_VERSION },
   platforms: { chatgpt: true, claude: false, gemini: false },
   autoCheck: true,
-  llm: { provider: 'heuristic', model: '', apiKey: '' },
+  llm: { provider: 'heuristic', model: '', apiKey: '', baseUrl: 'http://localhost:11434/v1' },
   evidence: { wikipedia: true, webSearch: false, webSearchApiKey: '' },
 };
 
 export const DEFAULT_MODELS: Record<Exclude<LLMChoice, 'heuristic'>, string> = {
   openai: 'gpt-4o-mini',
   anthropic: 'claude-opus-5-5',
+  local: 'qwen2.5:7b',
 };
 
 /** Host permission each network-using component needs (requested at runtime, never at install). */
@@ -33,6 +35,17 @@ export const HOST_PERMISSIONS = {
   anthropic: 'https://api.anthropic.com/*',
   webSearch: 'https://api.search.brave.com/*',
 } as const;
+
+/** Host-permission pattern for a local OpenAI-compatible server, e.g. http://localhost:11434/v1 -> http://localhost/* */
+export function localOrigin(baseUrl: string): string | undefined {
+  try {
+    const u = new URL(baseUrl);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return undefined;
+    return `${u.protocol}//${u.hostname}/*`;
+  } catch {
+    return undefined;
+  }
+}
 
 export function hasValidConsent(s: Settings): boolean {
   return s.consent.granted && s.consent.version === CONSENT_VERSION;
@@ -45,6 +58,10 @@ export function requiredOrigins(s: Settings): string[] {
   if (s.evidence.webSearch) out.push(HOST_PERMISSIONS.webSearch);
   if (s.llm.provider === 'openai') out.push(HOST_PERMISSIONS.openai);
   if (s.llm.provider === 'anthropic') out.push(HOST_PERMISSIONS.anthropic);
+  if (s.llm.provider === 'local') {
+    const origin = localOrigin(s.llm.baseUrl);
+    if (origin) out.push(origin);
+  }
   return out;
 }
 

@@ -5,7 +5,7 @@
 import type { FetchLike } from '@hallucination-firewall/core';
 import type { Request, StateResponse } from './messages.js';
 import { hasValidConsent, loadSettings } from './settings.js';
-import { handleVerify } from './verifyService.js';
+import { handleTestJudge, handleVerify, handleVerifyText } from './verifyService.js';
 
 const deps = {
   fetch: ((url, init) => fetch(url, init as RequestInit)) as FetchLike,
@@ -29,6 +29,12 @@ chrome.runtime.onMessage.addListener((msg: Request, sender, sendResponse) => {
       case 'hf/verify':
         sendResponse(await handleVerify(msg, settings, deps));
         return;
+      case 'hf/verify-text':
+        sendResponse(await handleVerifyText(msg, settings, deps));
+        return;
+      case 'hf/test-judge':
+        sendResponse(await handleTestJudge(settings, deps));
+        return;
       case 'hf/open-options':
         await chrome.runtime.openOptionsPage();
         sendResponse({ ok: true });
@@ -37,8 +43,6 @@ chrome.runtime.onMessage.addListener((msg: Request, sender, sendResponse) => {
   })();
   return true; // async response
 });
-
-chrome.action.onClicked.addListener(() => void chrome.runtime.openOptionsPage());
 
 chrome.runtime.onInstalled.addListener((details) => {
   // Show the consent screen on first install. No network calls happen until it is accepted.

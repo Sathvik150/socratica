@@ -3,6 +3,18 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Toolbar popup**: shows on/off state, judge and evidence setup, answers detected on the current ChatGPT tab and the
+  last result. Includes **Check latest answer**, and **Check selected text** for any website (`activeTab` + `scripting`).
+- **Local model judge in the extension** (Ollama, LM Studio, any OpenAI-compatible server on localhost), with a
+  **Test connection** button and specific guidance for the common HTTP 403 (`OLLAMA_ORIGINS`) and 404 (model not pulled) errors.
+- Warnings when the limited offline judge is in use, and when the judge itself fails.
+
+### Changed
+- Clicking the toolbar icon opens the popup instead of the settings tab.
+
 ## [0.1.0] - 2026-10-24
 
 ### Fixed (from live testing)

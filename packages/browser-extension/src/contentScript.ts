@@ -4,7 +4,7 @@
  * network requests itself.
  */
 import { adapterFor } from './adapters/index.js';
-import type { Request, StateResponse, VerifyResponse } from './messages.js';
+import type { PageStatus, Request, StateResponse, TabRequest, VerifyResponse } from './messages.js';
 import { AnswerOverlay } from './overlay.js';
 import { MessageWatcher, type ReadyMessage } from './watcher.js';
 
@@ -21,10 +21,15 @@ async function main(): Promise<void> {
   const overlays = new Map<string, AnswerOverlay>();
   const latest = new Map<string, string>();
   const current = new Map<string, ReadyMessage>();
+  /** Answers the user explicitly asked to check from the popup. */
+  const force = new Set<string>();
   const openOptions = () => void send({ type: 'hf/open-options' });
+  // What the popup shows for this tab.
+  const status: Omit<PageStatus, 'answers' | 'platform'> = { state: state.consentGranted ? 'idle' : 'consent-required' };
 
   const verify = async (m: ReadyMessage, overlay: AnswerOverlay) => {
     overlay.showStatus('Checking claims against evidence…');
+    status.state = 'checking';
     const res = await send<VerifyResponse>({
       type: 'hf/verify',
       platform: adapter.platform,
@@ -32,9 +37,12 @@ async function main(): Promise<void> {
       ...(m.question ? { question: m.question } : {}),
     });
     if (latest.get(m.id) !== m.hash) return; // answer changed while we were checking; a newer run will render
+    status.state = res.status === 'ok' ? 'idle' : res.status;
+    delete status.lastError;
     switch (res.status) {
       case 'ok':
         overlay.render(res.result, m.text, res.warnings);
+        status.lastSummary = res.result.summary.text;
         break;
       case 'consent-required':
         overlay.showConsentRequired();
@@ -43,6 +51,7 @@ async function main(): Promise<void> {
         overlay.destroy();
         break;
       case 'error':
+        status.lastError = res.message;
         overlay.showStatus(`Could not check this answer: ${res.message}`, { label: 'Retry', run: () => void verify(m, overlay) });
         break;
     }
@@ -68,11 +77,37 @@ async function main(): Promise<void> {
         overlay.ensureAttached();
       }
       if (!state.consentGranted) return overlay.showConsentRequired();
-      if (!state.autoCheck) return overlay.showStatus('Auto-check is off.', { label: 'Check this answer', run: () => void verify(m, overlay!) });
+      if (!state.autoCheck && !force.delete(m.id)) return overlay.showStatus('Auto-check is off.', { label: 'Check this answer', run: () => void verify(m, overlay!) });
       void verify(m, overlay);
     },
   });
   watcher.start();
+
+  // Requests from the toolbar popup.
+  chrome.runtime.onMessage.addListener((msg: TabRequest, sender, sendResponse) => {
+    if (sender.id !== chrome.runtime.id) return false;
+    if (msg.type === 'hf/page-status') {
+      const answers = adapter.findAssistantMessages(document).length;
+      sendResponse({ platform: adapter.platform, answers, ...status } satisfies PageStatus);
+      return false;
+    }
+    if (msg.type === 'hf/check-latest') {
+      // Re-check only the newest answer, even if auto-check is off.
+      const all = adapter.findAssistantMessages(document);
+      const last = all[all.length - 1];
+      if (!last) {
+        sendResponse({ ok: false, message: 'No ChatGPT answer found on this page.' });
+        return false;
+      }
+      const id = adapter.getMessageId(last, all.length - 1);
+      force.add(id);
+      watcher.forget(id);
+      watcher.check();
+      sendResponse({ ok: true });
+      return false;
+    }
+    return false;
+  });
 
   // Consent or settings may change in the options page; pick that up without a reload.
   chrome.storage.onChanged.addListener(async (_changes, area) => {
@@ -80,6 +115,8 @@ async function main(): Promise<void> {
     const next = await send<StateResponse>({ type: 'hf/get-state', platform: adapter.platform });
     const consentNowGranted = next.consentGranted && !state.consentGranted;
     Object.assign(state, next);
+    if (!state.consentGranted) status.state = 'consent-required';
+    else if (status.state === 'consent-required') status.state = 'idle';
     if (consentNowGranted) {
       for (const id of overlays.keys()) watcher.forget(id);
       watcher.check();

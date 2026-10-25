@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FetchLike } from '@hallucination-firewall/core';
-import { handleVerify } from '../verifyService.js';
+import { handleTestJudge, handleVerify, handleVerifyText } from '../verifyService.js';
 import { CONSENT_VERSION, DEFAULT_SETTINGS, type Settings } from '../settings.js';
 
 function deps(granted = true) {
@@ -58,5 +58,63 @@ describe('background verify service', () => {
     const { deps: d } = deps();
     const s = { ...consented, llm: { provider: 'openai' as const, model: '', apiKey: '' } };
     expect((await handleVerify(req, s, d)).status).toBe('error');
+  });
+});
+
+describe('local model judge', () => {
+  const local: Settings = {
+    ...consented,
+    evidence: { wikipedia: false, webSearch: false, webSearchApiKey: '' },
+    llm: { provider: 'local', model: 'qwen2.5:7b', apiKey: '', baseUrl: 'http://localhost:11434/v1' },
+  };
+
+  it('calls the OpenAI-compatible endpoint on localhost', async () => {
+    const urls: string[] = [];
+    const fetch: FetchLike = async (url) => {
+      urls.push(url);
+      return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: '{"ok": true}' } }] }), text: async () => '' };
+    };
+    const res = await handleTestJudge(local, { fetch, hasPermission: async () => true });
+    expect(res).toMatchObject({ ok: true, judge: 'qwen2.5:7b (local)' });
+    expect(urls).toEqual(['http://localhost:11434/v1/chat/completions']);
+  });
+
+  it('explains an HTTP 403 from Ollama (missing OLLAMA_ORIGINS)', async () => {
+    const fetch: FetchLike = async () => ({ ok: false, status: 403, json: async () => ({}), text: async () => '' });
+    const res = await handleTestJudge(local, { fetch, hasPermission: async () => true });
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.message).toContain('OLLAMA_ORIGINS="chrome-extension://*"');
+  });
+
+  it('explains an unreachable server', async () => {
+    const fetch: FetchLike = async () => {
+      throw new TypeError('Failed to fetch');
+    };
+    const res = await handleTestJudge(local, { fetch, hasPermission: async () => true });
+    if (!res.ok) expect(res.message).toMatch(/Is your local model server running/);
+  });
+
+  it('requires the localhost permission', async () => {
+    const { deps: d } = deps(false);
+    const res = await handleVerify(req, local, d);
+    expect(res).toMatchObject({ status: 'error' });
+  });
+});
+
+describe('selected-text checks', () => {
+  it('need consent, like page checks', async () => {
+    const { calls, deps: d } = deps();
+    expect(await handleVerifyText({ text: 'The Zentha Bridge opened in 1987.' }, DEFAULT_SETTINGS, d)).toEqual({ status: 'consent-required' });
+    expect(calls).toEqual([]);
+  });
+
+  it('run the same pipeline, regardless of which site the text came from', async () => {
+    const { deps: d } = deps();
+    const res = await handleVerifyText({ text: 'The Zentha Bridge opened in 1987.' }, consented, d);
+    expect(res.status).toBe('ok');
+    if (res.status === 'ok') {
+      expect(res.result.summary.contradicted).toBe(1);
+      expect(res.warnings.join(' ')).toMatch(/offline heuristic judge/);
+    }
   });
 });

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Hallucination Firewall</title>
+  <style>
+    :root { color-scheme: light; --fg: #1f2328; --muted: #57606a; --line: #d0d7de; --bg: #fff; --soft: #f6f8fa; }
+    * { box-sizing: border-box; }
+    body { margin: 0; width: 380px; max-height: 580px; overflow-y: auto; background: var(--bg); color: var(--fg); font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    header { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--soft); }
+    header h1 { font-size: 14px; margin: 0; flex: 1; }
+    main { padding: 10px 14px 14px; }
+    section { margin: 0 0 12px; }
+    h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 0 0 4px; }
+    p { margin: 0 0 6px; }
+    .muted { color: var(--muted); }
+    .warn { background: #fff8c5; border: 1px solid #d4a72c66; border-radius: 6px; padding: 6px 8px; }
+    .err { background: #ffebe9; border: 1px solid #cf222e44; border-radius: 6px; padding: 6px 8px; }
+    button { font: inherit; cursor: pointer; border: 1px solid var(--line); background: #fff; color: var(--fg); border-radius: 6px; padding: 5px 10px; }
+    button.primary { background: #1f883d; border-color: #1a7f37; color: #fff; }
+    button:disabled { opacity: .55; cursor: default; }
+    .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    a { color: #0969da; }
+    .chip { display: inline-block; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+    .chip.supported { background: #dafbe1; color: #116329; }
+    .chip.contradicted { background: #ffebe9; color: #a40e26; }
+    .chip.unverifiable { background: #fff8c5; color: #7d4e00; }
+    .chip.checked { background: #e7ecf0; }
+    ol.claims { list-style: none; padding: 0; margin: 6px 0 0; }
+    ol.claims li { border-top: 1px solid #eaeef2; padding: 6px 0; }
+    blockquote { margin: 4px 0; padding: 4px 8px; border-left: 3px solid var(--line); background: var(--soft); }
+    .correction { margin-top: 4px; padding: 4px 8px; background: #dafbe1; border-radius: 4px; }
+    .pill { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: #e7ecf0; }
+    .pill.on { background: #dafbe1; color: #116329; }
+    .pill.off { background: #fff8c5; color: #7d4e00; }
+  </style>
+</head>
+<body>
+  <header><h1>🛡️ Hallucination Firewall</h1><span id="pill" class="pill">…</span></header>
+  <main id="app"><p class="muted">Loading…</p></main>
+  <script src="popup.js"></script>
+</body>
+</html>

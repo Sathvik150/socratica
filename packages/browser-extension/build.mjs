@@ -11,6 +11,7 @@ await build({
     background: 'src/background.ts',
     contentScript: 'src/contentScript.ts',
     options: 'src/options.ts',
+    popup: 'src/popup.ts',
     demo: 'src/demo.ts',
   },
   outdir,

@@ -13,8 +13,11 @@
 - **All network calls go through the background service worker.** The content script only reads the page.
 - **Keys** live only in `chrome.storage.local` (not synced). They are never logged or put in error messages,
   and they are sent only as headers to their own provider.
-- **Permissions:** `storage`, plus content-script access to `https://chatgpt.com/*`. Wikipedia, OpenAI,
-  Anthropic and Brave are *optional* host permissions, requested at runtime only for what you enable.
+- **Permissions:** `storage`, content-script access to `https://chatgpt.com/*`, and `activeTab` + `scripting`.
+  The last two are used only by the popup's **Check selected text**: they read the current selection in the tab where
+  you clicked the toolbar button, and only at that moment. Wikipedia, OpenAI, Anthropic, Brave and `localhost` /
+  `127.0.0.1` (for a local model) are *optional* host permissions, requested at runtime only for what you enable.
+- **Local model judge:** claims and passages go only to the server URL you enter, which must be on your own machine.
 - **No backend, accounts, telemetry or analytics.**
 
 ## CLI

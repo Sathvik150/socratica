@@ -1,10 +1,13 @@
-import { DEFAULT_MODELS, HOST_PERMISSIONS, CONSENT_VERSION, hasValidConsent, requiredOrigins, type LLMChoice, type Settings } from './settings.js';
+import type { TestJudgeResponse } from './messages.js';
+import { DEFAULT_MODELS, HOST_PERMISSIONS, CONSENT_VERSION, hasValidConsent, localOrigin, requiredOrigins, type LLMChoice, type Settings } from './settings.js';
 
 export interface OptionsApi {
   load(): Promise<Settings>;
   save(s: Settings): Promise<void>;
   /** Must be called from a user gesture (chrome.permissions.request). */
   requestPermissions(origins: string[]): Promise<boolean>;
+  /** Sends one tiny request to the saved judge (background service worker). */
+  testJudge?(): Promise<TestJudgeResponse>;
 }
 
 const h = <K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, props: Record<string, unknown> = {}, ...children: Array<Node | string>): HTMLElementTagNameMap[K] => {
@@ -81,17 +84,51 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
       ['heuristic', 'Offline heuristic judge (no key, no network; simple sentences only)'],
       ['openai', 'OpenAI (your API key)'],
       ['anthropic', 'Anthropic (your API key)'],
+      ['local', 'Local model: Ollama, LM Studio, llama.cpp… (runs on your computer)'],
     ] as const) llmSelect.append(h(doc, 'option', { value, selected: settings.llm.provider === value }, label));
     const model = h(doc, 'input', { type: 'text', id: 'llm-model', value: settings.llm.model, placeholder: 'default model' });
     const key = h(doc, 'input', { type: 'password', id: 'llm-key', value: settings.llm.apiKey, autocomplete: 'off', placeholder: 'paste your own key' });
+    const baseUrl = h(doc, 'input', { type: 'text', id: 'llm-base-url', value: settings.llm.baseUrl, placeholder: 'http://localhost:11434/v1' });
+    const baseUrlRow = h(doc, 'label', { id: 'llm-base-url-row' }, 'Server URL (OpenAI-compatible)', baseUrl);
+    const hint = h(doc, 'p', { className: 'muted', id: 'llm-hint' });
+    const HINTS: Record<LLMChoice, string> = {
+      heuristic: 'No model, no network. It only recognises very literal matches, so most real answers come out "unverifiable". Pick a model for real checks.',
+      openai: 'Uses your OpenAI API key. Claims and retrieved passages are sent to OpenAI.',
+      anthropic: 'Uses your Anthropic API key. Claims and retrieved passages are sent to Anthropic.',
+      local:
+        'Runs on your own computer; nothing goes to a model provider. Ollama: run `ollama pull qwen2.5:7b`, then start it with OLLAMA_ORIGINS="chrome-extension://*" ollama serve. LM Studio: load a model, start the server and turn on "Enable CORS". 7B-class models or larger recommended. Only localhost / 127.0.0.1 servers are allowed.',
+    };
     const syncLlm = () => {
       const p = llmSelect.value as LLMChoice;
-      key.disabled = model.disabled = p === 'heuristic';
+      model.disabled = p === 'heuristic';
+      key.disabled = p === 'heuristic';
+      key.placeholder = p === 'local' ? 'usually not needed' : 'paste your own key';
+      baseUrlRow.hidden = p !== 'local';
       model.placeholder = p === 'heuristic' ? 'not used' : `default: ${DEFAULT_MODELS[p]}`;
+      hint.textContent = HINTS[p];
     };
     llmSelect.addEventListener('change', syncLlm);
     syncLlm();
-    const llm = h(doc, 'section', {}, h(doc, 'h2', {}, 'Judge (LLM)'), h(doc, 'label', {}, 'Provider', llmSelect), h(doc, 'label', {}, 'Model', model), h(doc, 'label', {}, 'API key', key));
+    const testBtn = h(doc, 'button', { id: 'test-judge', type: 'button' }, 'Test connection');
+    const testOut = h(doc, 'span', { className: 'status muted', id: 'test-result' });
+    testBtn.addEventListener('click', async () => {
+      if (!api.testJudge) return;
+      testOut.textContent = 'Testing… (uses the last saved settings)';
+      const r = await api.testJudge();
+      testOut.textContent = r.ok ? `✔ ${r.judge} answered in ${r.ms} ms.` : `✘ ${r.judge}: ${r.message}`;
+    });
+    const llm = h(
+      doc,
+      'section',
+      {},
+      h(doc, 'h2', {}, 'Judge (LLM)'),
+      h(doc, 'label', {}, 'Provider', llmSelect),
+      hint,
+      baseUrlRow,
+      h(doc, 'label', {}, 'Model', model),
+      h(doc, 'label', {}, 'API key', key),
+      h(doc, 'div', {}, testBtn, testOut),
+    );
 
     const wiki = h(doc, 'input', { type: 'checkbox', id: 'ev-wikipedia', checked: settings.evidence.wikipedia });
     const web = h(doc, 'input', { type: 'checkbox', id: 'ev-web', checked: settings.evidence.webSearch });
@@ -116,9 +153,16 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
         ...settings,
         platforms: { ...settings.platforms, chatgpt: chatgpt.checked },
         autoCheck: auto.checked,
-        llm: { provider: llmSelect.value as LLMChoice, model: model.value.trim(), apiKey: key.value.trim() },
+        llm: { provider: llmSelect.value as LLMChoice, model: model.value.trim(), apiKey: key.value.trim(), baseUrl: baseUrl.value.trim() || 'http://localhost:11434/v1' },
         evidence: { wikipedia: wiki.checked, webSearch: web.checked, webSearchApiKey: webKey.value.trim() },
       };
+      if (next.llm.provider === 'local') {
+        const origin = localOrigin(next.llm.baseUrl);
+        if (!origin || !/^http:\/\/(localhost|127\.0\.0\.1)\/\*$/.test(origin)) {
+          status('The local server URL must be on localhost or 127.0.0.1, e.g. http://localhost:11434/v1');
+          return;
+        }
+      }
       // Only ask for site access once the user has consented to sending data at all.
       const granted = hasValidConsent(next) ? await api.requestPermissions(requiredOrigins(next)) : true;
       settings = next;

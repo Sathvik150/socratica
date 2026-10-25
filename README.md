@@ -47,7 +47,13 @@ Grab the zips from the **[latest release](https://github.com/sathvik150/cac26/re
 1. Unzip `hallucination-firewall-extension-v0.1.0.zip`.
 2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and pick the unzipped folder.
 3. Read and accept the privacy notice on the settings page that opens. **Nothing is checked or sent before you accept.**
-4. Use [chatgpt.com](https://chatgpt.com) normally. When an answer finishes, a summary bar appears under it. Click a highlighted claim to see the reason, the source quotes and a correction.
+4. **Choose a judge** in the same settings page. The default offline judge only recognises very literal matches, so on real answers it mostly says "unverifiable". For real checks, pick one of:
+   - **Local model (free, private):** install [Ollama](https://ollama.com), run `ollama pull qwen2.5:7b`, then start it with `OLLAMA_ORIGINS="chrome-extension://*" ollama serve`. In settings, choose **Local model**, press **Save**, then **Test connection**.
+   - **OpenAI or Anthropic:** paste your own API key.
+5. Use [chatgpt.com](https://chatgpt.com) normally. When an answer finishes, a summary bar appears under it. Click a highlighted claim to see the reason, the source quotes and a correction.
+6. Click the toolbar icon at any time for the **popup**. It shows whether checking is on, which judge is in use, how many answers were detected, and the last result. It has a **Check latest answer** button, plus **Check selected text**, which works on any website.
+
+<img src="docs/images/popup.png" alt="The toolbar popup: setup, detected answers, last result, and a selected-text check" width="300">
 
 Want to see it without ChatGPT? Open `demo.html` from the unzipped folder. It runs fully offline.
 
@@ -136,7 +142,7 @@ The core engine has no DOM or browser code and doesn't know which chatbot wrote 
 - **Off until you consent.** The extension makes no network calls until you accept its privacy notice.
 - **Minimal data out.** Evidence sources get short claim-based search queries, not your conversation. A hosted judge (if you pick one) gets each claim, its sentence, your question, and the retrieved passages.
 - **Your keys stay yours.** They're stored locally (`chrome.storage.local` or environment variables), never logged, and never bundled.
-- **Least privilege.** The extension's only required permission is `storage`, plus access to chatgpt.com. Other sites are requested only when you enable them.
+- **Least privilege.** The extension's required permissions are `storage`, access to chatgpt.com, `activeTab` and `scripting`. The last two let **Check selected text** read your selection, and only in the tab where you clicked the toolbar button. Evidence sources and model servers are requested only when you enable them.
 - **No server, accounts, telemetry or analytics.**
 
 Full details: [docs/privacy.md](docs/privacy.md).
@@ -176,7 +182,7 @@ All of these judges are in-repo or local; **no hosted LLM (OpenAI or Anthropic A
 - **ChatGPT's page can change.** The adapter was verified on live chatgpt.com (logged-out UI) on 2026-10-24, and that page is saved as test fixtures. The **logged-in UI was not tested** and may differ. Older selectors are kept as a fallback. Fixes go in [`adapters/chatgpt.ts`](packages/browser-extension/src/adapters/chatgpt.ts).
 - **Wikipedia rate limits.** Wikimedia throttles clients by IP. In testing from a cloud machine, requests were rate-limited (HTTP 429) after a few bursts. The extension identifies itself as Wikimedia's API policy asks, caches articles and backs off; rate-limited claims fall back to `unverifiable`.
 - **The offline heuristic judge is literal.** It handles simple number, name and negation conflicts, but real encyclopedia wording usually comes out `unverifiable`. For real-world answers, use an LLM judge: OpenAI or Anthropic in the extension, or a local model with the CLI.
-- **The extension has no local-model option yet.** Local models are supported in the CLI, SDK and skill.
+- **Local models need one setting.** Ollama refuses browser extensions unless started with `OLLAMA_ORIGINS="chrome-extension://*"`; LM Studio needs **Enable CORS**. The extension tells you this if it hits the error. Only servers on `localhost` / `127.0.0.1` are allowed. The first request can take minutes while the model loads.
 - **Small local models are unreliable judges.** In testing, `qwen2.5:3b` fabricated a quote, which the validator caught and downgraded, and it missed most contradictions. 7B-class models did far better.
 - **Claim extraction is rule-based.** It can miss claims, such as pronoun clauses without a named entity.
 - **Only ChatGPT is supported.** Claude and Gemini adapters are stubs.
