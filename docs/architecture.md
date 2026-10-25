@@ -12,7 +12,7 @@
 │     evidence panel, summary bar          │      └──────────────┬───────────────────────┘
 └──────────────────────────────────────────┘                     │ plain text in, JSON out
                                                                  ▼
- @hallucination-firewall/core  (no DOM, no chrome.*, no knowledge of the chatbot)
+ @socratica/core  (no DOM, no chrome.*, no knowledge of the chatbot)
 ┌───────────────────────────────────────────────────────────────────────────────────────┐
 │ extractClaims ──▶ retrieveEvidence ──────▶ verifyClaims ─────────────▶ scoreResults   │
 │ atomic factual    providers/evidence:      providers/llm: judge sees   summary line,  │
@@ -22,8 +22,8 @@
 │ code              ranked passages + URLs   substrings, else downgrade                 │
 └───────────────────────────────────────────────────────────────────────────────────────┘
      ▲                         ▲                          ▲                       ▲
-     │ packages/sdk            │ packages/cli (hf-verify) │ skill/ (SKILL.md)     │ benchmark/
-     │ verify({...})           │ verify/extract/validate  │ uses hf-verify or the │ labeled JSONL
+     │ packages/sdk            │ packages/cli (socratica) │ skill/ (SKILL.md)     │ benchmark/
+     │ verify({...})           │ verify/extract/validate  │ uses socratica or the │ labeled JSONL
                                                            Python validator
 ```
 
@@ -48,9 +48,9 @@
 |---|---|
 | `packages/core` | The engine. Interfaces: `LLMProvider.complete(prompt)`, `EvidenceProvider.retrieve(claim, opts)`. |
 | `packages/sdk` | `verify({ question, answer, evidence, llm?, providers? })`. |
-| `packages/cli` | `hf-verify`, bundled into one file (`dist/hf-verify.mjs`). |
+| `packages/cli` | `socratica`, bundled into one file (`dist/socratica.mjs`). |
 | `packages/browser-extension` | MV3 extension: adapters, watcher, overlay, options, background, demo. |
-| `skill/hallucination-firewall` | Agent Skill: `SKILL.md`, references, Python validator. |
+| `skill/socratica` | Agent Skill: `SKILL.md`, references, Python validator. |
 | `benchmark` | Labeled dataset, metrics, runner, `BaselineVerifier`. |
 
 ## Shield Mode (interface only)

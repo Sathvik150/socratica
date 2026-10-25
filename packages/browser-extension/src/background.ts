@@ -2,7 +2,7 @@
  * MV3 service worker. All network calls happen here, never in the content script.
  * Nothing in this file logs request bodies, conversation text or keys.
  */
-import type { FetchLike } from '@hallucination-firewall/core';
+import type { FetchLike } from '@socratica/core';
 import type { Request, StateResponse } from './messages.js';
 import { hasValidConsent, loadSettings } from './settings.js';
 import { handleTestJudge, handleVerify, handleVerifyText } from './verifyService.js';
@@ -17,7 +17,7 @@ chrome.runtime.onMessage.addListener((msg: Request, sender, sendResponse) => {
   void (async () => {
     const settings = await loadSettings();
     switch (msg.type) {
-      case 'hf/get-state': {
+      case 'socratica/get-state': {
         const state: StateResponse = {
           platformEnabled: settings.enabled && settings.platforms[msg.platform],
           autoCheck: settings.autoCheck,
@@ -26,16 +26,16 @@ chrome.runtime.onMessage.addListener((msg: Request, sender, sendResponse) => {
         sendResponse(state);
         return;
       }
-      case 'hf/verify':
+      case 'socratica/verify':
         sendResponse(await handleVerify(msg, settings, deps));
         return;
-      case 'hf/verify-text':
+      case 'socratica/verify-text':
         sendResponse(await handleVerifyText(msg, settings, deps));
         return;
-      case 'hf/test-judge':
+      case 'socratica/test-judge':
         sendResponse(await handleTestJudge(settings, deps));
         return;
-      case 'hf/open-options':
+      case 'socratica/open-options':
         await chrome.runtime.openOptionsPage();
         sendResponse({ ok: true });
         return;

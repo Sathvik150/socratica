@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { MockLLM, runVerification } from '@hallucination-firewall/core';
+import { MockLLM, runVerification } from '@socratica/core';
 import { AnswerOverlay, supportsNativeHighlights } from '../overlay.js';
 import { friendlyWarning, pageIsDark, summarizeWarnings } from '../ui/theme.js';
 import { extractText } from '../textMap.js';
@@ -52,14 +52,14 @@ describe('native text highlights (CSS Custom Highlight API)', () => {
     const overlay = new AnswerOverlay({ content });
     overlay.render(result, text);
 
-    expect(registry.get('hf-contradicted')?.ranges.map((r) => r.toString())).toEqual(['The Pell Tower is 190 meters tall.']);
-    expect(registry.get('hf-unverifiable')?.ranges.map((r) => r.toString())).toEqual(['It has a rooftop garden designed by Ilsa Varn.']);
-    expect(document.querySelector('[data-hf-ui="layer"]')).toBeNull(); // no positioned boxes were created
-    expect(content.querySelector('[data-hf-ui]')).toBeNull(); // the page's own DOM is untouched
+    expect(registry.get('socratica-contradicted')?.ranges.map((r) => r.toString())).toEqual(['The Pell Tower is 190 meters tall.']);
+    expect(registry.get('socratica-unverifiable')?.ranges.map((r) => r.toString())).toEqual(['It has a rooftop garden designed by Ilsa Varn.']);
+    expect(document.querySelector('[data-socratica-ui="layer"]')).toBeNull(); // no positioned boxes were created
+    expect(content.querySelector('[data-socratica-ui]')).toBeNull(); // the page's own DOM is untouched
 
     overlay.destroy();
-    expect(registry.has('hf-contradicted')).toBe(false);
-    expect(registry.has('hf-unverifiable')).toBe(false);
+    expect(registry.has('socratica-contradicted')).toBe(false);
+    expect(registry.has('socratica-unverifiable')).toBe(false);
   });
 
   it('shows rate-limit warnings as plain-language notes', async () => {

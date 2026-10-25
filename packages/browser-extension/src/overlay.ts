@@ -1,6 +1,6 @@
 /**
  * In-page UI. Everything visual lives inside Shadow DOM hosts marked
- * `data-hf-ui`, so page styles cannot leak in, ours cannot leak out, and the
+ * `data-socratica-ui`, so page styles cannot leak in, ours cannot leak out, and the
  * watcher ignores our own mutations. The page's own DOM, which the chat app's
  * framework owns, is never rewritten.
  *
@@ -12,10 +12,15 @@
  * All dynamic text is inserted with textContent. Evidence comes from the web
  * and is never interpreted as HTML.
  */
-import type { ClaimVerdict, VerifyOutput } from '@hallucination-firewall/core';
+import type { ClaimVerdict, VerifyOutput } from '@socratica/core';
 import { extractText, rangeForSpan, type TextMap } from './textMap.js';
 import { HIGHLIGHT_CSS, OVERLAY_CSS, icon, pageIsDark, summarizeWarnings, type IconName } from './ui/theme.js';
 
+const VERDICT_MEANING: Record<ClaimVerdict['verdict'], string> = {
+  supported: 'A source states this claim.',
+  contradicted: 'A source states something different.',
+  unverifiable: 'Not enough evidence to confirm or refute it.',
+};
 const VERDICT_LABEL: Record<ClaimVerdict['verdict'], string> = {
   supported: 'Supported',
   contradicted: 'Contradicted',
@@ -99,7 +104,7 @@ class NativeHighlights {
       doc.adoptedStyleSheets = [...doc.adoptedStyleSheets, sheet];
     } catch {
       const style = el(doc, 'style', undefined, HIGHLIGHT_CSS);
-      style.setAttribute('data-hf-ui', 'highlights');
+      style.setAttribute('data-socratica-ui', 'highlights');
       doc.head.append(style);
     }
   }
@@ -120,8 +125,8 @@ class NativeHighlights {
     const Highlight = this.#win.Highlight!;
     for (const verdict of ['contradicted', 'unverifiable'] as const) {
       const ranges = this.#entries.filter((e) => e.verdict === verdict).map((e) => e.range);
-      if (ranges.length) registry.set(`hf-${verdict}`, new Highlight(...ranges));
-      else registry.delete(`hf-${verdict}`);
+      if (ranges.length) registry.set(`socratica-${verdict}`, new Highlight(...ranges));
+      else registry.delete(`socratica-${verdict}`);
     }
   }
 
@@ -196,7 +201,7 @@ class HighlightLayer {
 
   constructor(readonly doc: Document) {
     this.host = doc.createElement('div');
-    this.host.setAttribute('data-hf-ui', 'layer');
+    this.host.setAttribute('data-socratica-ui', 'layer');
     Object.assign(this.host.style, { position: 'absolute', top: '0', left: '0', width: '0', height: '0', zIndex: '2147483646', pointerEvents: 'none' });
     this.root = this.host.attachShadow({ mode: 'open' });
     this.root.appendChild(el(doc, 'style', undefined, OVERLAY_CSS));
@@ -337,7 +342,7 @@ export class AnswerOverlay {
     this.#doc = opts.content.ownerDocument;
     this.#native = supportsNativeHighlights(this.#doc);
     this.host = this.#doc.createElement('div');
-    this.host.setAttribute('data-hf-ui', 'summary');
+    this.host.setAttribute('data-socratica-ui', 'summary');
     this.root = this.host.attachShadow({ mode: 'open' });
     this.root.appendChild(el(this.#doc, 'style', undefined, OVERLAY_CSS));
     this.#bar = el(this.#doc, 'div', 'bar');
@@ -363,9 +368,9 @@ export class AnswerOverlay {
     const doc = this.#doc;
     const head = el(doc, 'div', 'head');
     const logo = el(doc, 'span', 'logo');
-    logo.append(icon(doc, 'shield', 13));
+    logo.append(icon(doc, 'laurel', 20));
     const brand = el(doc, 'span', 'brand');
-    brand.append(logo, 'Hallucination Firewall');
+    brand.append(logo, el(doc, 'span', 'wordmark', 'Socratica'));
     head.append(brand, ...extra);
     return head;
   }
@@ -599,17 +604,19 @@ export class AnswerOverlay {
     close.append(icon(doc, 'cross', 14));
     close.addEventListener('click', () => layer.closePanel());
 
-    const h = el(doc, 'h3');
-    const chip = el(doc, 'span', `chip ${v.verdict}`);
-    chip.append(icon(doc, VERDICT_ICON[v.verdict], 11), VERDICT_LABEL[v.verdict]);
+    const seal = el(doc, 'span', `seal ${v.verdict}`);
+    seal.append(icon(doc, VERDICT_ICON[v.verdict], 15));
+    const title = el(doc, 'div', 'verdict-title');
+    title.append(el(doc, 'b', undefined, VERDICT_LABEL[v.verdict]), el(doc, 'small', undefined, VERDICT_MEANING[v.verdict]));
     const conf = el(doc, 'span', 'conf');
     const track = el(doc, 'span', 'track');
     const fill = el(doc, 'span', 'fill');
     fill.style.width = `${Math.round(v.confidence * 100)}%`;
     track.append(fill);
-    conf.append(track, `confidence ${Math.round(v.confidence * 100)}%`);
-    h.append(chip, conf);
-    panel.append(close, h, el(doc, 'div', 'claim', `“${v.claim}”`));
+    conf.append(track, `${Math.round(v.confidence * 100)}% confidence`);
+    const head = el(doc, 'div', 'verdict-head');
+    head.append(seal, title);
+    panel.append(close, head, el(doc, 'div', 'claim', `“${v.claim}”`), conf);
     panel.append(el(doc, 'div', 'label', 'Reason'), el(doc, 'div', 'reason', v.rationale));
 
     if (v.correction) {
@@ -618,25 +625,31 @@ export class AnswerOverlay {
     if (v.quotes.length) {
       panel.append(el(doc, 'div', 'label', 'Evidence'));
       for (const q of v.quotes) {
-        const block = el(doc, 'blockquote');
-        block.append(el(doc, 'div', 'quote', q.quote));
         const href = safeHref(q.source.url);
-        const sourceTitle = `${q.source.title} (${q.source.providerId})`;
+        const meta = el(doc, 'span', 'source-meta');
+        meta.append(el(doc, 'b', undefined, q.source.title), el(doc, 'small', undefined, [hostOf(href), q.source.providerId].filter(Boolean).join(' · ')));
+        const sourceIcon = icon(doc, ['wikipedia', 'wikidata', 'europe-pmc', 'world-bank', 'gov-uk'].includes(q.source.providerId) ? 'columns' : 'document', 20);
+        let source: HTMLElement;
         if (href) {
           const a = el(doc, 'a', 'source');
           a.href = href;
           a.target = '_blank';
           a.rel = 'noopener noreferrer';
           a.title = hostOf(href) ?? href;
-          a.append(sourceTitle, icon(doc, 'external', 11));
-          block.append(a);
+          a.append(sourceIcon, meta, icon(doc, 'external', 13));
+          source = a;
         } else {
-          block.append(el(doc, 'span', 'source', sourceTitle));
+          source = el(doc, 'span', 'source');
+          source.append(sourceIcon, meta);
         }
-        panel.append(block);
+        const block = el(doc, 'blockquote');
+        block.append(el(doc, 'div', 'quote', q.quote));
+        const item = el(doc, 'div', 'evidence');
+        item.append(source, block);
+        panel.append(item);
       }
     } else if (v.downgradeReason === 'no-evidence') {
-      panel.append(el(doc, 'div', 'label', 'Evidence'), el(doc, 'div', undefined, 'No relevant passages were found in the enabled sources.'));
+      panel.append(el(doc, 'div', 'label', 'Evidence'), el(doc, 'div', 'empty', 'No relevant passages were found in the enabled sources.'));
     }
 
     layer.showPanel(panel, this.#anchorFor(claimId, at), this);

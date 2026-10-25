@@ -1,5 +1,5 @@
 /**
- * Core types for Hallucination Firewall.
+ * Core types for Socratica.
  *
  * This package is platform-agnostic: nothing here knows about the DOM,
  * browser-extension APIs, or which chatbot produced the text being verified.

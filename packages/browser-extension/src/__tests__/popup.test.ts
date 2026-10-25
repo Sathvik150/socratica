@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MockLLM, runVerification } from '@hallucination-firewall/core';
+import { MockLLM, runVerification } from '@socratica/core';
 import { mountPopup, type PopupApi } from '../popupView.js';
 import { CONSENT_VERSION, DEFAULT_SETTINGS, type Settings } from '../settings.js';
 

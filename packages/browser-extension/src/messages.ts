@@ -1,18 +1,18 @@
-import type { VerifyOutput } from '@hallucination-firewall/core';
+import type { VerifyOutput } from '@socratica/core';
 import type { PlatformId } from './adapters/adapter.js';
 
 /** Messages handled by the background service worker. */
 export type Request =
-  | { type: 'hf/get-state'; platform: PlatformId }
-  | { type: 'hf/verify'; platform: PlatformId; answer: string; question?: string }
+  | { type: 'socratica/get-state'; platform: PlatformId }
+  | { type: 'socratica/verify'; platform: PlatformId; answer: string; question?: string }
   /** Text the user selected on any page and asked to check from the popup. */
-  | { type: 'hf/verify-text'; text: string }
+  | { type: 'socratica/verify-text'; text: string }
   /** Options page "Test connection" for the configured judge. */
-  | { type: 'hf/test-judge' }
-  | { type: 'hf/open-options' };
+  | { type: 'socratica/test-judge' }
+  | { type: 'socratica/open-options' };
 
 /** Messages the popup sends to the ChatGPT content script. */
-export type TabRequest = { type: 'hf/page-status' } | { type: 'hf/check-latest' };
+export type TabRequest = { type: 'socratica/page-status' } | { type: 'socratica/check-latest' };
 
 export interface PageStatus {
   platform: PlatformId;
@@ -20,6 +20,8 @@ export interface PageStatus {
   answers: number;
   /** Summary of the most recent finished check, if any. */
   lastSummary?: string;
+  /** Verdict counts of that check, for the popup's Insights tab. */
+  lastCounts?: { checked: number; supported: number; contradicted: number; unverifiable: number };
   /** What the content script is doing now. */
   state: 'idle' | 'checking' | 'consent-required' | 'disabled' | 'error';
   lastError?: string;

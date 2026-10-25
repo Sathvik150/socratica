@@ -1,13 +1,13 @@
-# Using Hallucination Firewall as an Agent Skill
+# Using Socratica as an Agent Skill
 
-`hallucination-firewall-skill-vX.zip` contains one folder, `hallucination-firewall/`, in the
+`socratica-skill-vX.zip` contains one folder, `socratica/`, in the
 [Agent Skills](https://agentskills.io) format:
 
 ```
-hallucination-firewall/
+socratica/
 ├── SKILL.md                     instructions the assistant follows
 ├── references/                  verdict rules, claim extraction, validator input format
-├── scripts/hf-verify.mjs        Node 20+ CLI (extract / verify / validate), no install needed
+├── scripts/socratica.mjs        Node 20+ CLI (extract / verify / validate), no install needed
 ├── scripts/validate_verdicts.py Python 3 validator (stdlib only); works in claude.ai's sandbox
 ├── scripts/find_quote.py        finds the exact wording of a quote in saved sources (Python 3)
 └── LICENSE
@@ -18,7 +18,7 @@ quote is not a verbatim substring of a retrieved passage. Missing evidence stays
 
 ## Claude (claude.ai and desktop app)
 
-1. Download `hallucination-firewall-skill-vX.zip` from the [latest release](https://github.com/sathvik150/cac26/releases/latest).
+1. Download `socratica-skill-vX.zip` from the [latest release](https://github.com/sathvik150/cac26/releases/latest).
 2. Make sure code execution is enabled in your settings (skills need it).
 3. Open the Skills section in Settings, choose **Upload skill**, and select the zip.
 4. Ask: *"Fact-check this answer against these sources"* and attach or paste the sources.
@@ -26,25 +26,25 @@ quote is not a verbatim substring of a retrieved passage. Missing evidence stays
 ## Claude Code
 
 ```bash
-unzip hallucination-firewall-skill-v0.1.6.zip -d ~/.claude/skills/        # all projects
+unzip socratica-skill-v0.2.0.zip -d ~/.claude/skills/        # all projects
 # or: unzip ... -d .claude/skills/                                        # this project only
 ```
 
 ## ChatGPT
 
 For ChatGPT's **Plugins → New Plugin** upload dialog, use
-`hallucination-firewall-plugin-vX.zip`. It contains a root `plugin.json` manifest and
-`skills/hallucination-firewall/SKILL.md`, following
+`socratica-plugin-vX.zip`. It contains a root `plugin.json` manifest and
+`skills/socratica/SKILL.md`, following
 [OpenAI's plugin packaging guide](https://developers.openai.com/plugins/build/plugins).
-The standalone `hallucination-firewall-skill-vX.zip` is for Agent Skills hosts and
+The standalone `socratica-skill-vX.zip` is for Agent Skills hosts and
 is missing the plugin manifest required by that dialog.
 
 1. Open the [latest release](https://github.com/sathvik150/cac26/releases/latest).
-2. Download `hallucination-firewall-plugin-v0.1.6.zip` without extracting it. To build locally instead, run `pnpm build && pnpm package`; the ZIP will be in `release/`.
+2. Download `socratica-plugin-v0.2.0.zip` without extracting it. To build locally instead, run `pnpm build && pnpm package`; the ZIP will be in `release/`.
 3. In **Plugins → New Plugin**, choose that ZIP and select **Add plugin**.
 4. Start a new chat, select the plugin, and ask it to fact-check an answer against attached sources. Plugin upload has been confirmed; fact-checking behavior after installation still needs verification. If it fails, record the exact error and ZIP filename.
 
-For a plugin without bundled code, use `hallucination-firewall-plugin-instructions-vX.zip`.
+For a plugin without bundled code, use `socratica-plugin-instructions-vX.zip`.
 It performs manual quote checks and discloses that quotes are not machine-validated.
 Install one variant at a time because they use the same plugin and skill names.
 
@@ -59,9 +59,9 @@ A screenshot confirms that the instruction-only standalone skill ZIP was uploade
 **Plugins → New Plugin**, which returned “Couldn't add plugin. Try again.” Both
 standalone skill variants lack a plugin manifest. That is a documented format mismatch
 with the plugin uploader, although the generic error does not prove it is the only issue.
-Use the new `hallucination-firewall-plugin-vX.zip` in that dialog first.
+Use the new `socratica-plugin-vX.zip` in that dialog first.
 
-A partial upload of `hallucination-firewall-skill-v0.1.0.zip` was also reported. The
+A partial upload of `socratica-skill-v0.1.0.zip` was also reported. The
 reference validator reportedly accepts it, but the cause and ChatGPT compatibility
 remain unconfirmed. Plan/workspace access, the upload location, and handling of bundled
 scripts are hypotheses, not established causes.
@@ -78,8 +78,8 @@ ZIP directory entries and normalizes files to mode `0644` (directories `0755`).
 Run scripts through `node` or `python3`; files do not need executable bits.
 These are compatibility experiments, not a confirmed fix.
 
-Try `hallucination-firewall-skill-instructions-vX.zip` in the same Skills upload flow.
-It contains one `hallucination-firewall/` folder, one `SKILL.md`, the shared references,
+Try `socratica-skill-instructions-vX.zip` in the same Skills upload flow.
+It contains one `socratica/` folder, one `SKILL.md`, the shared references,
 and the license, with no `scripts/`. It uses manual claim extraction and quote checking
 and explicitly reports that quotes are not machine-validated. Install one variant at
 a time: both have the same skill name. If only this variant uploads, that narrows the
@@ -103,9 +103,9 @@ your own model, see [local-ai.md](local-ai.md).
 
 | Host | Status |
 |---|---|
-| **Claude Code** | ✅ Tested on 2026-10-24. The release zip was unzipped into a project's `.claude/skills/`, then `claude -p "Fact-check answer.txt against the documents in sources/"` ran headless. Claude Code loaded the skill on its own and ran `hf-verify.mjs`. It judged the claims, including a semantic contradiction ("landlocked" vs "island nation") that the offline judge misses, then ran `validate_verdicts.py` and reported `4 checked, 1 supported, 2 contradicted, 1 unverifiable`. |
-| claude.ai / Claude desktop upload | Upload confirmed: the uploaded files arrive intact. Earlier versions only "kind of worked" ([#3](https://github.com/Sathvik150/CAC26/issues/3)): SKILL.md used script paths relative to the skill folder, relied on Node, and had Claude retype source text, so correct quotes failed the exact-match check. Fixed by using full script paths, a Python-only workflow, passages read from saved files, and `find_quote.py`. claude.ai installs uploaded skills under `/mnt/skills/plugins/` (seen in a live run). Re-tested under simulated claude.ai conditions (read-only skill folder, separate working folder, no Node). ⏳ Not yet re-tested in the live claude.ai app. |
-| ChatGPT plugin | ✅ Plugin ZIP successfully uploaded through Plugins → New Plugin. Fact-checking behavior after installation still needs verification. |
-| Custom GPT fallback | ⏳ Not tested in a logged-in account. |
+| **Claude Code** | Tested on 2026-10-24. The release zip was unzipped into a project's `.claude/skills/`, then `claude -p "Fact-check answer.txt against the documents in sources/"` ran headless. Claude Code loaded the skill on its own and ran `socratica.mjs`. It judged the claims, including a semantic contradiction ("landlocked" vs "island nation") that the offline judge misses, then ran `validate_verdicts.py` and reported `4 checked, 1 supported, 2 contradicted, 1 unverifiable`. |
+| claude.ai / Claude desktop upload | Upload confirmed: the uploaded files arrive intact. Earlier versions only "kind of worked" ([#3](https://github.com/Sathvik150/CAC26/issues/3)): SKILL.md used script paths relative to the skill folder, relied on Node, and had Claude retype source text, so correct quotes failed the exact-match check. Fixed by using full script paths, a Python-only workflow, passages read from saved files, and `find_quote.py`. claude.ai installs uploaded skills under `/mnt/skills/plugins/` (seen in a live run). Re-tested under simulated claude.ai conditions (read-only skill folder, separate working folder, no Node). Not yet re-tested in the live claude.ai app. |
+| ChatGPT plugin | Plugin ZIP successfully uploaded through Plugins → New Plugin. Fact-checking behavior after installation still needs verification. |
+| Custom GPT fallback | Not tested in a logged-in account. |
 
 These hosts change quickly, so check their current docs for the skills folder or upload location.

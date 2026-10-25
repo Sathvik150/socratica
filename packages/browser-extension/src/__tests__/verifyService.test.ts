@@ -1,16 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import type { FetchLike } from '@hallucination-firewall/core';
+import type { FetchLike } from '@socratica/core';
 import { handleTestJudge, handleVerify, handleVerifyText } from '../verifyService.js';
 import { CONSENT_VERSION, DEFAULT_SETTINGS, type Settings } from '../settings.js';
 
-function deps(granted = true) {
+/** Fake network: Wikipedia knows the bridge; the web search engine (Firecrawl, the default) finds nothing. */
+function deps(granted: boolean | ((origin: string) => boolean) = true) {
   const calls: string[] = [];
-  const fetch: FetchLike = async (url) => {
+  const bodies: string[] = [];
+  const fetch: FetchLike = async (url, init) => {
     calls.push(url);
+    if (url.startsWith('https://api.firecrawl.dev/')) {
+      bodies.push(init?.body ?? '');
+      return { ok: true, status: 200, json: async () => ({ success: true, data: { web: [] } }), text: async () => '' };
+    }
     if (url.includes('list=search')) return { ok: true, status: 200, json: async () => ({ query: { search: [{ title: 'Zentha Bridge' }] } }), text: async () => '' };
     return { ok: true, status: 200, json: async () => ({ query: { pages: { 1: { extract: 'The Zentha Bridge opened in 1991.' } } } }), text: async () => '' };
   };
-  return { calls, deps: { fetch, hasPermission: async () => granted } };
+  return { calls, bodies, deps: { fetch, hasPermission: async (origin: string) => typeof granted === 'function' ? granted(origin) : granted } };
 }
 
 const consented: Settings = { ...DEFAULT_SETTINGS, consent: { granted: true, version: CONSENT_VERSION }, evidence: { ...DEFAULT_SETTINGS.evidence, wikidata: false, europePmc: false } };
@@ -45,20 +51,29 @@ describe('background verify service', () => {
     expect(calls).toEqual([]);
   });
 
-  it('after consent, uses Wikipedia with only claim-derived queries', async () => {
-    const { calls, deps: d } = deps();
+  it('after consent, searches the web and Wikipedia with only claim-derived queries', async () => {
+    const { calls, bodies, deps: d } = deps();
     const res = await handleVerify(req, consented, d);
     expect(res.status).toBe('ok');
     if (res.status !== 'ok') return;
     expect(res.result.summary.contradicted).toBe(1);
-    expect(calls.every((u) => u.startsWith('https://en.wikipedia.org/'))).toBe(true);
+    expect(calls.some((u) => u.startsWith('https://api.firecrawl.dev/'))).toBe(true);
+    expect(calls.every((u) => u.startsWith('https://en.wikipedia.org/') || u.startsWith('https://api.firecrawl.dev/'))).toBe(true);
+    for (const body of bodies) expect(JSON.parse(body).query).toContain('zentha bridge');
   });
 
-  it('skips sources whose host permission was declined', async () => {
-    const { calls, deps: d } = deps(false);
+  it('skips optional sources whose host permission was declined', async () => {
+    const { calls, deps: d } = deps((origin) => origin === 'https://api.firecrawl.dev/*');
     const res = await handleVerify(req, consented, d);
     expect(res.status).toBe('ok');
-    if (res.status === 'ok') expect(res.warnings.join(' ')).toMatch(/permission/);
+    if (res.status === 'ok') expect(res.warnings.join(' ')).toMatch(/Wikipedia is enabled but its permission/);
+    expect(calls.every((u) => u.startsWith('https://api.firecrawl.dev/'))).toBe(true);
+  });
+
+  it('refuses to check, and sends nothing, without permission for the required web search', async () => {
+    const { calls, deps: d } = deps(false);
+    const res = await handleVerify(req, consented, d);
+    expect(res).toMatchObject({ status: 'error' });
     expect(calls).toEqual([]);
   });
 
@@ -72,7 +87,7 @@ describe('background verify service', () => {
 describe('local model judge', () => {
   const local: Settings = {
     ...consented,
-    evidence: { ...consented.evidence, wikipedia: false, webSearch: false, webSearchApiKey: '' },
+    evidence: { ...consented.evidence, wikipedia: false },
     llm: { provider: 'local', model: 'qwen2.5:7b', apiKey: '', baseUrl: 'http://localhost:11434/v1' },
   };
 

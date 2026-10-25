@@ -3,7 +3,7 @@
  * documents against a ChatGPT-like page, then renders the real overlay.
  * No chrome.* APIs and no network.
  */
-import { MockLLM, runVerification } from '@hallucination-firewall/core';
+import { MockLLM, runVerification } from '@socratica/core';
 import { chatgptAdapter } from './adapters/chatgpt.js';
 import { DEMO_DOCUMENTS } from './demoData.js';
 import { AnswerOverlay } from './overlay.js';
@@ -37,7 +37,7 @@ const watcher = new MessageWatcher(chatgptAdapter, document, {
       llm: new MockLLM(),
     });
     overlay.render(result, m.text);
-    document.body.dataset.hfDemo = result.summary.text;
+    document.body.dataset.socraticaDemo = result.summary.text;
   },
 });
 watcher.start();

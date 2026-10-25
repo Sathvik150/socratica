@@ -3,17 +3,39 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [SemVer](https://semver.org/).
 
-## [0.1.6] - 2026-10-25
+## [0.2.0] - 2026-10-25
+
+Hallucination Firewall is now **Socratica**. This release also replaces the unreleased 0.1.6 design restore.
 
 ### Changed
-- **Restored the original design** (indigo-violet gradient, soft cards) from v0.1.4 across the popup, settings page,
-  demo and the in-ChatGPT overlay, keeping every 0.1.5 feature: the on/off switch, "Show details" at the bottom, the
-  evidence panel that follows the text, skeleton loaders, and the faster, smarter checks.
-- The popup's on/off switch is smaller and quieter: a slim track with slightly rounded corners instead of a pill, and
-  the popup content sits in a softly rounded card.
+- **New name and look.** Socratica has a laurel mark, a "SOCRATICA" wordmark in the Garogier serif, a subtle
+  off-white canvas, and one antique-gold accent, in light and dark. The structure follows the Claude design
+  analyses from open-design and awesome-design-md; Tailwind CSS compiles it. See
+  [`DESIGN.md`](packages/browser-extension/DESIGN.md).
+- **Web search is required.** Every check searches the web with one engine you choose:
+  - **Firecrawl** (the default) needs no account or key. A daily limit applies per network; a free Firecrawl
+    key raises it.
+  - **Google results via Serper** needs a free Serper key.
+  - **Brave Search** needs a Brave Search API key.
+  The extension won't check, and says why, if the engine needs a key that isn't set or its site permission was
+  declined. Settings refuses to save an engine that needs a missing key. The CLI's `verify` needs
+  `--web <engine>` unless you check only against your own `--evidence` files.
+- The popup has **Verify**, **Sources** and **Insights** tabs.
+- The evidence panel shows a verdict seal and meaning, the claim, confidence, the reason, the suggested correction,
+  and each source as a card with its quote.
+- The CLI prints `[CONTRADICTED] claim` without the check-mark glyphs; the skill's Python validator does the same.
+- Packages are `@socratica/core`, `@socratica/sdk`, `@socratica/cli` and `@socratica/browser-extension`; the
+  CLI is `socratica` (`socratica.mjs`), the skill is `skill/socratica`, and the release zips are `socratica-*`.
+- Environment variables are `SOCRATICA_*`. The old `HF_*` names still work as fallbacks.
+- The privacy notice is version 3, because the web search engines are new destinations. Existing users accept it
+  again before anything is sent.
+- Settings move to a new storage key and are migrated: a Brave key becomes the Brave engine choice.
+- The README has no emojis.
 
 ### Removed
-- The Linear-based design tokens (open-design and awesome-design-md files). Tailwind CSS still compiles the styles.
+- **Tavily**, its trusted-domain list and topic presets, and the CLI's `--tavily` and `--search-domain` flags.
+  Web search now goes through Firecrawl, Serper or Brave.
+- The optional "Brave Search" source toggle, replaced by the engine choice.
 
 ## [0.1.5] - 2026-10-25
 
@@ -132,7 +154,7 @@ All notable changes to this project are documented here. The format follows
 - **Benchmark**: 37 labeled synthetic items, a runner, and a `BaselineVerifier` plug-in interface.
 - Release packaging (`pnpm package`) and GitHub Actions for CI and tagged releases.
 
-[0.1.6]: https://github.com/sathvik150/cac26/releases/tag/v0.1.6
+[0.2.0]: https://github.com/sathvik150/cac26/releases/tag/v0.2.0
 [0.1.5]: https://github.com/sathvik150/cac26/releases/tag/v0.1.5
 [0.1.4]: https://github.com/sathvik150/cac26/releases/tag/v0.1.4
 [0.1.3]: https://github.com/sathvik150/cac26/releases/tag/v0.1.3

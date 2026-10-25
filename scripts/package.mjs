@@ -1,8 +1,8 @@
 // Builds the downloadable release bundles into ./release (run `pnpm package` after `pnpm build`).
 //
-//   hallucination-firewall-extension-vX.zip   Chrome extension (manifest.json at the zip root)
-//   hallucination-firewall-skill-vX.zip       Agent Skill folder (SKILL.md) for Claude / ChatGPT / Codex / Claude Code
-//   hf-verify-cli-vX.zip                      single-file CLI for local use (Node 20+, no install)
+//   socratica-extension-vX.zip   Chrome extension (manifest.json at the zip root)
+//   socratica-skill-vX.zip       Agent Skill folder (SKILL.md) for Claude / ChatGPT / Codex / Claude Code
+//   socratica-cli-vX.zip         single-file CLI for local use (Node 20+, no install)
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -31,7 +31,7 @@ function requireBuilt(path) {
 }
 
 const extDist = join(root, 'packages/browser-extension/dist');
-const cli = join(root, 'packages/cli/dist/hf-verify.mjs');
+const cli = join(root, 'packages/cli/dist/socratica.mjs');
 requireBuilt(join(extDist, 'manifest.json'));
 requireBuilt(cli);
 
@@ -39,40 +39,40 @@ rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
 
 const bundles = {
-  [`hallucination-firewall-extension-v${version}.zip`]: walk(extDist, (p) => !p.endsWith('.map')).map((p) => entry(relative(extDist, p), p)),
+  [`socratica-extension-v${version}.zip`]: walk(extDist, (p) => !p.endsWith('.map')).map((p) => entry(relative(extDist, p), p)),
 
-  [`hallucination-firewall-skill-v${version}.zip`]: [
-    ...walk(join(root, 'skill/hallucination-firewall')).map((p) => entry(join('hallucination-firewall', relative(join(root, 'skill/hallucination-firewall'), p)), p)),
-    entry('hallucination-firewall/scripts/hf-verify.mjs', cli),
-    entry('hallucination-firewall/LICENSE', join(root, 'LICENSE')),
+  [`socratica-skill-v${version}.zip`]: [
+    ...walk(join(root, 'skill/socratica')).map((p) => entry(join('socratica', relative(join(root, 'skill/socratica'), p)), p)),
+    entry('socratica/scripts/socratica.mjs', cli),
+    entry('socratica/LICENSE', join(root, 'LICENSE')),
   ],
 
-  [`hallucination-firewall-skill-instructions-v${version}.zip`]: [
-    entry('hallucination-firewall/SKILL.md', join(root, 'skill/instruction-only/SKILL.md')),
-    ...walk(join(root, 'skill/hallucination-firewall/references')).map((p) => entry(join('hallucination-firewall/references', relative(join(root, 'skill/hallucination-firewall/references'), p)), p)),
-    entry('hallucination-firewall/LICENSE', join(root, 'LICENSE')),
+  [`socratica-skill-instructions-v${version}.zip`]: [
+    entry('socratica/SKILL.md', join(root, 'skill/instruction-only/SKILL.md')),
+    ...walk(join(root, 'skill/socratica/references')).map((p) => entry(join('socratica/references', relative(join(root, 'skill/socratica/references'), p)), p)),
+    entry('socratica/LICENSE', join(root, 'LICENSE')),
   ],
 
-  [`hf-verify-cli-v${version}.zip`]: [
-    entry('hf-verify/hf-verify.mjs', cli),
-    entry('hf-verify/README.md', join(root, 'packages/cli/README.md')),
-    entry('hf-verify/LICENSE', join(root, 'LICENSE')),
-    ...walk(join(root, 'examples')).map((p) => entry(join('hf-verify/examples', relative(join(root, 'examples'), p)), p)),
+  [`socratica-cli-v${version}.zip`]: [
+    entry('socratica-cli/socratica.mjs', cli),
+    entry('socratica-cli/README.md', join(root, 'packages/cli/README.md')),
+    entry('socratica-cli/LICENSE', join(root, 'LICENSE')),
+    ...walk(join(root, 'examples')).map((p) => entry(join('socratica-cli/examples', relative(join(root, 'examples'), p)), p)),
   ],
 };
 
 // The ChatGPT New Plugin dialog expects a plugin manifest and skills/ layout,
 // rather than a standalone Agent Skills folder.
 for (const variant of ['', '-instructions']) {
-  const skill = bundles[`hallucination-firewall-skill${variant}-v${version}.zip`];
+  const skill = bundles[`socratica-skill${variant}-v${version}.zip`];
   const manifest = {
     $schema: 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json',
-    name: 'hallucination-firewall',
+    name: 'socratica',
     version,
     description: variant ? 'Evidence-linked fact checking with manual quote checks; no bundled scripts.' : 'Evidence-linked fact checking with bundled quote validators.',
     license: 'MIT',
   };
-  bundles[`hallucination-firewall-plugin${variant}-v${version}.zip`] = [
+  bundles[`socratica-plugin${variant}-v${version}.zip`] = [
     { name: 'plugin.json', data: Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`), mode: 0o644 },
     ...skill.map((item) => ({ ...item, name: `skills/${item.name}` })),
   ];
@@ -81,7 +81,7 @@ for (const variant of ['', '-instructions']) {
 for (const [name, entries] of Object.entries(bundles)) {
   // Normalize skill archives independently of checkout permissions. Include explicit
   // directory records for uploaders that do not infer them from file paths.
-  const archiveEntries = /^hallucination-firewall-(skill|plugin)-/.test(name)
+  const archiveEntries = /^socratica-(skill|plugin)-/.test(name)
     ? skillEntries(entries)
     : entries;
   const zip = createZip(archiveEntries.sort((a, b) => a.name.localeCompare(b.name)));

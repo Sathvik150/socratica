@@ -1,11 +1,11 @@
 {
-  "name": "@hallucination-firewall/cli",
-  "version": "0.1.6",
-  "description": "hf-verify: fact-check text against evidence from the command line. Works offline, with your own API key, or with a local OpenAI-compatible model.",
+  "name": "@socratica/cli",
+  "version": "0.2.0",
+  "description": "socratica: fact-check text against evidence from the command line. Works offline, with your own API key, or with a local OpenAI-compatible model.",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "hf-verify": "./dist/hf-verify.mjs"
+    "socratica": "./dist/socratica.mjs"
   },
   "files": [
     "dist"
@@ -16,7 +16,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@hallucination-firewall/core": "workspace:*",
+    "@socratica/core": "workspace:*",
     "undici": "6.29.1"
   },
   "devDependencies": {

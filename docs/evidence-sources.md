@@ -9,7 +9,23 @@ For example, a claim that a tower opened in 1899 can be contradicted by a cited 
 the same tower opened in 1889. A statement about when construction began does not establish
 the opening date. Check the subject, property, date, units, and scope of the source.
 
-## Available sources
+## Web search (required)
+
+Every check searches the web, so a claim about the real world always has something to be checked
+against. Pick one engine; the extension and the CLI refuse to run a check without one (the CLI also
+accepts your own `--evidence` files instead).
+
+| Engine | Evidence returned | Key | Notes |
+|---|---|---|---|
+| Firecrawl (default) | Result titles, links and snippets | None. An optional free Firecrawl key raises the limits | Works for anyone with no sign-up. Keyless use has a daily limit per network address; when it runs out, the check continues with the other sources and says so |
+| Google results via Serper | Google's answer box, knowledge panel and result snippets | Free Serper key (2,500 searches, no card) | The closest thing to Google web search with a free key. Google's own Custom Search JSON API is closed to new customers, so it is not offered |
+| Brave Search | Result snippets | Brave Search API key | Brave's independent index |
+
+Search snippets are short. A snippet only decides a verdict when it states the fact itself and the
+quote is verbatim; otherwise the claim stays `unverifiable`. Results are restricted to `http(s)`
+links, cleaned of markup, and ranked by how closely they match the claim's subject.
+
+## More sources
 
 | Source | Evidence returned | Key | Best use |
 |---|---|---|---|
@@ -20,42 +36,40 @@ the opening date. Check the subject, property, date, units, and scope of the sou
 | GOV.UK | Official guidance body text and guide sections | None | UK government policy, public services and rules |
 | Google Fact Check | Publisher, reviewed claim, textual rating, review date and review link | Google API key | Claims already reviewed by fact-checkers |
 | Trusted URLs | Readable text extracted from pages you explicitly choose | None | Authoritative sources for a particular topic |
-| Tavily | Extracted page text, not generated answers or snippet fallbacks | Tavily API key | Web coverage, optionally restricted to trusted domains |
-| Brave Search | Result snippets | Brave API key | Additional web discovery |
 
 Sources have different strengths; none is an automatic guarantee of truth. Prefer a primary source
 that establishes the fact in question. For biomedical claims, read the study's scope and limitations;
 the existence or title of a paper is not proof of its conclusions. Wikidata is community-maintained
-and can share Wikimedia rate limits. A search service may return unreliable sites: restrict Tavily
-to trusted domains, or supply URLs from sources you trust.
+and can share Wikimedia rate limits. A search engine may return unreliable sites: every verdict
+shows its source, so check who wrote it, and add trusted URLs for topics where you know the
+authoritative source.
 
 OpenAlex, additional statistical mappings (such as Eurostat), and Exa are candidates for future
-providers. Tavily implements the proposed extracted-web-search option; Europe PMC,
-World Bank and GOV.UK provide independent key-free alternatives to Wikimedia now.
+providers. Europe PMC, World Bank and GOV.UK provide independent key-free alternatives to
+Wikimedia now.
 
-For general-purpose checking, enable extracted web search and choose a local or hosted model.
-Leave the domain list empty to cover all topics, or narrow it to authoritative sources for a
-specific subject. The specialist APIs add evidence where their scope applies. Neither a finite
+For general-purpose checking, keep web search on its default and choose a local or hosted model.
+The specialist APIs add evidence where their scope applies. Neither a finite
 API list nor web search can guarantee a verdict for every claim: private, disputed, ambiguous,
 or very new information may remain unverifiable. The system must not invent a correction just
 because a user expects the claim to be false.
 
 ## Chrome extension
 
-Open Settings and accept the updated privacy notice. Wikipedia, Wikidata and Europe PMC are enabled
-by default after consent; every source has an independent toggle. Enable additional sources only
-when needed. Existing users must accept consent version 2 before any requests resume.
+Open Settings and accept the privacy notice. The **Web search** card is marked Required: Firecrawl
+is selected by default and needs nothing else. To use Serper or Brave instead, select it and paste
+its key; Save refuses an engine that needs a key and has none. Each engine's key is remembered
+separately, so switching back and forth keeps them. If the engine's site permission is declined,
+checks stop with a message telling you to press Save and allow it.
 
-Google Fact Check and Tavily each have their own password field. Keys are retained in
-`chrome.storage.local`, not sync. For Tavily, enter one trusted domain per line, such as `who.int`
-or `nih.gov`. Subdomains are included; lookalikes such as `who.int.attacker.org` are excluded by
-the provider even if the search API returns them. An empty list searches the general web.
+Wikipedia, Wikidata and Europe PMC are also enabled by default after consent; every other source has
+an independent toggle. Existing users must accept consent version 3 before any requests resume.
+Settings from earlier versions are migrated: a Brave key becomes the Brave engine choice, and Tavily
+settings are dropped.
 
-Tavily searches the general web by default when enabled, and the extension provides topic presets:
-NASA/ESA for space, WHO/NIH/CDC for health, NOAA/USGS for Earth science, and World Bank/OECD/European
-Commission for statistics. Choosing a preset fills the editable domain list; Save applies it.
-The All topics preset clears the restriction for general-purpose coverage.
-Institutional authority still depends on the topic and the specific passage. Google Fact Check is
+Web search keys and the Google Fact Check key each have a password field. Keys are retained in
+`chrome.storage.local`, not sync. Institutional authority depends on the topic and the specific
+passage. Google Fact Check is
 discovery of publisher reviews; it is not general Google web search, and Google is not cited as the
 author of the underlying facts.
 
@@ -73,31 +87,30 @@ Disabling a source stops its requests, even if Chrome still retains a previously
 
 ## CLI
 
-The CLI stays fully offline unless you explicitly add a network source or judge.
+`verify` needs a web search engine (`--web firecrawl`, `--web serper` or `--web brave`) unless you
+check against your own files with `--evidence`. With `--evidence` alone it stays fully offline.
 
 ```bash
+# Web search with no key, plus Wikipedia
+node packages/cli/dist/socratica.mjs verify --answer answer.txt --web firecrawl --wikipedia
+
+# Google results through Serper; SOCRATICA_SERPER_API_KEY must already be in the environment.
+node packages/cli/dist/socratica.mjs verify --answer answer.txt --web serper
+
 # Structured dates/numbers plus an independent key-free source
-node packages/cli/dist/hf-verify.mjs verify --answer answer.txt --wikidata --europe-pmc
+node packages/cli/dist/socratica.mjs verify --answer answer.txt --wikidata --europe-pmc
 
 # Evidence from an authoritative page (replace the URL with your source)
-node packages/cli/dist/hf-verify.mjs verify --answer answer.txt \
+node packages/cli/dist/socratica.mjs verify --answer answer.txt \
   --evidence-url https://www.who.int/news-room/fact-sheets/detail/healthy-diet
 
-# Publisher reviews: HF_GOOGLE_FACT_CHECK_API_KEY must already be in the environment.
+# Publisher reviews: SOCRATICA_GOOGLE_FACT_CHECK_API_KEY must already be in the environment.
 # A model is needed to interpret publisher ratings; the offline judge abstains on reviews.
-node packages/cli/dist/hf-verify.mjs verify --answer answer.txt --fact-check \
+node packages/cli/dist/socratica.mjs verify --answer answer.txt --fact-check \
   --llm local --model qwen2.5:7b
 
-# Extracted web text restricted to selected sources; HF_TAVILY_API_KEY must be set.
-node packages/cli/dist/hf-verify.mjs verify --answer answer.txt --tavily \
-  --search-domain who.int --search-domain nih.gov
-
-# Space claims: search NASA and ESA, and cite the original institutional page.
-node packages/cli/dist/hf-verify.mjs verify --answer answer.txt --tavily \
-  --search-domain nasa.gov --search-domain esa.int
-
 # Official statistics and government guidance
-node packages/cli/dist/hf-verify.mjs verify --answer answer.txt --world-bank --gov-uk \
+node packages/cli/dist/socratica.mjs verify --answer answer.txt --world-bank --gov-uk \
   --llm local --model qwen2.5:7b
 ```
 
@@ -107,26 +120,29 @@ is found. API keys are read only from the environment, never CLI flags.
 
 ## SDK / core
 
-All providers implement `EvidenceProvider`, accept an injected `fetch`, and are exported from both
-core and the SDK:
+All providers implement `EvidenceProvider`, accept an injected `fetch`, and are exported from
+`@socratica/core`; pass them to the SDK's `verify` as `providers`:
 
 ```ts
-import { verify, WikidataEvidenceProvider, EuropePmcEvidenceProvider,
-  UrlEvidenceProvider, TavilyEvidenceProvider } from '@hallucination-firewall/sdk';
+import { verify } from '@socratica/sdk';
+import { createWebSearch, WikidataEvidenceProvider, EuropePmcEvidenceProvider,
+  UrlEvidenceProvider } from '@socratica/core';
 
 const result = await verify({
   answer: 'The Eiffel Tower opened in 1899.',
   providers: [
+    createWebSearch('firecrawl', { fetch }), // or 'serper' / 'brave' with { fetch, apiKey }
     new WikidataEvidenceProvider({ fetch }),
     new EuropePmcEvidenceProvider({ fetch }),
     new UrlEvidenceProvider({ fetch, urls: ['https://trusted-site.org/article'] }),
   ],
 });
 // Inspect result.verdicts[].quotes and result.errors, not only the verdict label.
-
-// Optional extracted web search:
-const web = new TavilyEvidenceProvider({ fetch, apiKey, domains: ['who.int', 'nih.gov'] });
 ```
+
+The engines are also available as classes: `FirecrawlSearchEvidenceProvider`,
+`SerperEvidenceProvider` and `BraveSearchEvidenceProvider`. `WEB_SEARCH_ENGINES` lists each
+engine's name, whether it needs a key, and where to get one.
 
 Use a separate `UrlEvidenceProvider` for each URL if independent URL failures must be isolated,
 as the extension and CLI do. When accepting URLs from untrusted callers in a server application,
@@ -154,8 +170,8 @@ dependency and does not perform DNS resolution.
 - Missing, weak, malformed or unrelated evidence remains `unverifiable`. All surviving supported or
   contradicted verdicts still require exact passage quotes. Corrections retain the existing grounding
   validation. Retrieved passages remain untrusted data rather than instructions to the judge.
-- Each new source uses a bounded five-minute cache, shares identical in-flight requests, serializes
-  its network requests, and aborts requests after 15 seconds. HTTP 429/503 starts a per-provider
+- Each source uses a bounded five-minute cache, shares identical in-flight requests, limits how many
+  of its requests run at once, and aborts requests after 8 seconds. HTTP 429/503 starts a per-provider
   cooldown honoring numeric or HTTP-date `Retry-After`; invalid/missing headers use 30 seconds.
   Failures are not cached. Wikipedia retains its single retry for short rate limits.
 - Provider failures are reported in warnings and `errors`, while other providers continue. API keys
@@ -183,7 +199,8 @@ dependency and does not perform DNS resolution.
 
 `pnpm test` uses fake fetch only: no live network, API keys or source availability are required.
 Tests exercise the full claim → retrieval → judge → citation path, Wikimedia 429 fallback, source
-permissions and renewed consent, metadata/review interpretation, unsafe URLs, domain lookalikes,
+permissions and renewed consent, the required web search engine (including keyless Firecrawl, key
+headers, rate limits and missing keys), metadata/review interpretation, unsafe URLs,
 cache expiration, cooldown recovery, timeouts, CLI source selection and key isolation.
 Live API coverage and hosted-judge quality are separate checks and are not established by mocks.
 See [live validation](live-validation.md) for the checks performed against real sources and the

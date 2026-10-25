@@ -10,7 +10,7 @@ main(process.argv.slice(2), {
 }).then(
   (code) => process.exit(code),
   (err: unknown) => {
-    process.stderr.write(`hf-verify: ${err instanceof Error ? err.message : String(err)}\n`);
+    process.stderr.write(`socratica: ${err instanceof Error ? err.message : String(err)}\n`);
     process.exit(err instanceof UsageError ? 64 : 1);
   },
 );

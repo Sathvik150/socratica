@@ -1,19 +1,10 @@
-import { trustedUrl } from '@hallucination-firewall/core';
+import { trustedUrl, type WebSearchEngine } from '@socratica/core';
 import type { PlatformId } from './adapters/adapter.js';
 
 /** Bump when the consent text changes materially; users must consent again. */
-export const CONSENT_VERSION = 2;
+export const CONSENT_VERSION = 3;
 
 export type LLMChoice = 'heuristic' | 'openai' | 'anthropic' | 'local';
-
-/** Topic-specific starting points; the original institution is cited, not a search engine. */
-export const TRUSTED_SOURCE_PRESETS = [
-  { id: 'general', label: 'All topics — general web, check original sources', domains: [] },
-  { id: 'space', label: 'Space — NASA and ESA', domains: ['nasa.gov', 'esa.int'] },
-  { id: 'health', label: 'Health — WHO, NIH and CDC', domains: ['who.int', 'nih.gov', 'cdc.gov'] },
-  { id: 'earth', label: 'Earth and climate — NOAA and USGS', domains: ['noaa.gov', 'usgs.gov'] },
-  { id: 'statistics', label: 'Statistics — World Bank, OECD and European Commission', domains: ['worldbank.org', 'oecd.org', 'ec.europa.eu'] },
-] as const;
 
 export interface Settings {
   consent: { granted: boolean; version: number; grantedAt?: string };
@@ -26,9 +17,9 @@ export interface Settings {
   evidence: {
     wikipedia: boolean; wikidata: boolean; europePmc: boolean; worldBank: boolean; govUk: boolean;
     googleFactCheck: boolean; googleFactCheckApiKey: string;
-    tavily: boolean; tavilyApiKey: string; tavilyDomains: string[];
     urls: boolean; trustedUrls: string[];
-    webSearch: boolean; webSearchApiKey: string;
+    /** Web search is required: every check uses the chosen engine. Firecrawl needs no key. */
+    web: { engine: WebSearchEngine; firecrawlApiKey: string; serperApiKey: string; braveApiKey: string };
   };
 }
 
@@ -40,9 +31,9 @@ export const DEFAULT_SETTINGS: Settings = {
   llm: { provider: 'heuristic', model: '', apiKey: '', baseUrl: 'http://localhost:11434/v1' },
   evidence: {
     wikipedia: true, wikidata: true, europePmc: true, worldBank: false, govUk: false,
-    googleFactCheck: false, googleFactCheckApiKey: '', tavily: false, tavilyApiKey: '',
-    tavilyDomains: [],
-    urls: false, trustedUrls: [], webSearch: false, webSearchApiKey: '',
+    googleFactCheck: false, googleFactCheckApiKey: '',
+    urls: false, trustedUrls: [],
+    web: { engine: 'firecrawl', firecrawlApiKey: '', serperApiKey: '', braveApiKey: '' },
   },
 };
 
@@ -60,11 +51,15 @@ export const HOST_PERMISSIONS = {
   worldBank: 'https://api.worldbank.org/*',
   govUk: 'https://www.gov.uk/*',
   googleFactCheck: 'https://factchecktools.googleapis.com/*',
-  tavily: 'https://api.tavily.com/*',
   openai: 'https://api.openai.com/*',
   anthropic: 'https://api.anthropic.com/*',
-  webSearch: 'https://api.search.brave.com/*',
+  firecrawl: 'https://api.firecrawl.dev/*',
+  serper: 'https://google.serper.dev/*',
+  brave: 'https://api.search.brave.com/*',
 } as const;
+
+/** The key field for each web search engine (Firecrawl's is optional). */
+export const WEB_KEY_FIELD = { firecrawl: 'firecrawlApiKey', serper: 'serperApiKey', brave: 'braveApiKey' } as const;
 
 /** Host-permission pattern for a local OpenAI-compatible server, e.g. http://localhost:11434/v1 -> http://localhost/* */
 export function localOrigin(baseUrl: string): string | undefined {
@@ -81,15 +76,14 @@ export function hasValidConsent(s: Settings): boolean {
   return s.consent.granted && s.consent.version === CONSENT_VERSION;
 }
 
-/** Origins the current settings would contact. Empty means fully offline. */
+/** Origins the current settings would contact. Always includes the web search engine. */
 export function requiredOrigins(s: Settings): string[] {
-  const out: string[] = [];
+  const out: string[] = [HOST_PERMISSIONS[s.evidence.web.engine]];
   if (s.evidence.wikipedia) out.push(HOST_PERMISSIONS.wikipedia);
-  for (const source of ['wikidata', 'europePmc', 'worldBank', 'govUk', 'googleFactCheck', 'tavily'] as const) {
+  for (const source of ['wikidata', 'europePmc', 'worldBank', 'govUk', 'googleFactCheck'] as const) {
     if (s.evidence[source]) out.push(HOST_PERMISSIONS[source]);
   }
   if (s.evidence.urls) for (const url of s.evidence.trustedUrls) out.push(trustedUrl(url).origin);
-  if (s.evidence.webSearch) out.push(HOST_PERMISSIONS.webSearch);
   if (s.llm.provider === 'openai') out.push(HOST_PERMISSIONS.openai);
   if (s.llm.provider === 'anthropic') out.push(HOST_PERMISSIONS.anthropic);
   if (s.llm.provider === 'local') {
@@ -99,7 +93,9 @@ export function requiredOrigins(s: Settings): string[] {
   return [...new Set(out)];
 }
 
-const KEY = 'hf-settings';
+const KEY = 'socratica-settings';
+/** Where settings were stored before the rename to Socratica; read once, then replaced on save. */
+const LEGACY_KEY = 'hf-settings';
 
 function merge(stored: Partial<Settings> | undefined): Settings {
   const s = stored ?? {};
@@ -109,16 +105,34 @@ function merge(stored: Partial<Settings> | undefined): Settings {
     platforms: { ...DEFAULT_SETTINGS.platforms, ...s.platforms },
     autoCheck: s.autoCheck ?? DEFAULT_SETTINGS.autoCheck,
     llm: { ...DEFAULT_SETTINGS.llm, ...s.llm },
-    evidence: { ...DEFAULT_SETTINGS.evidence, ...s.evidence },
+    evidence: mergeEvidence(s.evidence),
+  };
+}
+
+/** Settings saved before 0.2 had an optional Brave toggle and a Tavily source instead of a required engine. */
+type LegacyEvidence = Partial<Settings['evidence']> & { webSearch?: boolean; webSearchApiKey?: string };
+
+function mergeEvidence(stored: LegacyEvidence | undefined): Settings['evidence'] {
+  const d = DEFAULT_SETTINGS.evidence;
+  const e = stored ?? {};
+  const legacyBraveKey = e.webSearch && e.webSearchApiKey ? e.webSearchApiKey : '';
+  const web = e.web ?? { ...d.web, ...(legacyBraveKey ? { engine: 'brave' as const, braveApiKey: legacyBraveKey } : {}) };
+  return {
+    wikipedia: e.wikipedia ?? d.wikipedia, wikidata: e.wikidata ?? d.wikidata, europePmc: e.europePmc ?? d.europePmc,
+    worldBank: e.worldBank ?? d.worldBank, govUk: e.govUk ?? d.govUk,
+    googleFactCheck: e.googleFactCheck ?? d.googleFactCheck, googleFactCheckApiKey: e.googleFactCheckApiKey ?? d.googleFactCheckApiKey,
+    urls: e.urls ?? d.urls, trustedUrls: e.trustedUrls ?? d.trustedUrls,
+    web: { ...d.web, ...web },
   };
 }
 
 /** Settings (including the user's API keys) live only in chrome.storage.local, never sync. */
 export async function loadSettings(): Promise<Settings> {
-  const raw = await chrome.storage.local.get(KEY);
-  return merge(raw[KEY] as Partial<Settings> | undefined);
+  const raw = await chrome.storage.local.get([KEY, LEGACY_KEY]);
+  return merge((raw[KEY] ?? raw[LEGACY_KEY]) as Partial<Settings> | undefined);
 }
 
 export async function saveSettings(s: Settings): Promise<void> {
   await chrome.storage.local.set({ [KEY]: s });
+  await chrome.storage.local.remove(LEGACY_KEY);
 }

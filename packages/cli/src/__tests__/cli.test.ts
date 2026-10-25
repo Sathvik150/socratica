@@ -20,7 +20,7 @@ function io(stdin = '', env: NodeJS.ProcessEnv = {}) {
   return { x, out: () => out, calls };
 }
 
-describe('hf-verify', () => {
+describe('socratica', () => {
   it('parses flags, repeated flags and --flag=value', () => {
     const p = parseArgs(['verify', '--evidence', 'a', '--evidence=b', '--wikipedia', '--', '--format', 'json']);
     expect(p.command).toBe('verify');
@@ -82,7 +82,7 @@ describe('hf-verify', () => {
     const llm = makeLLM(parseArgs(['verify', '--llm', 'local', '--model', 'llama3.1']).flags, {}, t.x.fetch);
     await llm.complete('x');
     expect(t.calls).toEqual(['http://localhost:11434/v1/chat/completions']);
-    expect(() => makeLLM(parseArgs(['verify', '--llm', 'openai']).flags, {}, t.x.fetch)).toThrow(/HF_OPENAI_API_KEY/);
+    expect(() => makeLLM(parseArgs(['verify', '--llm', 'openai']).flags, {}, t.x.fetch)).toThrow(/SOCRATICA_OPENAI_API_KEY/);
   });
 
   it('prints help', async () => {
@@ -102,13 +102,13 @@ function hasPython(): boolean {
 }
 
 describe.skipIf(!hasPython())('Python validator parity (skill/…/validate_verdicts.py)', () => {
-  it('gives the same verdicts, downgrade reasons, corrections and summary as hf-verify validate', async () => {
+  it('gives the same verdicts, downgrade reasons, corrections and summary as socratica validate', async () => {
     const examples = join(process.cwd(), '../../examples/verdicts.json');
     const t = io();
     await main(['validate', '--input', examples], t.x);
     const node = JSON.parse(t.out());
     const py = JSON.parse(
-      execFileSync('python3', [join(process.cwd(), '../../skill/hallucination-firewall/scripts/validate_verdicts.py'), examples], { encoding: 'utf8' }),
+      execFileSync('python3', [join(process.cwd(), '../../skill/socratica/scripts/validate_verdicts.py'), examples], { encoding: 'utf8' }),
     );
     const shape = (r: { verdicts: Array<Record<string, unknown>>; summary: { text: string } }) => ({
       verdicts: r.verdicts.map((v) => [v.claimId, v.verdict, v.downgradeReason ?? null, v.correction ?? null]),
@@ -121,10 +121,10 @@ describe.skipIf(!hasPython())('Python validator parity (skill/…/validate_verdi
 
 describe('skill run in a separate working folder (passages loaded from files)', () => {
   const skillRun = (f: string) => join(process.cwd(), 'src/__tests__/data/skill-run', f);
-  const script = (f: string) => join(process.cwd(), '../../skill/hallucination-firewall/scripts', f);
+  const script = (f: string) => join(process.cwd(), '../../skill/socratica/scripts', f);
   const expected = { c1: ['contradicted', null], c2: ['unverifiable', 'quote-not-in-passage'] };
 
-  it('hf-verify validate reads "path" passages relative to verdicts.json', async () => {
+  it('socratica validate reads "path" passages relative to verdicts.json', async () => {
     const t = io();
     await main(['validate', '--input', skillRun('verdicts.json')], t.x);
     const out = JSON.parse(t.out());
@@ -136,7 +136,7 @@ describe('skill run in a separate working folder (passages loaded from files)', 
     expect(Object.fromEntries(json.verdicts.map((v: Record<string, unknown>) => [v.claimId, [v.verdict, v.downgradeReason ?? null]]))).toEqual(expected);
     const text = execFileSync('python3', [script('validate_verdicts.py'), skillRun('verdicts.json'), '--format', 'text'], { encoding: 'utf8', cwd: '/' });
     expect(text.split('\n')[0]).toBe('Summary: 2 checked, 0 supported, 1 contradicted, 1 unverifiable');
-    expect(text).toContain('✘ [CONTRADICTED] The Zentha Bridge opened in 1987.');
+    expect(text).toContain('[CONTRADICTED] The Zentha Bridge opened in 1987.');
     expect(text).toContain('correction: The Zentha Bridge opened in 1991.');
     expect(text).toContain('discarded (quote-not-in-passage)');
   });

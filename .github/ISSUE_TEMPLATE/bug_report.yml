@@ -6,7 +6,7 @@ body:
     id: part
     attributes:
       label: Which part?
-      options: [Chrome extension, CLI (hf-verify), Agent skill, Core / SDK, Benchmark]
+      options: [Chrome extension, CLI (socratica), Agent skill, Core / SDK, Benchmark]
     validations:
       required: true
   - type: textarea

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MockLLM, runVerification } from '@hallucination-firewall/core';
+import { MockLLM, runVerification } from '@socratica/core';
 import { chatgptAdapter } from '../adapters/chatgpt.js';
 import { AnswerOverlay } from '../overlay.js';
 import { MessageWatcher, type ReadyMessage } from '../watcher.js';

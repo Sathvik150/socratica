@@ -9,7 +9,7 @@ import { EvidenceHttp } from './http.js';
  * accepts `Api-User-Agent` for that purpose (Node also gets User-Agent).
  */
 
-export const WIKIMEDIA_CLIENT_ID = 'HallucinationFirewall/0.1 (https://github.com/sathvik150/cac26)';
+export const WIKIMEDIA_CLIENT_ID = 'Socratica/0.1 (https://github.com/sathvik150/cac26)';
 const WIKI_HEADERS = { 'api-user-agent': WIKIMEDIA_CLIENT_ID, 'user-agent': WIKIMEDIA_CLIENT_ID };
 
 export interface WikipediaOptions {

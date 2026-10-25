@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
   resolve: {
-    alias: { '@hallucination-firewall/core': fileURLToPath(new URL('../core/src/index.ts', import.meta.url)) },
+    alias: { '@socratica/core': fileURLToPath(new URL('../core/src/index.ts', import.meta.url)) },
   },
   test: {
     environment: 'jsdom',

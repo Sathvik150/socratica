@@ -4,6 +4,8 @@ import { loadSettings, saveSettings } from './settings.js';
 
 const send = <T>(msg: Request) => chrome.runtime.sendMessage(msg) as Promise<T>;
 
+document.getElementById('gear')?.addEventListener('click', () => void chrome.runtime.openOptionsPage());
+
 void mountPopup(document.getElementById('app')!, document.getElementById('power') as HTMLButtonElement | null, {
   getSettings: loadSettings,
   async setEnabled(on) {
@@ -18,14 +20,14 @@ void mountPopup(document.getElementById('app')!, document.getElementById('power'
   },
   async pageStatus(tabId) {
     try {
-      return (await chrome.tabs.sendMessage(tabId, { type: 'hf/page-status' } satisfies TabRequest)) as PageStatus;
+      return (await chrome.tabs.sendMessage(tabId, { type: 'socratica/page-status' } satisfies TabRequest)) as PageStatus;
     } catch {
       return undefined; // no content script in this tab
     }
   },
   async checkLatest(tabId) {
     try {
-      return (await chrome.tabs.sendMessage(tabId, { type: 'hf/check-latest' } satisfies TabRequest)) as { ok: boolean; message?: string };
+      return (await chrome.tabs.sendMessage(tabId, { type: 'socratica/check-latest' } satisfies TabRequest)) as { ok: boolean; message?: string };
     } catch {
       return { ok: false, message: 'Reload the ChatGPT tab and try again.' };
     }
@@ -38,6 +40,6 @@ void mountPopup(document.getElementById('app')!, document.getElementById('power'
       throw new Error('This page does not allow extensions to read it (for example, browser or Web Store pages).');
     }
   },
-  verifyText: (text) => send<VerifyResponse>({ type: 'hf/verify-text', text }),
+  verifyText: (text) => send<VerifyResponse>({ type: 'socratica/verify-text', text }),
   openOptions: () => void chrome.runtime.openOptionsPage(),
 });
