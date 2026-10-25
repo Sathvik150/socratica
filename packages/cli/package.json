@@ -7,14 +7,17 @@
   "bin": {
     "hf-verify": "./dist/hf-verify.mjs"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit && node build.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
-    "@hallucination-firewall/core": "workspace:*"
+    "@hallucination-firewall/core": "workspace:*",
+    "undici": "6.29.1"
   },
   "devDependencies": {
     "esbuild": "0.28.2"

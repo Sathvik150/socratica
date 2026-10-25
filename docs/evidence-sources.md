@@ -147,6 +147,8 @@ dependency and does not perform DNS resolution.
   skipped. Quantities retain units, uncertainty bounds and qualifiers. Rendered statements are the
   stored passages, and quotes must match those renderings exactly. An inception date is labelled
   as inception, rather than silently treated as an opening date.
+  Precise dates also supply an entailed year statement, with the full date retained on a separate
+  line, so the literal judge can correct a wrong year without inventing a day or month.
 - Qualified statistics and quantities (which require unit interpretation) need a model. The offline
   heuristic abstains on these passages rather than comparing mismatched dates or units.
 - Google Fact Check returns an attributed review, not a new assertion of the quoted claim. The
@@ -171,7 +173,17 @@ dependency and does not perform DNS resolution.
   dollars, life expectancy at birth and annual consumer-price inflation. Models must respect units
   and observation dates; the offline heuristic abstains on these records.
 - GOV.UK fetches official Content API bodies and guide sections, not search descriptions. Withdrawn
-  guidance is skipped, and content paths are restricted to the government origin.
+  guidance is skipped (an empty withdrawal notice means an active page), and content paths are
+  restricted to the government origin. Searches use subject terms instead of the asserted false
+  number. Crossref searches explicit publication titles separately from the claimed year and
+  excludes similarly titled papers when an exact title was supplied.
+- URL extraction prefers a page's main content or a single article over global navigation. Passage
+  ranking weights subject/property terms more heavily than numbers, since the claim's number may
+  itself be wrong. A measurement that happens to contain the wrong number must not displace the
+  passage addressing the actual fact.
+- The Node CLI honors `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` (including lowercase variants).
+  Proxy support is bundled into its standalone file; TLS verification remains enabled. The SDK
+  still accepts an injected fetch implementation appropriate to its host environment.
 
 ## Tests
 
@@ -180,3 +192,5 @@ Tests exercise the full claim → retrieval → judge → citation path, Wikimed
 permissions and renewed consent, metadata/review interpretation, unsafe URLs, domain lookalikes,
 cache expiration, cooldown recovery, timeouts, CLI source selection and key isolation.
 Live API coverage and hosted-judge quality are separate checks and are not established by mocks.
+See [live validation](live-validation.md) for the checks performed against real sources and the
+remaining credential/browser-policy limits.

@@ -60,6 +60,10 @@ metadata: use a local or hosted model to interpret those records.
 All network evidence sources are opt-in and can be combined with local documents. A failed source
 produces a warning while the other sources continue. See [source behavior, privacy and trust](../../docs/evidence-sources.md).
 
+The standalone CLI honors `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` (lowercase variants also work),
+including on Node 20. Proxy credentials remain in your environment; invalid proxy configuration
+errors do not expose them. TLS certificate verification stays enabled.
+
 ## Hosted judges (your own key, from the environment)
 
 ```bash

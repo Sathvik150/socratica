@@ -47,6 +47,14 @@ export function htmlText(html: string): string {
     }).replace(/[ \t\r]+/g, ' ').replace(/\n\s*\n/g, '\n').trim();
 }
 
+/** Prefer the page's declared content landmark over global menus and related stories. */
+function pageContent(html: string): string {
+  const main = /<main\b[^>]*>([\s\S]*?)<\/main\s*>/i.exec(html)?.[1];
+  if (main) return main;
+  const articles = [...html.matchAll(/<article\b[^>]*>([\s\S]*?)<\/article\s*>/gi)];
+  return articles.length === 1 ? articles[0]![1]! : html;
+}
+
 export interface UrlEvidenceOptions { fetch: FetchLike; urls: string[] }
 
 async function pageText(res: Awaited<ReturnType<FetchLike>>): Promise<string> {
@@ -98,7 +106,7 @@ export class UrlEvidenceProvider implements EvidenceProvider {
         const type = res.headers?.get('content-type')?.split(';')[0]?.trim().toLowerCase();
         if (!type || !['text/html', 'text/plain', 'text/markdown', 'application/xhtml+xml'].includes(type)) throw new Error('Unsupported content type');
         const raw = await pageText(res);
-        return type.includes('html') ? htmlText(raw) : raw;
+        return type.includes('html') ? htmlText(pageContent(raw)) : raw;
       }, { redirect: 'error', credentials: 'omit', referrerPolicy: 'no-referrer', headers: { accept: 'text/html, text/plain, text/markdown' } });
       documents.push({ title: url, url, text: body });
     }

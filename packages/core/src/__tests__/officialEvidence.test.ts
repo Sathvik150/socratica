@@ -85,7 +85,7 @@ describe('GOV.UK official guidance', () => {
     const calls: string[] = [];
     const fetch: FetchLike = async (url) => {
       calls.push(url);
-      return response(url.includes('/api/search.json') ? { results: [{ link: '/fictional-example-guide', title: 'Example guidance', description: 'The Velmora Permit lasts 20 years.' }] } : { title: 'Example guidance', details: { parts: [{ slug: 'validity', body: '<p>The Velmora Permit lasts 10 years.</p>' }] } });
+      return response(url.includes('/api/search.json') ? { results: [{ link: '/fictional-example-guide', title: 'Example guidance', description: 'The Velmora Permit lasts 20 years.' }] } : { title: 'Example guidance', withdrawn_notice: {}, details: { parts: [{ slug: 'validity', body: '<p>The Velmora Permit lasts 10 years.</p>' }] } });
     };
     const provider = new GovUkEvidenceProvider({ fetch });
     const result = await runVerification({ answer: 'The Velmora Permit lasts 20 years.', providers: [provider], llm: new HeuristicLLM() });
@@ -95,6 +95,8 @@ describe('GOV.UK official guidance', () => {
     expect(result.verdicts[0]?.correction).toBe('The Velmora Permit lasts 10 years.');
     await provider.retrieve(c('The Velmora Permit lasts 20 years.'), { limit: 4 });
     expect(calls).toHaveLength(2);
+    const query = new URL(calls[0]!).searchParams.get('q');
+    expect(query).not.toContain('20');
   });
 
   it('skips unsafe content paths, withdrawals and snippets without body text', async () => {

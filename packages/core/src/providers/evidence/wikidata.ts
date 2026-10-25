@@ -11,8 +11,8 @@ export interface WikidataOptions { fetch: FetchLike }
 const PROPERTIES: Record<string, (name: string, value: string) => string> = {
   P571: (n, v) => `${n} — inception: ${v}.`,
   P1619: (n, v) => `${n} opened in ${v}.`,
-  P569: (n, v) => `${n} was born on ${v}.`,
-  P570: (n, v) => `${n} died on ${v}.`,
+  P569: (n, v) => `${n} was born in ${v}.`,
+  P570: (n, v) => `${n} died in ${v}.`,
   P19: (n, v) => `${n} was born in ${v}.`,
   P20: (n, v) => `${n} died in ${v}.`,
   P17: (n, v) => `${n} is in the country ${v}.`,
@@ -20,7 +20,7 @@ const PROPERTIES: Record<string, (name: string, value: string) => string> = {
   P36: (n, v) => `${n} has capital ${v}.`,
   P112: (n, v) => `${n} was founded by ${v}.`,
   P50: (n, v) => `${n} was written by ${v}.`,
-  P577: (n, v) => `${n} was published on ${v}.`,
+  P577: (n, v) => `${n} was published in ${v}.`,
   P2048: (n, v) => `${n} has height ${v}.`,
   P2046: (n, v) => `${n} has area ${v}.`,
   P1082: (n, v) => `${n} has population ${v}.`,
@@ -109,7 +109,12 @@ export class WikidataEvidenceProvider implements EvidenceProvider {
       const hasQualifiers = Object.keys(qualifiers).length > 0;
       const quantity = record(record(record(statement.mainsnak).datavalue).value);
       const needsInterpretation = hasQualifiers || property === 'P1082' || typeof quantity.amount === 'string';
-      const rendered = PROPERTIES[property]!(name, value) + (hasQualifiers ? `\nQualifiers (Wikidata JSON): ${JSON.stringify(qualifiers)}` : '');
+      const date = /^\d{4,}-\d{2}(?:-\d{2})?$/.test(value) && record(record(statement.mainsnak).datavalue).type === 'time';
+      // A year statement is entailed by a precise date. Retain the full precision
+      // separately so a year-only claim can receive a directly quoted correction.
+      const rendered = PROPERTIES[property]!(name, date ? value.split('-')[0]! : value) +
+        (date ? `\nWikidata date: ${value}` : '') +
+        (hasQualifiers ? `\nQualifiers (Wikidata JSON): ${JSON.stringify(qualifiers)}` : '');
       const score = scorePassage(claim, rendered);
       if (score >= MIN_RELEVANCE) passages.push({ text: rendered, score, source: { title: `${name} — Wikidata ${property}`, url: `https://www.wikidata.org/wiki/${id}#${property}`, providerId: this.id, kind: needsInterpretation ? 'metadata' : 'structured' } });
     }

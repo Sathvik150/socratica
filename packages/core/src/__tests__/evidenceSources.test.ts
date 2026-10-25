@@ -61,7 +61,28 @@ describe('Wikidata evidence', () => {
       { mainsnak: time('+1800-00-00T00:00:00Z', 7) },
       { mainsnak: { ...time('+1889-03-31T00:00:00Z'), datavalue: { type: 'time', value: { time: '+1889-03-31T00:00:00Z', precision: 9, calendarmodel: 'other' } } } },
     ] });
-    expect((await new WikidataEvidenceProvider(f).retrieve(claim, opts)).map((p) => p.text)).toEqual(['Eiffel Tower opened in 1889-03.']);
+    expect((await new WikidataEvidenceProvider(f).retrieve(claim, opts)).map((p) => p.text)).toEqual(['Eiffel Tower opened in 1889.\nWikidata date: 1889-03']);
+  });
+
+  it('provides a year correction from a full-precision date while retaining that date', async () => {
+    const f = wikidata({ P1619: [{ rank: 'normal', mainsnak: time('+1889-03-31T00:00:00Z', 11) }] });
+    const result = await runVerification({ answer: claim.text, providers: [new WikidataEvidenceProvider(f)], llm: new HeuristicLLM() });
+    expect(result.summary.contradicted).toBe(1);
+    expect(result.verdicts[0]?.correction).toBe('The Eiffel Tower opened in 1889.');
+    expect(result.verdicts[0]?.quotes[0]?.quote).toBe('Eiffel Tower opened in 1889.');
+    expect(Object.values(result.passages)[0]?.text).toContain('Wikidata date: 1889-03-31');
+  });
+
+  it('compares a birth year with a birth date rather than an equally relevant birthplace', async () => {
+    const fetch: FetchLike = async (url) => response(url.includes('wbsearchentities') ? { search: [{ id: 'Q937' }] } : url.includes('props=labels&') ? { entities: { Q3012: { labels: { en: { value: 'Ulm' } } } } } : {
+      entities: { Q937: { labels: { en: { value: 'Albert Einstein' } }, claims: {
+        P569: [{ mainsnak: time('+1879-03-14T00:00:00Z', 11) }],
+        P19: [{ mainsnak: { snaktype: 'value', datavalue: { type: 'wikibase-entityid', value: { id: 'Q3012' } } } }],
+      } } },
+    });
+    const result = await runVerification({ answer: 'Albert Einstein was born in 1878.', providers: [new WikidataEvidenceProvider({ fetch })], llm: new HeuristicLLM() });
+    expect(result.verdicts[0]?.verdict).toBe('contradicted');
+    expect(result.verdicts[0]?.correction).toBe('Albert Einstein was born in 1879.');
   });
 
   it('batch-resolves entity and unit labels without substituting claim words', async () => {
@@ -130,6 +151,24 @@ describe('Google Fact Check evidence', () => {
 });
 
 describe('trusted URLs', () => {
+  it('prefers the relevant property over unrelated measurements that contain the false number', async () => {
+    const f = fake(() => response('<main><p>Mars has a radius of 3,390 kilometers.</p><p>Mars is a dry planet.</p><p>It is about half the size of Earth.</p><p>The distance from the Sun varies.</p><p>Mars has two small moons, Phobos and Deimos.</p></main>', 200, { 'content-type': 'text/html' }));
+    const found = await new UrlEvidenceProvider({ ...f, urls: ['https://science.nasa.gov/mars/facts/'] }).retrieve({ ...claim, text: 'Mars has 3 moons.', context: 'Mars has 3 moons.' }, { limit: 1 });
+    expect(found[0]?.text).toContain('Mars has two small moons');
+    expect(found[0]?.text).not.toContain('radius');
+  });
+  it('ranks actual main-page content instead of navigation that happens to match the claim', async () => {
+    const f = fake(() => response('<html><div>Earth\nThe Moon\nMars</div><main><h1>Mars facts</h1><p>Mars has two small moons, Phobos and Deimos.</p></main><div>Other stories about Mars</div></html>', 200, { 'content-type': 'text/html' }));
+    const found = await new UrlEvidenceProvider({ ...f, urls: ['https://science.nasa.gov/mars/facts/'] }).retrieve({ ...claim, text: 'Mars has 3 moons.', context: 'Mars has 3 moons.' }, opts);
+    expect(found[0]?.text).toContain('Mars has two small moons');
+    expect(found.map((p) => p.text).join(' ')).not.toContain('Earth');
+  });
+
+  it('extracts a single article when a page has no main landmark', async () => {
+    const f = fake(() => response('<div>The Eiffel Tower opened in 1899.</div><article><p>The Eiffel Tower opened in 1889.</p></article>', 200, { 'content-type': 'text/html' }));
+    const found = await new UrlEvidenceProvider({ ...f, urls: ['https://trusted.org/tower'] }).retrieve(claim, opts);
+    expect(found[0]?.text).toBe('The Eiffel Tower opened in 1889.');
+  });
   it('fetches once for multiple claims, omits credentials, rejects redirects and chunks readable text', async () => {
     const f = fake(() => response('<html><script>The Eiffel Tower opened in 1899.</script><p>The Eiffel Tower opened in 1889.</p><p>It is in France &amp; is open to visitors.</p></html>', 200, { 'content-type': 'text/html; charset=utf-8' }));
     const provider = new UrlEvidenceProvider({ ...f, urls: ['https://trusted.org/tower#history'] });
@@ -211,6 +250,20 @@ describe('independent search sources', () => {
     expect(found[0]?.source).toMatchObject({ kind: 'metadata', url: 'https://doi.org/10.1234/tower' });
     const result = await runVerification({ answer: claim.text, providers: [provider], llm: new HeuristicLLM() });
     expect(result.summary.unverifiable).toBe(1);
+  });
+
+  it('searches the publication title without the claimed year and rejects similarly named papers', async () => {
+    const title = 'Deep Residual Learning for Image Recognition';
+    const f = fake(() => response({ message: { items: [
+      { title: [`${title}: A Survey`], DOI: '10.0000/survey', published: { 'date-parts': [[2022]] } },
+      { title: [title], DOI: '10.1109/cvpr.2016.90', published: { 'date-parts': [[2016, 6]] } },
+    ] } }));
+    const found = await new CrossrefEvidenceProvider(f).retrieve({ ...claim, text: `${title} was published in 2015.` }, opts);
+    expect(decodeURIComponent(f.calls[0]!.url)).toContain(`query.title=${title}`);
+    expect(f.calls[0]!.url).not.toContain('2015');
+    expect(found).toHaveLength(1);
+    expect(found[0]?.text).toContain('Published: 2016-6');
+    expect(found[0]?.source.url).toBe('https://doi.org/10.1109/cvpr.2016.90');
   });
 
   it('keeps independent evidence when Wikipedia returns 429', async () => {

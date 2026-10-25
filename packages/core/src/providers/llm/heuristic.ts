@@ -45,7 +45,8 @@ function nonNumeric(tokens: string[]): string[] {
 
 function judge(claim: string, passages: Array<{ id: string; text: string }>): LLMVerdict {
   const claimTokens = nonNumeric(contentTokens(claim));
-  let best: { passageId: string; sentence: string; overlap: number } | undefined;
+  const needsNumber = numbers(claim).length > 0;
+  let best: { passageId: string; sentence: string; overlap: number; hasNumber: boolean } | undefined;
   for (const p of passages) {
     const sentences = splitSentences(p.text);
     sentences.forEach((s, i) => {
@@ -53,7 +54,12 @@ function judge(claim: string, passages: Array<{ id: string; text: string }>): LL
       const prev = i > 0 && PRONOUN_START.test(s.text) ? sentences[i - 1] : undefined;
       const sentence = prev ? p.text.slice(prev.start, s.end) : s.text;
       const overlap = coverage(claimTokens, contentTokens(sentence));
-      if (!best || overlap > best.overlap) best = { passageId: p.id, sentence, overlap };
+      const hasNumber = needsNumber && numbers(sentence).length > 0;
+      // For a numeric claim, an equally relevant numeric statement can answer
+      // the question where an otherwise matching place/name statement cannot.
+      if (!best || overlap > best.overlap || (overlap === best.overlap && hasNumber && !best.hasNumber)) {
+        best = { passageId: p.id, sentence, overlap, hasNumber };
+      }
     });
   }
   if (!best || best.overlap < 0.5) return unverifiable('No passage addresses this claim directly.');
