@@ -3,6 +3,41 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [SemVer](https://semver.org/).
 
+## [0.3.0] - 2026-10-25
+
+### Added
+- **Socratica search, the new default engine: Google results with no key for anyone.** A small search relay
+  ([`relay/`](relay/README.md), one Vercel Function) forwards each claim-based query to Serper with the project's key,
+  which lives only in Vercel's environment settings. It keeps no record of queries, answers repeats from a 10-minute
+  in-memory cache, and limits each network address to 30 searches a minute and 400 a day. When it is busy or out of
+  credits, the DuckDuckGo backup takes over. Settings from 0.2 that used Firecrawl without a key move to it; the CLI
+  uses it with `--web socratica` (`SOCRATICA_RELAY_URL` points at another deployment). It is a new destination, so the
+  privacy notice moves to version 5.
+
+### Fixed
+- **Firecrawl's "could not be reached (HTTP 403)", and no key needed anywhere.** Without a key, Firecrawl turns away
+  addresses it judges to be a VPN or proxy (HTTP 403) and IPv6 addresses (HTTP 401), and stops after its daily allowance
+  (HTTP 429). Keyless Firecrawl is now backed up by DuckDuckGo's Instant Answer API, which needs no key and has no documented network limits,
+  so checks carry on with DuckDuckGo, Wikipedia and Wikidata and nobody has to add a key. The note says what happened and
+  that an optional free Firecrawl key adds full web results on that network. The CLI's `--web firecrawl` uses the same
+  backup.
+- **Every claim came back unverifiable on long, framed answers.** Searches went to the reporter or the first capitalized
+  word ("NASA", "According", "Scientists") and passages about the actual fact scored too low to reach the judge.
+  Searches now target each fact (`james webb space telescope launch`, `earth oxygen concentration`,
+  `moon orbiting earth`) and passages are scored against those facts.
+- **Sources timing out.** Evidence for every claim is requested at once (each source still paces itself), Wikipedia needs
+  one request per search instead of three, and the extension waits up to 20 seconds instead of 10. The note for a slow
+  source now says it missed only some claims.
+
+### Changed
+- The offline judge checks each numeric fact inside a long claim on its own, so "…since its launch in 2018" is
+  contradicted by "The telescope was launched on 25 December 2021". It never supports a whole claim from one fact.
+  Benchmark results are unchanged (89.2%; 82.6% and 75.0% on the encyclopedia-style sets; no false contradictions).
+- Wikidata also reads launch dates, elevation, orbital period and rotation period.
+- The toolbar icon is the gold laurel alone, as in the README, without the letter or the tile.
+- A source's rate-limit cooldown is cleared once its short `Retry-After` wait is over; a timer firing slightly early
+  could leave it in place and fail the next request.
+
 ## [0.2.0] - 2026-10-25
 
 Hallucination Firewall is now **Socratica**. This release also replaces the unreleased 0.1.6 design restore.
@@ -154,6 +189,7 @@ Hallucination Firewall is now **Socratica**. This release also replaces the unre
 - **Benchmark**: 37 labeled synthetic items, a runner, and a `BaselineVerifier` plug-in interface.
 - Release packaging (`pnpm package`) and GitHub Actions for CI and tagged releases.
 
+[0.3.0]: https://github.com/sathvik150/cac26/releases/tag/v0.3.0
 [0.2.0]: https://github.com/sathvik150/cac26/releases/tag/v0.2.0
 [0.1.5]: https://github.com/sathvik150/cac26/releases/tag/v0.1.5
 [0.1.4]: https://github.com/sathvik150/cac26/releases/tag/v0.1.4

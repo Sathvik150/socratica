@@ -87,7 +87,7 @@ describe('summarizeWarnings', () => {
     expect(out.offlineJudge).toMatch(/^Using the offline heuristic judge/);
     expect(out.notes).toEqual([
       'Wikipedia is rate-limiting requests right now (try again in 29s). Other enabled sources were still used.',
-      'Wikidata was too slow (no answer within 10s), so results were shown without it.',
+      'Wikidata did not answer within 10s for some claims, so those were checked without it.',
     ]);
   });
 });

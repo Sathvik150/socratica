@@ -4,6 +4,7 @@ import { CONSENT_VERSION, DEFAULT_SETTINGS, HOST_PERMISSIONS, hasValidConsent, l
 import { handleVerifyText } from '../verifyService.js';
 import { mountOptions, type OptionsApi } from '../optionsView.js';
 import { mountPopup, renderResult, type PopupApi } from '../popupView.js';
+import { summarizeWarnings } from '../ui/theme.js';
 import manifest from '../../manifest.json';
 
 const answer = 'The Eiffel Tower opened in 1899.';
@@ -15,11 +16,11 @@ function response(data: unknown, status = 200, type = 'application/json') {
 }
 afterEach(() => vi.unstubAllGlobals());
 
-/** Every check queries the web search engine (Firecrawl by default); these fakes answer it with no results. */
-const isWebSearch = (url: string) => url.startsWith('https://api.firecrawl.dev/');
+/** Every check queries the web search engine (Socratica search by default, backed up by DuckDuckGo); these fakes answer with no results. */
+const isWebSearch = (url: string) => ['https://socratica-search.vercel.app/', 'https://api.firecrawl.dev/', 'https://api.duckduckgo.com/'].some((o) => url.startsWith(o));
 const noWebResults = () => response({ success: true, data: { web: [] } });
-/** Permissions for the default web engine plus whatever a test allows. */
-const allow = (...origins: string[]) => async (origin: string) => origin === HOST_PERMISSIONS.firecrawl || origins.includes(origin);
+/** Permissions for the default web engine and its backup, plus whatever a test allows. */
+const allow = (...origins: string[]) => async (origin: string) => origin === HOST_PERMISSIONS.socratica || origin === HOST_PERMISSIONS.duckduckgo || origins.includes(origin);
 
 describe('source settings and consent migration', () => {
   it('migrates old stored settings without losing keys or treating old consent as valid', async () => {
@@ -33,20 +34,35 @@ describe('source settings and consent migration', () => {
     expect(hasValidConsent(s)).toBe(false);
   });
 
-  it('reads settings saved under the pre-Socratica storage key, defaulting web search to Firecrawl', async () => {
+  it('reads settings saved under the pre-Socratica storage key, defaulting web search to Socratica search', async () => {
     vi.stubGlobal('chrome', { storage: { local: { get: async () => ({ 'hf-settings': { autoCheck: false, evidence: { wikidata: false } } }) } } });
     const s = await loadSettings();
     expect(s.autoCheck).toBe(false);
     expect(s.evidence.wikidata).toBe(false);
-    expect(s.evidence.web.engine).toBe('firecrawl');
+    expect(s.evidence.web.engine).toBe('socratica');
+  });
+
+  it('moves 0.2 keyless Firecrawl settings to Socratica search, but keeps a chosen Firecrawl key', async () => {
+    const web = { engine: 'firecrawl', firecrawlApiKey: '', serperApiKey: '', braveApiKey: '' };
+    vi.stubGlobal('chrome', { storage: { local: { get: async () => ({ 'socratica-settings': { consent: { granted: true, version: 4 }, evidence: { web } } }) } } });
+    expect((await loadSettings()).evidence.web.engine).toBe('socratica');
+    vi.stubGlobal('chrome', { storage: { local: { get: async () => ({ 'socratica-settings': { consent: { granted: true, version: 4 }, evidence: { web: { ...web, firecrawlApiKey: 'fc-test' } } } }) } } });
+    expect((await loadSettings()).evidence.web.engine).toBe('firecrawl');
+    vi.stubGlobal('chrome', { storage: { local: { get: async () => ({ 'socratica-settings': { consent: { granted: true, version: CONSENT_VERSION }, evidence: { web } } }) } } });
+    expect((await loadSettings()).evidence.web.engine).toBe('firecrawl');
   });
 
   it('declares all API permissions but only requests enabled exact origins, including pasted URL sites', () => {
     const s = { ...settings, evidence: { ...offline, wikidata: true, europePmc: true, worldBank: true, govUk: true, googleFactCheck: true, urls: true, trustedUrls: ['https://trusted.org/a', 'https://trusted.org/b'] } };
     const origins = requiredOrigins(s);
     // The web search engine is always first: it is required.
-    expect(origins).toEqual([HOST_PERMISSIONS.firecrawl, HOST_PERMISSIONS.wikidata, HOST_PERMISSIONS.europePmc, HOST_PERMISSIONS.worldBank, HOST_PERMISSIONS.govUk, HOST_PERMISSIONS.googleFactCheck, 'https://trusted.org/*']);
+    expect(origins).toEqual([HOST_PERMISSIONS.socratica, HOST_PERMISSIONS.duckduckgo, HOST_PERMISSIONS.wikidata, HOST_PERMISSIONS.europePmc, HOST_PERMISSIONS.worldBank, HOST_PERMISSIONS.govUk, HOST_PERMISSIONS.googleFactCheck, 'https://trusted.org/*']);
     expect(requiredOrigins({ ...s, evidence: { ...s.evidence, web: { ...s.evidence.web, engine: 'serper' } } })[0]).toBe(HOST_PERMISSIONS.serper);
+    // The DuckDuckGo backup is only for the keyless engines.
+    const firecrawl = { ...s.evidence.web, engine: 'firecrawl' as const };
+    expect(requiredOrigins({ ...s, evidence: { ...s.evidence, web: firecrawl } }).slice(0, 2)).toEqual([HOST_PERMISSIONS.firecrawl, HOST_PERMISSIONS.duckduckgo]);
+    expect(requiredOrigins({ ...s, evidence: { ...s.evidence, web: { ...firecrawl, firecrawlApiKey: 'fc-test' } } })).not.toContain(HOST_PERMISSIONS.duckduckgo);
+    expect(requiredOrigins({ ...s, evidence: { ...s.evidence, web: { ...s.evidence.web, engine: 'serper' } } })).not.toContain(HOST_PERMISSIONS.duckduckgo);
     expect(origins).not.toContain('https://*/*');
     for (const origin of Object.values(HOST_PERMISSIONS)) expect(manifest.optional_host_permissions).toContain(origin);
     expect(manifest.optional_host_permissions).toContain('https://*/*');
@@ -102,15 +118,19 @@ describe('source options', () => {
     expect(document.getElementById('status')!.textContent).toContain('public HTTPS');
   });
 
-  it('defaults to keyless Firecrawl and refuses to save an engine that needs a missing key', async () => {
+  it('defaults to Socratica search, with no key field, and refuses to save an engine that needs a missing key', async () => {
     const state = await mount();
-    expect(document.querySelector<HTMLInputElement>('#web-firecrawl')!.checked).toBe(true);
+    expect(document.querySelector<HTMLInputElement>('#web-socratica')!.checked).toBe(true);
+    expect(document.getElementById('web-key-row')!.hidden).toBe(true);
     expect(document.getElementById('web-search')!.textContent).toContain('Required');
+    document.querySelector<HTMLInputElement>('#web-firecrawl')!.click();
+    expect(document.getElementById('web-key-row')!.hidden).toBe(false);
     document.querySelector<HTMLInputElement>('#web-brave')!.click();
     document.querySelector<HTMLButtonElement>('#save')!.click(); await flush();
-    expect(state.saved().evidence.web.engine).toBe('firecrawl');
+    expect(state.saved().evidence.web.engine).toBe('socratica');
     expect(state.requested).toEqual([]);
     expect(document.getElementById('status')!.textContent).toContain('Brave Search needs an API key');
+    expect(document.getElementById('status')!.textContent).toContain('Or choose Socratica search, which needs none.');
   });
 
   it('remembers a key per engine while switching between them', async () => {
@@ -128,7 +148,7 @@ describe('source options', () => {
 
   it('describes every destination and saves preferences without permissions before consent', async () => {
     const state = await mount(false);
-    for (const name of ['Wikipedia', 'Wikidata', 'Europe PMC', 'Google Fact Check', 'Firecrawl', 'Serper', 'Brave']) expect(document.getElementById('consent')!.textContent).toContain(name);
+    for (const name of ['Socratica search', 'Vercel', 'Wikipedia', 'Wikidata', 'Europe PMC', 'Google Fact Check', 'Firecrawl', 'Serper', 'Brave', 'DuckDuckGo']) expect(document.getElementById('consent')!.textContent).toContain(name);
     set('ev-world-bank', true);
     document.querySelector<HTMLButtonElement>('#save')!.click(); await flush();
     expect(state.saved().evidence.worldBank).toBe(true);
@@ -151,12 +171,44 @@ describe('background source integration', () => {
     const fetch = vi.fn<FetchLike>();
     const denied = await handleVerifyText({ text: answer }, { ...settings, evidence: DEFAULT_SETTINGS.evidence }, { fetch, hasPermission: async () => false });
     expect(denied).toMatchObject({ status: 'error' });
-    if (denied.status === 'error') expect(denied.message).toContain('permission to contact Firecrawl');
+    if (denied.status === 'error') expect(denied.message).toContain('permission to contact Socratica search');
     const keyless = { ...settings, evidence: { ...offline, web: { ...offline.web, engine: 'serper' as const } } };
     const noKey = await handleVerifyText({ text: answer }, keyless, { fetch, hasPermission: async () => true });
     expect(noKey).toMatchObject({ status: 'error' });
     if (noKey.status === 'error') expect(noKey.message).toContain('Web search is required');
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("carries on with DuckDuckGo when Firecrawl's free tier refuses the network, without asking for a key", async () => {
+    const fetch: FetchLike = async (url) => {
+      if (url.startsWith('https://api.firecrawl.dev/')) return response({ success: false, error: 'blocked' }, 403);
+      if (url.startsWith('https://api.duckduckgo.com/')) return response({ Heading: 'Eiffel Tower', AbstractSource: 'Wikipedia', AbstractURL: 'https://en.wikipedia.org/wiki/Eiffel_Tower', AbstractText: 'The Eiffel Tower opened in 1889.' });
+      return response({});
+    };
+    const r = await handleVerifyText({ text: answer }, { ...settings, evidence: { ...offline, web: { ...offline.web, engine: 'firecrawl' } } }, { fetch, hasPermission: async () => true });
+    if (r.status !== 'ok') throw new Error(r.status);
+    // The backup's evidence decides the verdict.
+    expect(r.result.summary.contradicted).toBe(1);
+    expect(r.result.verdicts[0]!.quotes[0]!.source.providerId).toBe('duckduckgo');
+    const notes = summarizeWarnings(r.warnings).notes.join(' ');
+    expect(notes).toContain("Firecrawl's free tier doesn't search from this network (HTTP 403)");
+    expect(notes).toContain('The other sources were still used');
+    expect(notes).toContain('optional');
+    expect(notes).not.toContain('firecrawl:');
+    expect(notes).not.toContain('blocked');
+  });
+
+  it('carries on with DuckDuckGo when Socratica search is unavailable', async () => {
+    const fetch: FetchLike = async (url) => {
+      if (url.startsWith('https://socratica-search.vercel.app/')) return response({ error: 'Shared search is unavailable right now.' }, 503);
+      if (url.startsWith('https://api.duckduckgo.com/')) return response({ Heading: 'Eiffel Tower', AbstractSource: 'Wikipedia', AbstractURL: 'https://en.wikipedia.org/wiki/Eiffel_Tower', AbstractText: 'The Eiffel Tower opened in 1889.' });
+      return response({});
+    };
+    const r = await handleVerifyText({ text: answer }, { ...settings, evidence: offline }, { fetch, hasPermission: async () => true });
+    if (r.status !== 'ok') throw new Error(r.status);
+    expect(r.result.summary.contradicted).toBe(1);
+    expect(r.result.verdicts[0]!.quotes[0]!.source.providerId).toBe('duckduckgo');
+    expect(summarizeWarnings(r.warnings).notes.join(' ')).toContain("Socratica's shared search is unavailable right now (HTTP 503). The other sources were still used.");
   });
 
   it('warns about missing API keys without making keyed-provider calls', async () => {
@@ -230,7 +282,8 @@ describe('background source integration', () => {
     const api: PopupApi = { getSettings: async () => s, activeTab: async () => undefined, pageStatus: async () => undefined, checkLatest: async () => ({ ok: true }), getSelection: async () => '', verifyText: async () => ({ status: 'disabled' }), openOptions: () => {} };
     await mountPopup(document.getElementById('app')!, null, api);
     expect(document.getElementById('evidence-summary')!.textContent).toBe('Also searching: Wikidata, Europe PMC, Google Fact Check, Trusted URLs.');
-    expect(document.getElementById('web-source')!.textContent).toContain('Firecrawl');
+    expect(document.getElementById('web-source')!.textContent).toContain('Socratica search');
     expect(document.getElementById('web-source')!.textContent).toContain('no key needed');
+    expect(document.getElementById('web-backup')!.textContent).toContain('DuckDuckGo');
   });
 });

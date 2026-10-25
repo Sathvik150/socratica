@@ -17,13 +17,37 @@ accepts your own `--evidence` files instead).
 
 | Engine | Evidence returned | Key | Notes |
 |---|---|---|---|
-| Firecrawl (default) | Result titles, links and snippets | None. An optional free Firecrawl key raises the limits | Works for anyone with no sign-up. Keyless use has a daily limit per network address; when it runs out, the check continues with the other sources and says so |
+| Socratica search (default) | Google's answer box, knowledge panel and result snippets, through Socratica's relay | None | The relay ([`relay/`](../relay/README.md), a Vercel Function) asks Serper with the project's key, so nobody needs one. 30 searches a minute and 400 a day per network address; when it's busy or out of credits, DuckDuckGo backs it up |
+| Firecrawl | Result titles, links and snippets | None. An optional free Firecrawl key (sign up with Google or GitHub, 1,000 credits) works on any network | No sign-up. Keyless use has a daily limit per network address, and Firecrawl turns away keyless requests from VPN, proxy and IPv6 addresses (HTTP 403 or 401). Without a key, DuckDuckGo backs it up (below) address; when it runs out, the check continues with the other sources and says so |
 | Google results via Serper | Google's answer box, knowledge panel and result snippets | Free Serper key (2,500 searches, no card) | The closest thing to Google web search with a free key. Google's own Custom Search JSON API is closed to new customers, so it is not offered |
 | Brave Search | Result snippets | Brave Search API key | Brave's independent index |
 
 Search snippets are short. A snippet only decides a verdict when it states the fact itself and the
 quote is verbatim; otherwise the claim stays `unverifiable`. Results are restricted to `http(s)`
 links, cleaned of markup, and ranked by how closely they match the claim's subject.
+
+### The DuckDuckGo backup
+
+Nobody has to add a key. With Socratica search, or Firecrawl without a key, every check also asks DuckDuckGo's Instant
+Answer API (keyless, with no documented network limits) about the subject of each claim. It answers with a
+short summary of that thing, usually Wikipedia's, and related topics: encyclopedia-style evidence, not
+full web results. When the relay is busy or out of credits, or Firecrawl's free tier turns a network
+away, the check carries on with DuckDuckGo, Wikipedia and Wikidata, and the note says what happened.
+With a Firecrawl key, or with Serper or Brave, the backup isn't used.
+
+## How searches are built
+
+Sources are searched for the facts a claim states, not for its wording or for whoever reported it.
+For "Researchers at Harvard University have also concluded that the Earth's atmospheric oxygen
+concentration has increased to 35%", the reporting frame is set aside and the search is
+`earth oxygen concentration`: the subject plus the words next to the number. The claimed number
+itself is never searched for, since it may be the hallucination. A claim with several facts gets one
+search per fact (up to three), and Wikidata looks up the entity the fact is about (the James Webb
+Space Telescope, not NASA). Wikipedia answers each search with the top article's text in a single
+request, and claims about the same thing share cached searches.
+
+Evidence for every claim is requested at once; each source paces its own requests, so one slow
+source no longer holds up the others. The extension waits up to 20 seconds for evidence.
 
 ## More sources
 
@@ -56,14 +80,15 @@ because a user expects the claim to be false.
 
 ## Chrome extension
 
-Open Settings and accept the privacy notice. The **Web search** card is marked Required: Firecrawl
-is selected by default and needs nothing else. To use Serper or Brave instead, select it and paste
+Open Settings and accept the privacy notice. The **Web search** card is marked Required: Socratica
+search is selected by default and needs nothing else (it has no key field). Settings from 0.2 that used
+Firecrawl without a key move to Socratica search. To use Serper or Brave instead, select it and paste
 its key; Save refuses an engine that needs a key and has none. Each engine's key is remembered
 separately, so switching back and forth keeps them. If the engine's site permission is declined,
 checks stop with a message telling you to press Save and allow it.
 
 Wikipedia, Wikidata and Europe PMC are also enabled by default after consent; every other source has
-an independent toggle. Existing users must accept consent version 3 before any requests resume.
+an independent toggle. Existing users must accept consent version 5 before any requests resume.
 Settings from earlier versions are migrated: a Brave key becomes the Brave engine choice, and Tavily
 settings are dropped.
 
@@ -87,12 +112,12 @@ Disabling a source stops its requests, even if Chrome still retains a previously
 
 ## CLI
 
-`verify` needs a web search engine (`--web firecrawl`, `--web serper` or `--web brave`) unless you
+`verify` needs a web search engine (`--web socratica`, `--web firecrawl`, `--web serper` or `--web brave`) unless you
 check against your own files with `--evidence`. With `--evidence` alone it stays fully offline.
 
 ```bash
-# Web search with no key, plus Wikipedia
-node packages/cli/dist/socratica.mjs verify --answer answer.txt --web firecrawl --wikipedia
+# Web search with no key (Socratica search), plus Wikipedia
+node packages/cli/dist/socratica.mjs verify --answer answer.txt --web socratica --wikipedia
 
 # Google results through Serper; SOCRATICA_SERPER_API_KEY must already be in the environment.
 node packages/cli/dist/socratica.mjs verify --answer answer.txt --web serper
@@ -160,6 +185,12 @@ dependency and does not perform DNS resolution.
   as inception, rather than silently treated as an opening date.
   Precise dates also supply an entailed year statement, with the full date retained on a separate
   line, so the literal judge can correct a wrong year without inventing a day or month.
+- The offline judge also checks each numeric fact inside a long claim on its own. A source sentence
+  about the same subject that puts a different number of the same kind next to the same word ("was
+  launched on 25 December 2021" against "since its launch in 2018") contradicts the claim. It never
+  supports a whole claim from one fact, skips amounts of change ("decreased by 15%") and claims with
+  two numbers of the same kind ("from 24 hours to 30 hours"), and writes a correction only for a plain
+  one-fact claim.
 - Qualified statistics and quantities (which require unit interpretation) need a model. The offline
   heuristic abstains on these passages rather than comparing mismatched dates or units.
 - Google Fact Check returns an attributed review, not a new assertion of the quoted claim. The

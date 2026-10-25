@@ -4,6 +4,7 @@ import {
   OpenAIProvider,
   WikipediaEvidenceProvider,
   WikidataEvidenceProvider,
+  DuckDuckGoEvidenceProvider,
   EuropePmcEvidenceProvider,
   WorldBankEvidenceProvider,
   GovUkEvidenceProvider,
@@ -19,7 +20,7 @@ import {
 } from '@socratica/core';
 import type { PlatformId } from './adapters/adapter.js';
 import type { TestJudgeResponse, VerifyResponse } from './messages.js';
-import { DEFAULT_MODELS, HOST_PERMISSIONS, WEB_KEY_FIELD, hasValidConsent, localOrigin, type Settings } from './settings.js';
+import { DEFAULT_MODELS, HOST_PERMISSIONS, hasValidConsent, localOrigin, usesKeylessBackup, webSearchKey, type Settings } from './settings.js';
 
 // One Wikipedia provider per fetch function, so its article cache survives across answers
 // and the extension sends Wikimedia fewer requests.
@@ -100,7 +101,7 @@ function withLocalHints(fetch: FetchLike, baseUrl: string, model: string): Fetch
  */
 export async function webSearchFor(settings: Settings, deps: ServiceDeps): Promise<{ provider: EvidenceProvider } | { error: string }> {
   const { engine } = settings.evidence.web;
-  const apiKey = settings.evidence.web[WEB_KEY_FIELD[engine]].trim();
+  const apiKey = webSearchKey(settings);
   const name = WEB_SEARCH_ENGINES[engine].name;
   let provider: EvidenceProvider;
   try {
@@ -117,6 +118,10 @@ export async function webSearchFor(settings: Settings, deps: ServiceDeps): Promi
 function evidenceProviders(settings: Settings, deps: ServiceDeps, warnings: string[]): Promise<EvidenceProvider[]> {
   return (async () => {
     const providers: EvidenceProvider[] = [];
+    if (usesKeylessBackup(settings)) {
+      if (await deps.hasPermission(HOST_PERMISSIONS.duckduckgo)) providers.push(cachedSource(deps.fetch, 'duckduckgo', () => new DuckDuckGoEvidenceProvider({ fetch: deps.fetch })));
+      else warnings.push('The DuckDuckGo backup for keyless web search is not allowed yet. Open Settings and press Save.');
+    }
     if (settings.evidence.wikipedia) {
       if (await deps.hasPermission(HOST_PERMISSIONS.wikipedia)) providers.push(wikipediaFor(deps.fetch));
       else warnings.push('Wikipedia is enabled but its permission was not granted.');
@@ -167,8 +172,8 @@ async function run(answer: string, question: string | undefined, settings: Setti
       llm: judge.llm,
       providers,
       ...(question ? { question } : {}),
-      // Fast turnaround: claims in parallel, and never wait more than 10 s for evidence.
-      options: { concurrency: 4, retrievalDeadlineMs: 10_000 },
+      // Every claim asks for evidence at once (each source paces itself); wait at most 20 s for it.
+      options: { concurrency: 4, retrievalDeadlineMs: 20_000 },
     });
     for (const e of result.errors) warnings.push(`${e.providerId}: ${e.message}`);
     // A judge failure shows up per claim; surface it once so the user can fix it.

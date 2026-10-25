@@ -15,7 +15,17 @@ export class EvidenceHttp {
   #active = 0;
   readonly #waiting: Array<() => void> = [];
 
-  constructor(readonly name: string, readonly fetch: FetchLike, readonly retryShort429 = false, readonly concurrency = 1) {}
+  /**
+   * `explain` turns an HTTP error status into a message that says what to do about it (for example a
+   * missing or rejected key); statuses it returns nothing for get the generic message.
+   */
+  constructor(
+    readonly name: string,
+    readonly fetch: FetchLike,
+    readonly retryShort429 = false,
+    readonly concurrency = 1,
+    readonly explain?: (status: number) => string | undefined,
+  ) {}
 
   async #slot<T>(work: () => Promise<T>): Promise<T> {
     if (this.#active >= this.concurrency) await new Promise<void>((resolve) => this.#waiting.push(resolve));
@@ -29,6 +39,8 @@ export class EvidenceHttp {
   }
 
   #cooldownError(): Error {
+    const why = this.explain?.(this.#retryStatus);
+    if (why) return new Error(why);
     const seconds = Math.max(1, Math.ceil((this.#retryAt - Date.now()) / 1000));
     return new Error(`${this.name} is temporarily unavailable (HTTP ${this.#retryStatus}); try again in ${seconds} seconds.`);
   }
@@ -67,11 +79,13 @@ export class EvidenceHttp {
             this.#retryAt = Date.now() + wait;
             if (this.retryShort429 && res.status === 429 && attempt === 0 && wait <= 5000) {
               await new Promise<void>((resolve) => setTimeout(resolve, wait));
+              // The requested wait is over; a timer that fires a little early must not leave a cooldown behind.
+              this.#retryAt = 0;
               continue;
             }
             throw this.#cooldownError();
           }
-          if (!res.ok) throw new Error(`${this.name} request failed with HTTP ${res.status}.`);
+          if (!res.ok) throw new Error(this.explain?.(res.status) ?? `${this.name} request failed with HTTP ${res.status}.`);
           try { return await read(res); }
           catch { throw new Error(`${this.name} returned an invalid or unsupported response.`); }
         }

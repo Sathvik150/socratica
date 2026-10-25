@@ -1,5 +1,5 @@
 import type { Claim, EvidenceProvider, FetchLike, Passage, RetrieveOptions } from '../../types.js';
-import { chunkText, scorePassage, searchQuery, subjectQuery } from '../../rank.js';
+import { chunkText, factQueries, factSubject, scorePassage, searchQuery } from '../../rank.js';
 import { MIN_RELEVANCE } from './documents.js';
 import { EvidenceHttp } from './http.js';
 
@@ -16,13 +16,13 @@ export interface WikipediaOptions {
   fetch: FetchLike;
   /** Wikipedia language subdomain. Default `en`. Must match the extension's host permissions. */
   lang?: string;
-  /** Articles fetched per claim. Default 2. */
+  /** Searches (one article each) per claim. Default 3. */
   maxArticles?: number;
 }
 
 /**
- * Evidence from the public Wikipedia API (no key). Only the search query
- * derived from a claim is sent, never the full conversation.
+ * Evidence from the public Wikipedia API (no key). Only search queries derived from a claim are
+ * sent, never the full conversation.
  */
 export class WikipediaEvidenceProvider implements EvidenceProvider {
   readonly id = 'wikipedia';
@@ -34,45 +34,43 @@ export class WikipediaEvidenceProvider implements EvidenceProvider {
     // Wikimedia asks API clients to send requests one at a time.
     this.#http = new EvidenceHttp('Wikipedia', opts.fetch, true);
     this.#base = `https://${opts.lang ?? 'en'}.wikipedia.org`;
-    this.#maxArticles = opts.maxArticles ?? 2;
+    this.#maxArticles = opts.maxArticles ?? 3;
   }
 
   async retrieve(claim: Claim, options: RetrieveOptions): Promise<Array<Omit<Passage, 'id'>>> {
-    // Search by subject first: claims about the same thing share one cached search and
-    // article, which cuts requests (and rate-limit pressure) for a typical answer several-fold.
-    const subject = subjectQuery(claim);
-    if (subject) {
-      const found = await this.#retrieveFor(subject, claim, options);
-      if (found.length) return found;
+    // Focused searches for each fact ("james webb space telescope launch"), then the claim's subject.
+    // Each is one request for the top article's text, cached, so claims about the same thing share them.
+    const queries = [...new Set([...factQueries(claim, 2), factSubject(claim)].filter((q): q is string => !!q))];
+    if (!queries.length) queries.push(searchQuery(claim));
+    const passages: Array<Omit<Passage, 'id'>> = [];
+    let failure: unknown;
+    for (const query of queries.slice(0, this.#maxArticles)) {
+      try { passages.push(...await this.#retrieveFor(query, claim)); }
+      catch (err) { failure ??= err; }
     }
-    return this.#retrieveFor(searchQuery(claim), claim, options);
+    if (!passages.length && failure) throw failure;
+    const seen = new Set<string>();
+    return passages
+      .sort((a, b) => b.score - a.score)
+      .filter((p) => !seen.has(p.text) && seen.add(p.text))
+      .slice(0, options.limit);
   }
 
-  async #retrieveFor(query: string, claim: Claim, options: RetrieveOptions): Promise<Array<Omit<Passage, 'id'>>> {
-    const q = encodeURIComponent(query);
+  async #retrieveFor(query: string, claim: Claim): Promise<Array<Omit<Passage, 'id'>>> {
+    // generator=search returns the top result's plain-text extract in the same request.
     const data = (await this.#http.json(
-      `${this.#base}/w/api.php?action=query&list=search&format=json&origin=*&srlimit=${this.#maxArticles}&srsearch=${q}`,
+      `${this.#base}/w/api.php?action=query&generator=search&gsrlimit=1&prop=extracts&explaintext=1&exlimit=1&redirects=1&format=json&origin=*&gsrsearch=${encodeURIComponent(query)}`,
       { headers: WIKI_HEADERS },
-    )) as { query?: { search?: Array<{ title: string }> } };
-    const titles = (data.query?.search ?? []).map((r) => r.title).slice(0, this.#maxArticles);
-
+    )) as { query?: { pages?: Record<string, { title?: string; extract?: string }> } };
     const passages: Array<Omit<Passage, 'id'>> = [];
-    for (const title of titles) {
-      const text = await this.#article(title);
-      const url = `${this.#base}/wiki/${encodeURIComponent(title.replace(/ /g, '_'))}`;
-      for (const chunk of chunkText(text)) {
+    for (const page of Object.values(data.query?.pages ?? {})) {
+      if (!page.title || !page.extract) continue;
+      const url = `${this.#base}/wiki/${encodeURIComponent(page.title.replace(/ /g, '_'))}`;
+      for (const chunk of chunkText(page.extract)) {
         const score = scorePassage(claim, chunk);
-        if (score >= MIN_RELEVANCE) passages.push({ text: chunk, score, source: { title, url, providerId: this.id } });
+        if (score >= MIN_RELEVANCE) passages.push({ text: chunk, score, source: { title: page.title, url, providerId: this.id } });
       }
     }
-    return passages.sort((a, b) => b.score - a.score).slice(0, options.limit);
-  }
-
-  async #article(title: string): Promise<string> {
-    const data = (await this.#http.json(
-      `${this.#base}/w/api.php?action=query&prop=extracts&explaintext=1&format=json&origin=*&redirects=1&titles=${encodeURIComponent(title)}`,
-      { headers: WIKI_HEADERS },
-    )) as { query?: { pages?: Record<string, { extract?: string }> } };
-    return Object.values(data.query?.pages ?? {})[0]?.extract ?? '';
+    return passages;
   }
 }

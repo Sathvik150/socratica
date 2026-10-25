@@ -75,7 +75,7 @@ Gold is the only accent. Verdict colours appear only on verdicts: chips, seals, 
 
 The laurel wreath (`LAUREL_PATH` in `src/ui/icons.ts`, inlined in the HTML pages) is two arcs of leaves on a
 64-unit grid, generated so every leaf has the same winding (overlapping subpaths with opposite winding showed
-seams). The toolbar icons put a Garogier "S" inside the laurel on an off-white tile. Other icons are 24-unit
+seams). The toolbar icon is the same gold laurel on a transparent background. Other icons are 24-unit
 stroke icons at 1.6px.
 
 ## Surfaces

@@ -3,18 +3,17 @@ import type { FetchLike } from '@socratica/core';
 import { handleTestJudge, handleVerify, handleVerifyText } from '../verifyService.js';
 import { CONSENT_VERSION, DEFAULT_SETTINGS, type Settings } from '../settings.js';
 
-/** Fake network: Wikipedia knows the bridge; the web search engine (Firecrawl, the default) finds nothing. */
+/** Fake network: Wikipedia's search finds the bridge; the web search engine (Socratica search, the default) finds nothing. */
 function deps(granted: boolean | ((origin: string) => boolean) = true) {
   const calls: string[] = [];
   const bodies: string[] = [];
   const fetch: FetchLike = async (url, init) => {
     calls.push(url);
-    if (url.startsWith('https://api.firecrawl.dev/')) {
+    if (url.startsWith('https://socratica-search.vercel.app/')) {
       bodies.push(init?.body ?? '');
-      return { ok: true, status: 200, json: async () => ({ success: true, data: { web: [] } }), text: async () => '' };
+      return { ok: true, status: 200, json: async () => ({ organic: [] }), text: async () => '' };
     }
-    if (url.includes('list=search')) return { ok: true, status: 200, json: async () => ({ query: { search: [{ title: 'Zentha Bridge' }] } }), text: async () => '' };
-    return { ok: true, status: 200, json: async () => ({ query: { pages: { 1: { extract: 'The Zentha Bridge opened in 1991.' } } } }), text: async () => '' };
+    return { ok: true, status: 200, json: async () => ({ query: { pages: { 1: { title: 'Zentha Bridge', extract: 'The Zentha Bridge opened in 1991.' } } } }), text: async () => '' };
   };
   return { calls, bodies, deps: { fetch, hasPermission: async (origin: string) => typeof granted === 'function' ? granted(origin) : granted } };
 }
@@ -57,17 +56,18 @@ describe('background verify service', () => {
     expect(res.status).toBe('ok');
     if (res.status !== 'ok') return;
     expect(res.result.summary.contradicted).toBe(1);
-    expect(calls.some((u) => u.startsWith('https://api.firecrawl.dev/'))).toBe(true);
-    expect(calls.every((u) => u.startsWith('https://en.wikipedia.org/') || u.startsWith('https://api.firecrawl.dev/'))).toBe(true);
-    for (const body of bodies) expect(JSON.parse(body).query).toContain('zentha bridge');
+    expect(calls.some((u) => u.startsWith('https://socratica-search.vercel.app/'))).toBe(true);
+    expect(calls.every((u) => ['https://en.wikipedia.org/', 'https://socratica-search.vercel.app/', 'https://api.duckduckgo.com/'].some((o) => u.startsWith(o)))).toBe(true);
+    // Only the claim-derived query goes to the relay.
+    for (const body of bodies) expect(JSON.parse(body)).toEqual({ q: 'zentha bridge opened' });
   });
 
   it('skips optional sources whose host permission was declined', async () => {
-    const { calls, deps: d } = deps((origin) => origin === 'https://api.firecrawl.dev/*');
+    const { calls, deps: d } = deps((origin) => origin === 'https://socratica-search.vercel.app/*');
     const res = await handleVerify(req, consented, d);
     expect(res.status).toBe('ok');
     if (res.status === 'ok') expect(res.warnings.join(' ')).toMatch(/Wikipedia is enabled but its permission/);
-    expect(calls.every((u) => u.startsWith('https://api.firecrawl.dev/'))).toBe(true);
+    expect(calls.every((u) => u.startsWith('https://socratica-search.vercel.app/'))).toBe(true);
   });
 
   it('refuses to check, and sends nothing, without permission for the required web search', async () => {

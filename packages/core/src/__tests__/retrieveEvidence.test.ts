@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   BraveSearchEvidenceProvider,
   DocumentEvidenceProvider,
@@ -60,45 +60,58 @@ function fakeFetch(routes: Array<[RegExp, unknown]>, calls: Array<{ url: string;
 }
 
 describe('WikipediaEvidenceProvider (fake fetch, no network)', () => {
-  it('searches, fetches extracts, and returns ranked passages with article URLs', async () => {
+  it('searches with focused queries and returns ranked passages with article URLs', async () => {
     const calls: Array<{ url: string; headers?: Record<string, string> }> = [];
     const fetch = fakeFetch(
-      [
-        [/list=search/, { query: { search: [{ title: 'Zentha Bridge' }] } }],
-        [/prop=extracts/, { query: { pages: { '1': { extract: docs[0]!.text } } } }],
-      ],
+      [[/generator=search/, { query: { pages: { '1': { title: 'Zentha Bridge', index: 1, extract: docs[0]!.text } } } }]],
       calls,
     );
     const claims = extractClaims('The Zentha Bridge opened in 1987.');
     const passages = await new WikipediaEvidenceProvider({ fetch }).retrieve(claims[0]!, { limit: 2 });
     expect(passages[0]?.source.url).toBe('https://en.wikipedia.org/wiki/Zentha_Bridge');
     expect(passages[0]?.text).toContain('1991');
+    // One request per query: the fact ("zentha bridge opened"), then the subject. The claim's number stays out.
+    expect(calls.map((c) => new URL(c.url).searchParams.get('gsrsearch'))).toEqual(['zentha bridge opened', 'zentha bridge']);
     // Wikimedia API policy: every request identifies the client.
     for (const c of calls) expect(c.headers?.['api-user-agent']).toMatch(/^Socratica\//);
   });
 });
 
 describe('WikipediaEvidenceProvider rate limiting', () => {
-  it('retries once after a short Retry-After, and caches articles across claims', async () => {
-    let searches = 0;
+  it('retries once after a short Retry-After, and shares searches across claims', async () => {
+    let requests = 0;
     const urls: string[] = [];
     const fetch: FetchLike = async (url) => {
       urls.push(url);
-      if (url.includes('list=search') && searches++ === 0) {
-        return { ok: false, status: 429, headers: { get: () => '0' }, json: async () => ({}), text: async () => '' };
-      }
-      const body = url.includes('list=search')
-        ? { query: { search: [{ title: 'Zentha Bridge' }] } }
-        : { query: { pages: { 1: { extract: docs[0]!.text } } } };
+      if (requests++ === 0) return { ok: false, status: 429, headers: { get: () => '0' }, json: async () => ({}), text: async () => '' };
+      const body = { query: { pages: { 1: { title: 'Zentha Bridge', extract: docs[0]!.text } } } };
       return { ok: true, status: 200, json: async () => body, text: async () => '' };
     };
     const wiki = new WikipediaEvidenceProvider({ fetch });
     const [c1, c2] = extractClaims('The Zentha Bridge opened in 1987. The Zentha Bridge is in Velmora.');
     expect((await wiki.retrieve(c1!, { limit: 2 })).length).toBeGreaterThan(0);
     await wiki.retrieve(c2!, { limit: 2 });
+    const searched = urls.map((u) => new URL(u).searchParams.get('gsrsearch'));
     // 429, then the retry; the second claim is about the same subject and reuses that search.
-    expect(urls.filter((u) => u.includes('list=search'))).toHaveLength(2);
-    expect(urls.filter((u) => u.includes('prop=extracts'))).toHaveLength(1); // article cached
+    expect(searched).toEqual(['zentha bridge opened', 'zentha bridge opened', 'zentha bridge', 'zentha bridge velmora']);
+  });
+
+  it('does not leave a cooldown behind when the retry timer fires a little early', async () => {
+    const realTimeout = globalThis.setTimeout;
+    vi.stubGlobal('setTimeout', (fn: () => void, ms?: number) => realTimeout(fn, Math.max(0, (ms ?? 0) - 20)));
+    try {
+      let requests = 0;
+      const searched: Array<string | null> = [];
+      const fetch: FetchLike = async (url) => {
+        searched.push(new URL(url).searchParams.get('gsrsearch'));
+        if (requests++ === 0) return { ok: false, status: 429, headers: { get: () => '0' }, json: async () => ({}), text: async () => '' };
+        return { ok: true, status: 200, json: async () => ({ query: { pages: { 1: { title: 'Zentha Bridge', extract: docs[0]!.text } } } }), text: async () => '' };
+      };
+      await new WikipediaEvidenceProvider({ fetch }).retrieve(extractClaims('The Zentha Bridge opened in 1987.')[0]!, { limit: 2 });
+      expect(searched).toEqual(['zentha bridge opened', 'zentha bridge opened', 'zentha bridge']);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('gives up on a long Retry-After instead of stalling', async () => {

@@ -160,6 +160,9 @@ export interface VerifyOptions {
    * reported per slow source. Default: no deadline.
    */
   retrievalDeadlineMs?: number;
-  /** Claims retrieved and judged at the same time. Default 4. */
+  /**
+   * Claims judged at the same time. Default 4. Evidence for every claim is requested at once:
+   * each source paces its own requests.
+   */
   concurrency?: number;
 }

@@ -6,7 +6,7 @@ export { verifyClaim, verifyClaims, isVerbatimQuote, type VerifyClaimsOptions } 
 export { scoreResults, summarize, finalizeVerdicts, isCorrectionGrounded } from './scoreResults.js';
 export { runVerification, type VerifyInput, type VerifyOutput } from './verify.js';
 export { buildVerifierPrompt, parseLLMVerdict, parseVerifierPrompt, LLMVerdictSchema, type LLMVerdict } from './prompt.js';
-export { chunkText, scorePassage, searchQuery } from './rank.js';
+export { chunkText, factQueries, factSubject, factUnits, propositions, scorePassage, searchQuery, webQuery, type FactUnit } from './rank.js';
 export { hashString, splitSentences } from './text.js';
 export { DocumentEvidenceProvider } from './providers/evidence/documents.js';
 export { WikipediaEvidenceProvider, type WikipediaOptions } from './providers/evidence/wikipedia.js';
@@ -14,14 +14,18 @@ export {
   BraveSearchEvidenceProvider,
   FirecrawlSearchEvidenceProvider,
   SerperEvidenceProvider,
+  SocraticaSearchEvidenceProvider,
+  SOCRATICA_RELAY_URL,
   WEB_SEARCH_ENGINES,
   createWebSearch,
   type BraveSearchOptions,
   type FirecrawlSearchOptions,
   type SerperOptions,
+  type SocraticaSearchOptions,
   type WebSearchEngine,
 } from './providers/evidence/webSearch.js';
 export { WikidataEvidenceProvider, type WikidataOptions } from './providers/evidence/wikidata.js';
+export { DuckDuckGoEvidenceProvider, type DuckDuckGoOptions } from './providers/evidence/duckduckgo.js';
 export { GoogleFactCheckEvidenceProvider, type GoogleFactCheckOptions } from './providers/evidence/factCheck.js';
 export { UrlEvidenceProvider, trustedUrl, trustedDomains, type UrlEvidenceOptions } from './providers/evidence/urls.js';
 export { EuropePmcEvidenceProvider, type ScholarlyOptions } from './providers/evidence/scholarly.js';

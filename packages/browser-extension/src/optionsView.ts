@@ -1,6 +1,6 @@
 import { WEB_SEARCH_ENGINES, trustedUrl, type WebSearchEngine } from '@socratica/core';
 import type { TestJudgeResponse } from './messages.js';
-import { DEFAULT_MODELS, HOST_PERMISSIONS, CONSENT_VERSION, WEB_KEY_FIELD, hasValidConsent, localOrigin, requiredOrigins, type LLMChoice, type Settings } from './settings.js';
+import { DEFAULT_MODELS, HOST_PERMISSIONS, CONSENT_VERSION, WEB_KEY_FIELD, hasValidConsent, localOrigin, requiredOrigins, webSearchKey, type LLMChoice, type Settings } from './settings.js';
 import { icon } from './ui/icons.js';
 
 export interface OptionsApi {
@@ -19,21 +19,30 @@ const h = <K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, props: 
 };
 
 /** How each web search engine is described in settings. */
-const ENGINE_COPY: Record<WebSearchEngine, { title: string; detail: string; keyLabel: string }> = {
+const ENGINE_COPY: Record<WebSearchEngine, { title: string; detail: string; keyLabel: string; keyLink: string }> = {
+  socratica: {
+    title: 'Socratica search (recommended)',
+    detail: 'Google results through Socratica’s own search relay. Free, with no key or sign-up. If the relay is busy, checks carry on with DuckDuckGo answers, Wikipedia and Wikidata.',
+    keyLabel: '',
+    keyLink: '',
+  },
   firecrawl: {
     title: 'Firecrawl',
-    detail: 'Free, with no key or sign-up. A daily limit applies per network; add a free Firecrawl key for more.',
+    detail: 'Free, no key needed. Where Firecrawl’s free tier doesn’t search (VPNs, proxies, IPv6 and some school or office networks, or after its daily limit), checks carry on with DuckDuckGo answers, Wikipedia and Wikidata. An optional free Firecrawl key adds full web results there.',
     keyLabel: 'Firecrawl API key (optional)',
+    keyLink: 'Optional: get a free Firecrawl key for full web results on any network',
   },
   serper: {
     title: 'Google results via Serper',
     detail: 'Google’s web results. Needs a free Serper key (2,500 searches, no card) from serper.dev.',
     keyLabel: 'Serper API key',
+    keyLink: 'Get a free Serper key',
   },
   brave: {
     title: 'Brave Search',
     detail: 'Brave’s independent web index. Needs your Brave Search API key.',
     keyLabel: 'Brave Search API key',
+    keyLink: 'Get a Brave Search API key',
   },
 };
 
@@ -72,7 +81,8 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
         doc,
         'ul',
         {},
-        h(doc, 'li', {}, 'Short search queries built from individual claims are sent to the web search engine you choose (Firecrawl by default; Google results via Serper or Brave Search with your own key). Web search is required, so every check uses it.'),
+        h(doc, 'li', {}, 'Short search queries built from individual claims are sent to the web search engine you choose. Web search is required, so every check uses it. The default, Socratica search, sends them to Socratica’s own relay (hosted on Vercel), which passes them to Google results via Serper. The relay keeps no record of them and uses your network address only to limit how many searches it runs. The alternatives are Firecrawl, and Google results via Serper or Brave Search with your own key.'),
+        h(doc, 'li', {}, 'With Socratica search or keyless Firecrawl, DuckDuckGo also receives the name of what each claim is about, as a backup.'),
         h(doc, 'li', {}, 'The other sources you enable also receive claim-based queries: Wikipedia, Wikidata (entity names), Europe PMC, GOV.UK, World Bank (country, indicator and year requests) and Google Fact Check (your key).'),
         h(doc, 'li', {}, 'If you enable trusted URLs, their pages are fetched without cookies or credentials. Those sites receive the URL request, not your claim text. Only the HTTPS sites you enter are requested; redirects are refused.'),
         h(doc, 'li', {}, 'If you choose OpenAI or Anthropic as the judge, each claim, its surrounding sentence, your question, and the retrieved passages are sent to that provider using your own API key, under that provider’s terms.'),
@@ -110,20 +120,31 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
     let engine: WebSearchEngine = settings.evidence.web.engine;
     const webKey = h(doc, 'input', { type: 'password', id: 'web-key', autocomplete: 'off' });
     const webKeyLabel = h(doc, 'span', {});
+    const webKeyLink = h(doc, 'a', { id: 'web-key-link', target: '_blank', rel: 'noopener noreferrer' });
     const webKeyRow = h(doc, 'label', { id: 'web-key-row' }, webKeyLabel, webKey);
+    const webKeyHelp = h(doc, 'p', { className: 'muted hint' }, webKeyLink);
     const choices = h(doc, 'div', { className: 'choices' });
     choices.setAttribute('role', 'radiogroup');
     choices.setAttribute('aria-label', 'Web search engine');
+    // Keep what was typed for the engine being left; Socratica search has no key.
+    const keepKey = () => {
+      const field = WEB_KEY_FIELD[engine];
+      if (field) webKeys[field] = webKey.value.trim();
+    };
     const syncWebKey = () => {
-      webKey.value = webKeys[WEB_KEY_FIELD[engine]];
-      webKey.placeholder = WEB_SEARCH_ENGINES[engine].keyRequired ? 'paste your key' : 'not needed';
+      const field = WEB_KEY_FIELD[engine];
+      webKeyRow.hidden = webKeyHelp.hidden = !field;
+      webKey.value = field ? webKeys[field] : '';
+      webKey.placeholder = WEB_SEARCH_ENGINES[engine].keyRequired ? 'paste your key' : 'not needed on most networks';
       webKeyLabel.textContent = ENGINE_COPY[engine].keyLabel;
+      webKeyLink.href = WEB_SEARCH_ENGINES[engine].signup;
+      webKeyLink.textContent = ENGINE_COPY[engine].keyLink;
       for (const c of choices.querySelectorAll('.choice')) c.classList.toggle('selected', (c as HTMLElement).dataset.engine === engine);
     };
     for (const id of Object.keys(WEB_SEARCH_ENGINES) as WebSearchEngine[]) {
       const radio = h(doc, 'input', { type: 'radio', name: 'web-engine', id: `web-${id}`, value: id, checked: engine === id });
       radio.addEventListener('change', () => {
-        webKeys[WEB_KEY_FIELD[engine]] = webKey.value.trim();
+        keepKey();
         engine = id;
         syncWebKey();
       });
@@ -138,6 +159,7 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
       h(doc, 'p', { className: 'muted' }, 'Every check searches the web, so claims about the real world have something to be checked against. Pick one engine.'),
       choices,
       webKeyRow,
+      webKeyHelp,
     );
     webSection.querySelector('h2')!.append(h(doc, 'span', { className: 'badge' }, 'Required'));
     syncWebKey();
@@ -237,7 +259,7 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
     root.append(form);
 
     save.addEventListener('click', async () => {
-      webKeys[WEB_KEY_FIELD[engine]] = webKey.value.trim();
+      keepKey();
       const next: Settings = {
         ...settings,
         platforms: { ...settings.platforms, chatgpt: chatgpt.checked },
@@ -251,8 +273,8 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
         },
       };
       // Web search is required, so an engine that can't run is not saved.
-      if (WEB_SEARCH_ENGINES[engine].keyRequired && !next.evidence.web[WEB_KEY_FIELD[engine]]) {
-        status(`${ENGINE_COPY[engine].title} needs an API key (free sign-up at ${WEB_SEARCH_ENGINES[engine].signup}). Or choose Firecrawl, which needs none.`);
+      if (WEB_SEARCH_ENGINES[engine].keyRequired && !webSearchKey(next)) {
+        status(`${ENGINE_COPY[engine].title} needs an API key (free sign-up at ${WEB_SEARCH_ENGINES[engine].signup}). Or choose Socratica search, which needs none.`);
         webKey.focus();
         return;
       }
