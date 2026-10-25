@@ -93,6 +93,8 @@ they must not be pasted into chat or committed to the repository.
 
 ## Automated validation after the fixes
 
-All 184 tests passed with fake fetch in the automated suites. Build, type checking, frozen-lockfile
-installation and release packaging passed. The offline benchmark remained at 89.2% on its existing
+All 184 tests passed with fake fetch in the original feature suites. After integrating the latest
+`main` (including its ChatGPT, skill and Wikipedia regression tests), all 200 tests passed under
+Vitest 4.1.11. Build, type checking, frozen-lockfile installation and release packaging passed.
+The offline benchmark remained at 89.2% on its existing
 37 synthetic claims (four misses); that result is not a measure of real-world or hosted-model accuracy.

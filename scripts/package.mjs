@@ -47,6 +47,12 @@ const bundles = {
     entry('hallucination-firewall/LICENSE', join(root, 'LICENSE')),
   ],
 
+  [`hallucination-firewall-skill-instructions-v${version}.zip`]: [
+    entry('hallucination-firewall/SKILL.md', join(root, 'skill/instruction-only/SKILL.md')),
+    ...walk(join(root, 'skill/hallucination-firewall/references')).map((p) => entry(join('hallucination-firewall/references', relative(join(root, 'skill/hallucination-firewall/references'), p)), p)),
+    entry('hallucination-firewall/LICENSE', join(root, 'LICENSE')),
+  ],
+
   [`hf-verify-cli-v${version}.zip`]: [
     entry('hf-verify/hf-verify.mjs', cli),
     entry('hf-verify/README.md', join(root, 'packages/cli/README.md')),
@@ -55,8 +61,41 @@ const bundles = {
   ],
 };
 
+// The ChatGPT New Plugin dialog expects a plugin manifest and skills/ layout,
+// rather than a standalone Agent Skills folder.
+for (const variant of ['', '-instructions']) {
+  const skill = bundles[`hallucination-firewall-skill${variant}-v${version}.zip`];
+  const manifest = {
+    $schema: 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json',
+    name: 'hallucination-firewall',
+    version,
+    description: variant ? 'Evidence-linked fact checking with manual quote checks; no bundled scripts.' : 'Evidence-linked fact checking with bundled quote validators.',
+    license: 'MIT',
+  };
+  bundles[`hallucination-firewall-plugin${variant}-v${version}.zip`] = [
+    { name: 'plugin.json', data: Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`), mode: 0o644 },
+    ...skill.map((item) => ({ ...item, name: `skills/${item.name}` })),
+  ];
+}
+
 for (const [name, entries] of Object.entries(bundles)) {
-  const zip = createZip(entries.sort((a, b) => a.name.localeCompare(b.name)));
+  // Normalize skill archives independently of checkout permissions. Include explicit
+  // directory records for uploaders that do not infer them from file paths.
+  const archiveEntries = /^hallucination-firewall-(skill|plugin)-/.test(name)
+    ? skillEntries(entries)
+    : entries;
+  const zip = createZip(archiveEntries.sort((a, b) => a.name.localeCompare(b.name)));
   writeFileSync(join(out, name), zip);
   console.log(`${name.padEnd(48)} ${String(entries.length).padStart(3)} files  ${(zip.length / 1024).toFixed(0).padStart(5)} KB`);
+}
+
+function skillEntries(entries) {
+  const directories = new Set();
+  const files = entries.map((item) => {
+    const name = item.name.replace(/\\/g, '/');
+    const parts = name.split('/');
+    for (let i = 1; i < parts.length; i++) directories.add(`${parts.slice(0, i).join('/')}/`);
+    return { ...item, name, mode: 0o644 };
+  });
+  return [...directories].map((name) => ({ name, data: Buffer.alloc(0), mode: 0o755 })).concat(files);
 }

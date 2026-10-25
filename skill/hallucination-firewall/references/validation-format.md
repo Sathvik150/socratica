@@ -10,7 +10,12 @@
       "id": "p1",
       "title": "Zentha Bridge",
       "url": "https://example.org/zentha",
-      "text": "The Zentha Bridge is a suspension bridge in Velmora. It opened to traffic in 1991."
+      "path": "sources/zentha.txt"
+    },
+    {
+      "id": "p2",
+      "title": "Pasted note",
+      "text": "The Zentha Bridge is a suspension bridge in Velmora."
     }
   ],
   "verdicts": [
@@ -26,9 +31,11 @@
 }
 ```
 
-- `passages[].text` must be the exact retrieved text. The validator compares quotes against it.
+- Give each passage either `"path"` (preferred: a file relative to `verdicts.json`, read verbatim)
+  or `"text"` (the exact retrieved text). The validator compares quotes against it.
+- Get quote wording from the file with `scripts/find_quote.py`; don't type quotes from memory.
 - A claim with no entry in `verdicts` comes out as `unverifiable`.
 
-The validator prints `{ "verdicts": [...], "summary": { "checked", "supported", "contradicted", "unverifiable", "text" } }`.
+Run with `--format text` for a ready-to-paste report, or without it for JSON. The JSON output is `{ "verdicts": [...], "summary": { "checked", "supported", "contradicted", "unverifiable", "text" } }`.
 A verdict it changed carries `"downgradeReason"`: `quote-not-in-passage`, `no-quotes`,
 `low-confidence`, `invalid-llm-output`, or `no-evidence`.

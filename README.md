@@ -35,16 +35,19 @@ Grab the zips from the **[latest release](https://github.com/sathvik150/cac26/re
 
 | Zip | For | What's inside |
 |---|---|---|
-| `hallucination-firewall-extension-v0.1.0.zip` | **Chrome**: annotate ChatGPT answers in place | Ready-to-load MV3 extension plus an offline demo page |
-| `hallucination-firewall-skill-v0.1.0.zip` | **Claude, ChatGPT, Claude Code** and other Agent Skills hosts | `SKILL.md`, rules, and Node and Python validators |
-| `hf-verify-cli-v0.1.0.zip` | **Local use** with your own model, scripts and agents | Single-file CLI (Node 20+, no install) plus examples |
+| hallucination-firewall-extension-v0.1.2.zip | **Chrome**: annotate ChatGPT answers in place | Ready-to-load MV3 extension plus an offline demo page |
+| hallucination-firewall-plugin-v0.1.2.zip | **ChatGPT → Plugins → New Plugin** | Plugin manifest plus full skill and validators |
+| hallucination-firewall-plugin-instructions-v0.1.2.zip | **ChatGPT plugin troubleshooting** | Plugin manifest plus instruction-only skill; manual quote checks |
+| hallucination-firewall-skill-instructions-v0.1.2.zip | **Skills upload troubleshooting** | Instruction-only variant; manual quote checks, no scripts ([details](docs/skill.md#troubleshooting-a-chatgpt-upload-failure)) |
+| hallucination-firewall-skill-v0.1.2.zip | **Claude, Claude Code** and other Agent Skills hosts | `SKILL.md`, rules, and Node and Python validators |
+| hf-verify-cli-v0.1.2.zip | **Local use** with your own model, scripts and agents | Single-file CLI (Node 20+, no install) plus examples |
 
 ## 🚀 Quick start
 
 <details open>
 <summary><b>Chrome extension (ChatGPT)</b></summary>
 
-1. Unzip `hallucination-firewall-extension-v0.1.0.zip`.
+1. Unzip `hallucination-firewall-extension-v0.1.2.zip`.
 2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and pick the unzipped folder.
 3. Read and accept the privacy notice on the settings page that opens. **Nothing is checked or sent before you accept.**
 4. **Choose a judge** in the same settings page. The default offline judge only recognises very literal matches, so on real answers it mostly says "unverifiable". For real checks, pick one of:
@@ -62,8 +65,8 @@ Want to see it without ChatGPT? Open `demo.html` from the unzipped folder. It ru
 <details>
 <summary><b>Agent Skill (Claude / ChatGPT / Claude Code)</b></summary>
 
-- **Claude:** with code execution enabled, open the Skills section in Settings, click **Upload skill**, and choose `hallucination-firewall-skill-v0.1.0.zip`.
-- **Claude Code:** `unzip hallucination-firewall-skill-v0.1.0.zip -d ~/.claude/skills/`
+- **Claude:** with code execution enabled, open the Skills section in Settings, click **Upload skill**, and choose `hallucination-firewall-skill-v0.1.2.zip`.
+- **Claude Code:** `unzip hallucination-firewall-skill-v0.1.2.zip -d ~/.claude/skills/`
 - **ChatGPT:** install the same zip where your plan supports [Skills](https://help.openai.com/en/articles/20001066-skills-in-chatgpt), or turn it into a Custom GPT.
 
 Then ask: *"Fact-check this answer against these sources."* Full guide: [docs/skill.md](docs/skill.md).
@@ -74,7 +77,7 @@ Then ask: *"Fact-check this answer against these sources."* Full guide: [docs/sk
 <summary><b>CLI and local models</b></summary>
 
 ```bash
-unzip hf-verify-cli-v0.1.0.zip && cd hf-verify
+unzip hf-verify-cli-v0.1.2.zip && cd hf-verify
 
 # Offline: your documents + the built-in deterministic judge
 node hf-verify.mjs verify --answer examples/answer.txt --evidence examples/evidence/
@@ -179,14 +182,15 @@ All of these judges are in-repo or local; **no hosted LLM (OpenAI or Anthropic A
 | Agent Skill in **Claude Code** | Installed from the release zip into `.claude/skills`, then a fact-check request run headless | ✅ skill auto-loaded, validator ran, semantic contradiction caught |
 | CLI with a **local model** | Ollama 0.40.10, `qwen2.5:3b` and `qwen2.5:7b`, from the unzipped release | ✅ works; quality depends on the model (see benchmark) |
 | Skill upload to **claude.ai / ChatGPT** | Not tested | ⏳ needs a logged-in account (see [docs/skill.md](docs/skill.md)) |
-| Logged-in ChatGPT, hosted OpenAI/Anthropic judges | Not tested | ⏳ needs your account / API key |
+| Logged-in ChatGPT | Chrome with the unpacked extension, 2026-10-24; public Brooklyn Bridge test conversation | ✅ popup detects 1 answer; fresh checks after regeneration and prompt editing, following completion (see [verification notes](docs/chatgpt-logged-in.md)) |
+| Hosted OpenAI/Anthropic judges | Not tested | ⏳ needs your API key |
 
 <img src="docs/images/live-chatgpt.png" alt="The extension running on live chatgpt.com: dashed underlines on claims, the evidence panel, and the summary bar under the answer" width="760">
 
 ## ⚠️ Known limitations
 
 - **Review Mode only.** You see the answer before it's checked.
-- **ChatGPT's page can change.** The adapter was verified on live chatgpt.com (logged-out UI) on 2026-10-24, and that page is saved as test fixtures. The **logged-in UI was not tested** and may differ. Older selectors are kept as a fallback. Fixes go in [`adapters/chatgpt.ts`](packages/browser-extension/src/adapters/chatgpt.ts).
+- **ChatGPT's page can change.** The adapter was verified on live chatgpt.com in logged-out and logged-in UIs on 2026-10-24, with sanitized fixtures for both. This covers the tested layouts; other accounts or rollouts may differ. Older selectors are kept as a fallback. Fixes go in [`adapters/chatgpt.ts`](packages/browser-extension/src/adapters/chatgpt.ts).
 - **Wikimedia rate limits.** Wikipedia and Wikidata can be throttled by IP (HTTP 429). Requests are cached and backed off; independent sources continue when a source fails. Claims without sufficient evidence remain `unverifiable`.
 - **The offline heuristic judge is literal.** It handles simple number, name and negation conflicts, but real encyclopedia wording usually comes out `unverifiable`. It abstains on publisher reviews, publication metadata and qualified statistics. For real-world answers, use an LLM judge: OpenAI or Anthropic in the extension, or a local model with the CLI.
 - **Local models need one setting.** Ollama refuses browser extensions unless started with `OLLAMA_ORIGINS="chrome-extension://*"`; LM Studio needs **Enable CORS**. The extension tells you this if it hits the error. Only servers on `localhost` / `127.0.0.1` are allowed. The first request can take minutes while the model loads.

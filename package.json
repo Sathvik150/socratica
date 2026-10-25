@@ -1,6 +1,6 @@
 {
   "name": "hallucination-firewall",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "description": "Model-independent, evidence-linked fact verification for chatbot answers.",
@@ -33,7 +33,7 @@
   "devDependencies": {
     "@types/node": "22.20.5",
     "typescript": "5.9.3",
-    "vitest": "3.2.7"
+    "vitest": "4.1.11"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

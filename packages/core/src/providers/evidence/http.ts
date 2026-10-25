@@ -13,6 +13,11 @@ export class EvidenceHttp {
 
   constructor(readonly name: string, readonly fetch: FetchLike, readonly retryShort429 = false) {}
 
+  #cooldownError(): Error {
+    const seconds = Math.max(1, Math.ceil((this.#retryAt - Date.now()) / 1000));
+    return new Error(`${this.name} is temporarily unavailable (HTTP ${this.#retryStatus}); try again in ${seconds} seconds.`);
+  }
+
   json(url: string, init?: Parameters<FetchLike>[1]): Promise<unknown> {
     const key = url + (init?.body ?? '');
     const cached = this.#cache.get(key);
@@ -30,7 +35,7 @@ export class EvidenceHttp {
 
   request<T>(url: string, read: (res: Awaited<ReturnType<FetchLike>>) => Promise<T>, init?: Parameters<FetchLike>[1]): Promise<T> {
     const work = this.#queue.then(async () => {
-      if (Date.now() < this.#retryAt) throw new Error(`${this.name} is temporarily unavailable; try again later (HTTP ${this.#retryStatus}).`);
+      if (Date.now() < this.#retryAt) throw this.#cooldownError();
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 15_000);
       try {
@@ -40,7 +45,7 @@ export class EvidenceHttp {
           catch { throw new Error(`${this.name} request failed or timed out.`); }
           if (res.status === 429 || res.status === 503) {
             const retry = res.headers?.get('retry-after')?.trim();
-            const delay = retry && /^\d+$/.test(retry) ? Number(retry) * 1000 : retry ? Date.parse(retry) - Date.now() : NaN;
+            const delay = retry && /^\d+$/.test(retry) ? Number(retry) * 1000 : retry && /^[A-Za-z]{3},?\s/.test(retry) ? Date.parse(retry) - Date.now() : NaN;
             const wait = Number.isFinite(delay) ? Math.max(500, delay) : 30_000;
             this.#retryStatus = res.status;
             this.#retryAt = Date.now() + wait;
@@ -48,6 +53,7 @@ export class EvidenceHttp {
               await new Promise<void>((resolve) => setTimeout(resolve, wait));
               continue;
             }
+            throw this.#cooldownError();
           }
           if (!res.ok) throw new Error(`${this.name} request failed with HTTP ${res.status}.`);
           try { return await read(res); }
