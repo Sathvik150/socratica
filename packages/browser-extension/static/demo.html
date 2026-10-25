@@ -7,6 +7,22 @@
   <title>Hallucination Firewall demo</title>
   <link rel="icon" href="icons/icon-32.png">
   <link rel="stylesheet" href="theme.css">
+  <style>
+    .hero { text-align: center; padding: 36px 16px 0; }
+    main { padding-top: 0; }
+    .hero h1 { justify-content: center; font-size: 30px; }
+    .hero h1 span { background: var(--hf-brand); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .hero p { max-width: 560px; margin: 8px auto 0; color: var(--hf-muted); }
+    .steps { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 16px 0 0; padding: 0; list-style: none; }
+    .steps li { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: var(--hf-surface); border: 1px solid var(--hf-border); color: var(--hf-muted); }
+    .steps b { color: var(--hf-fg); }
+    .chat { background: var(--hf-surface); border: 1px solid var(--hf-border); border-radius: 18px; box-shadow: var(--hf-shadow); padding: 22px 22px 14px; margin-top: 24px; font-size: 16px; }
+    [data-message-author-role="user"] { background: var(--hf-surface-2); border: 1px solid var(--hf-border); border-radius: 18px; padding: 10px 16px; margin: 0 0 20px auto; width: fit-content; max-width: 80%; }
+    .markdown p, .markdown li { margin: 0 0 10px; }
+    aside { margin-top: 20px; }
+    aside h2 { display: flex; align-items: center; gap: 8px; }
+    aside li { color: var(--hf-muted); font-size: 13px; }
+  </style>
 </head>
 <body>
   <div class="hero">

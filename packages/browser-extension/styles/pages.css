@@ -1,159 +1,182 @@
 /*
  * Extension pages (popup, settings, demo). Compiled by the Tailwind CLI into static/theme.css.
- * Pages follow the OS light/dark setting. Tokens and rules: see tokens.css and DESIGN.md.
+ * The design is the original Hallucination Firewall look (indigo-violet brand gradient, soft cards);
+ * see DESIGN.md. No preflight, so the rules below render exactly as written.
  */
-@import "tailwindcss" source(none);
-@import "./tokens.css";
-@source "../static";
-@source "../src";
-@source not "../src/ui/overlay.generated.ts";
-@source not "../static/theme.css";
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+/* Utilities used by the skeleton placeholders (widths, spacing) are generated from these files only.
+   They live in a cascade layer, so the unlayered design rules below always take precedence. */
+@source "../static/*.html";
+@source "../src/popupView.ts";
 
-@layer base {
-  :root { color-scheme: light dark; @apply hf-light; }
-  @media (prefers-color-scheme: dark) { :root { @apply hf-dark; } }
-  [hidden] { display: none !important; }
-  body { @apply m-0 bg-canvas text-fg font-sans text-sm leading-[1.55] antialiased; }
-  a { @apply text-(--hf-link) underline-offset-2; }
-  :focus-visible { @apply outline-2 outline-offset-2 outline-accent rounded-control; }
-  code { @apply font-mono text-xs bg-surface-2 border border-line rounded-control px-[5px] py-px; }
-  main { @apply max-w-[760px] mx-auto px-4 pt-7 pb-[72px]; }
-  h1 { @apply flex items-center gap-3 text-2xl leading-tight font-semibold tracking-(--od-tracking-display) mt-0 mb-1.5; }
-  h1::before {
-    content: ""; @apply flex-none size-[34px] rounded-[10px] bg-accent;
-    -webkit-mask: url("icon-mask.svg") center / 100% 100% no-repeat; mask: url("icon-mask.svg") center / 100% 100% no-repeat;
+/*
+ * Hallucination Firewall design system for extension pages (popup, settings, demo).
+ * Plain CSS, no web fonts, no framework: keeps pages instant. Follows the OS light/dark setting.
+ * The in-page overlay uses the same tokens (see src/ui/theme.ts).
+ */
+:root {
+  color-scheme: light dark;
+  --hf-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --hf-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --hf-bg: #f7f7fb;
+  --hf-surface: #ffffff;
+  --hf-surface-2: #f3f4f8;
+  --hf-fg: #0f172a;
+  --hf-muted: #5b6475;
+  --hf-border: #e4e6ef;
+  --hf-ring: rgba(99, 102, 241, .35);
+  --hf-brand-1: #6366f1;
+  --hf-brand-2: #a855f7;
+  --hf-brand: linear-gradient(135deg, var(--hf-brand-1), var(--hf-brand-2));
+  --hf-ok: #047857;  --hf-ok-bg: #ecfdf5;  --hf-ok-border: #a7f3d0;
+  --hf-bad: #be123c; --hf-bad-bg: #fff1f2; --hf-bad-border: #fecdd3;
+  --hf-unk: #92400e; --hf-unk-bg: #fffbeb; --hf-unk-border: #fde68a;
+  --hf-radius: 14px;
+  --hf-shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 8px 24px -12px rgba(15, 23, 42, .18);
+  --hf-ease: cubic-bezier(.2, .8, .2, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --hf-bg: #0b0d14;
+    --hf-surface: #12151f;
+    --hf-surface-2: #181c28;
+    --hf-fg: #e7e9f1;
+    --hf-muted: #98a1b3;
+    --hf-border: #262b3a;
+    --hf-ring: rgba(129, 140, 248, .45);
+    --hf-ok: #34d399;  --hf-ok-bg: rgba(16, 185, 129, .12); --hf-ok-border: rgba(52, 211, 153, .35);
+    --hf-bad: #fb7185; --hf-bad-bg: rgba(244, 63, 94, .12);  --hf-bad-border: rgba(251, 113, 133, .35);
+    --hf-unk: #fbbf24; --hf-unk-bg: rgba(245, 158, 11, .12); --hf-unk-border: rgba(251, 191, 36, .3);
+    --hf-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 32px -16px rgba(0, 0, 0, .7);
   }
-  h2 { @apply text-[15px] font-semibold tracking-[-.01em] mt-0 mb-2.5; }
-  ul { @apply list-disc pl-5 my-2; }
-  li { @apply my-[3px]; }
-  p { @apply my-2; }
-  fieldset { @apply border-0 p-0 m-0 min-w-0; }
-  fieldset:disabled { @apply opacity-55; }
-  label { @apply block mt-2.5 mb-1 font-medium; }
-  label.inline { @apply flex gap-2.5 items-center font-normal my-2; }
 }
 
-@layer components {
-  /* ---------- Cards: stepped surfaces and hairline borders, no gradients (DESIGN.md) ---------- */
-  section { @apply relative bg-surface border border-line rounded-card p-[18px] my-4 animate-rise; }
-  section.consent { @apply border-unk-line; }
-  section.consent.granted { @apply border-ok-line; }
-  section.consent:not(.granted) { box-shadow: inset 3px 0 0 var(--hf-unk); }
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--hf-bg); color: var(--hf-fg); font: 14px/1.55 var(--hf-font); -webkit-font-smoothing: antialiased; }
+a { color: var(--hf-brand-1); text-underline-offset: 2px; }
+@media (prefers-color-scheme: dark) { a { color: #a5b4fc; } }
+:focus-visible { outline: 2px solid var(--hf-brand-1); outline-offset: 2px; border-radius: 6px; }
+code { font: 12px var(--hf-mono); background: var(--hf-surface-2); border: 1px solid var(--hf-border); border-radius: 6px; padding: 1px 5px; }
 
-  /* ---------- Text ---------- */
-  .muted { @apply text-muted text-[13px]; }
-  .status { @apply ml-2.5 text-[13px] text-muted; }
-  .warn, .err { @apply flex gap-2 items-start rounded-control px-2.5 py-2 text-[13px] my-2; }
-  .warn { @apply bg-unk-bg border border-unk-line; }
-  .err { @apply bg-bad-bg border border-bad-line; }
-  .warn::before, .err::before { @apply flex-none font-bold; }
-  .warn::before { content: "!"; @apply text-unk; }
-  .err::before { content: "×"; @apply text-bad; }
-
-  /* ---------- Form controls ---------- */
-  input[type=text], input[type=password], input[type=url], select, textarea {
-    @apply block w-full mt-1 px-2.5 py-2 border border-line rounded-control bg-surface-2 text-fg
-      transition-[border-color,box-shadow,background-color] duration-150;
-    font: inherit;
-  }
-  input:focus, select:focus, textarea:focus { @apply outline-none border-accent bg-surface; box-shadow: var(--od-focus-ring); }
-  input:disabled, select:disabled, textarea:disabled { @apply opacity-55; }
-  textarea { @apply min-h-[70px] resize-y; }
-
-  /* Checkboxes render as switches. */
-  input[type=checkbox] {
-    @apply appearance-none flex-none relative w-9 h-5 m-0 rounded-full bg-line-strong cursor-pointer transition-colors duration-200;
-  }
-  input[type=checkbox]::after {
-    content: ""; @apply absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow-sm transition-transform duration-200;
-  }
-  input[type=checkbox]:checked { @apply bg-accent; }
-  input[type=checkbox]:checked::after { @apply translate-x-4; }
-  input[type=checkbox]:disabled { @apply cursor-not-allowed opacity-50; }
-
-  /* ---------- Buttons: 6px radius, one accent for the primary action (DESIGN.md) ---------- */
-  button {
-    @apply inline-flex items-center gap-1.5 font-medium text-[13px] px-3.5 py-[7px] rounded-control border border-line
-      bg-surface text-fg cursor-pointer transition-[transform,background-color,border-color] duration-150;
-    font-family: inherit;
-  }
-  button:hover:not(:disabled) { @apply bg-surface-2 border-line-strong; }
-  button:active:not(:disabled) { @apply translate-y-px; }
-  button.primary { @apply border-transparent text-white bg-accent; }
-  button.primary:hover:not(:disabled) { @apply bg-accent-hover border-transparent; }
-  button.primary:active:not(:disabled) { @apply bg-accent-active; }
-  button:disabled { @apply opacity-50 cursor-not-allowed; }
-
-  /* ---------- Chips & results ---------- */
-  .row { @apply flex gap-2 flex-wrap items-center; }
-  .chip { @apply inline-flex items-center gap-1 px-[9px] py-0.5 rounded-full text-[11.5px] font-semibold whitespace-nowrap border border-transparent; }
-  .chip.supported { @apply bg-ok-bg text-ok border-ok-line; }
-  .chip.contradicted { @apply bg-bad-bg text-bad border-bad-line; }
-  .chip.unverifiable { @apply bg-unk-bg text-unk border-unk-line; }
-  .chip.checked { @apply bg-surface-2 text-muted border-line; }
-  .chip.supported::before { content: "✓"; }
-  .chip.contradicted::before { content: "✕"; }
-  .chip.unverifiable::before { content: "?"; }
-  ol.claims { @apply list-none p-0 mt-2.5 mb-0 grid gap-2; }
-  ol.claims li { @apply m-0 px-3 py-2.5 border border-line rounded-card bg-surface animate-rise; }
-  ol.claims li > .muted { @apply mt-1; }
-  blockquote { @apply mt-2 mx-0 mb-0 px-2.5 py-2 border-l-[3px] border-accent bg-surface-2 rounded-r-control text-[13px]; }
-  blockquote a { @apply inline-block mt-1 text-xs; }
-  .correction { @apply mt-2 px-2.5 py-2 rounded-control bg-ok-bg border border-ok-line text-[13px]; }
-
-  /* ---------- Skeleton loaders (same footprint as the content they stand in for) ---------- */
-  .sk-line { @apply hf-skeleton block h-3 rounded-md my-2; }
-  .sk-title { @apply hf-skeleton block h-2.5 w-20 rounded-md mb-3; }
-  .sk-chip { @apply hf-skeleton inline-block h-[22px] w-[84px]; }
-  .sk-button { @apply hf-skeleton inline-block h-8 w-36 rounded-control; }
-  .sk-card { @apply bg-surface border border-line rounded-card p-3 my-2.5; }
-
-  /* ---------- Popup ---------- */
-  .popup { @apply w-[380px] p-1.5 text-[13px]; }
-  .popup .card { @apply max-h-[576px] overflow-y-auto overscroll-contain rounded-float bg-surface border border-line; }
-  .popup header {
-    @apply sticky top-0 z-[1] flex items-center gap-2.5 px-3.5 py-3 border-b border-line rounded-t-float backdrop-blur-md;
-    background: color-mix(in srgb, var(--hf-surface) 85%, transparent);
-  }
-  .popup header img { @apply size-[26px] rounded-control; }
-  .popup header h1 { @apply text-sm m-0 flex-1 tracking-[-.01em]; }
-  .popup header h1::before { content: none; }
-  .popup main { @apply p-3.5 pt-3 max-w-none; }
-  .popup section { @apply mt-0 mb-2.5 p-3 rounded-card; }
-  .popup h2 { @apply text-[10.5px] font-bold uppercase tracking-[.08em] text-muted mt-0 mb-1.5; }
-  .popup p { @apply mt-0 mb-1.5; }
-  .popup #app > .row:last-child { @apply justify-end; }
-  .popup #selection-output:not(:empty) { @apply mt-2.5; }
-
-  /* On/off switch in the popup header (pills are reserved for status: DESIGN.md). */
-  .switch {
-    @apply inline-flex items-center gap-2 py-[3px] pr-1 pl-2.5 rounded-full text-[11.5px] font-semibold text-muted
-      bg-surface-2 border border-line transition-colors duration-150;
-  }
-  .switch .track { @apply relative w-[30px] h-[18px] rounded-full bg-line-strong transition-colors duration-200; }
-  .switch .knob { @apply absolute top-0.5 left-0.5 size-3.5 rounded-full bg-white shadow-sm transition-transform duration-200; }
-  .switch[aria-checked="true"] { @apply text-ok bg-ok-bg border-ok-line; }
-  .switch[aria-checked="true"] .track { @apply bg-ok; }
-  .switch[aria-checked="true"] .knob { @apply translate-x-3; }
-  .switch:hover:not(:disabled) { @apply border-line-strong; }
-  .switch:disabled { @apply opacity-60 cursor-progress; }
-
-  /* ---------- Demo page ---------- */
-  .hero { @apply text-center px-4 pt-9; }
-  .hero h1 { @apply justify-center text-[30px]; }
-  .hero h1 span { @apply text-accent; }
-  .hero p { @apply max-w-[560px] mx-auto mt-2 text-muted; }
-  .steps { @apply flex gap-2 justify-center flex-wrap mt-4 p-0 list-none; }
-  .steps li { @apply text-xs px-2.5 py-1 rounded-full bg-surface border border-line text-muted; }
-  .steps b { @apply text-fg; }
-  .chat { @apply bg-surface border border-line rounded-float px-[22px] pt-[22px] pb-3.5 mt-6 text-base; }
-  [data-message-author-role="user"] { @apply bg-surface-2 border border-line rounded-float px-4 py-2.5 mb-5 ml-auto w-fit max-w-[80%]; }
-  .markdown p, .markdown li { @apply mt-0 mb-2.5; }
-  aside { @apply mt-5; }
-  aside h2 { @apply flex items-center gap-2; }
-  aside li { @apply text-muted text-[13px]; }
+/* ---------- Layout ---------- */
+main { max-width: 760px; margin: 0 auto; padding: 28px 16px 72px; }
+h1 { display: flex; align-items: center; gap: 12px; font-size: 24px; line-height: 1.2; letter-spacing: -.02em; margin: 0 0 6px; }
+h1::before {
+  content: ""; flex: none; width: 34px; height: 34px; border-radius: 10px; background: var(--hf-brand);
+  box-shadow: 0 6px 16px -6px rgba(99, 102, 241, .7);
+  -webkit-mask: url("icon-mask.svg") center / 100% 100% no-repeat; mask: url("icon-mask.svg") center / 100% 100% no-repeat;
 }
+h2 { font-size: 15px; letter-spacing: -.01em; margin: 0 0 10px; }
+main > p.muted:first-of-type { margin-top: 0; }
 
+/* ---------- Cards ---------- */
+section {
+  position: relative; background: var(--hf-surface); border: 1px solid var(--hf-border); border-radius: var(--hf-radius);
+  padding: 18px; margin: 16px 0; box-shadow: var(--hf-shadow);
+  animation: hf-rise .35s var(--hf-ease) both;
+}
+section:nth-of-type(2) { animation-delay: .03s; } section:nth-of-type(3) { animation-delay: .06s; }
+section:nth-of-type(4) { animation-delay: .09s; } section:nth-of-type(5) { animation-delay: .12s; }
+section.consent { border-color: var(--hf-unk-border); background: linear-gradient(180deg, var(--hf-unk-bg), var(--hf-surface) 70%); }
+section.consent.granted { border-color: var(--hf-ok-border); background: linear-gradient(180deg, var(--hf-ok-bg), var(--hf-surface) 70%); }
+/* Gradient hairline on the consent card while it still needs attention (MagicUI "border beam" style, static). */
+section.consent:not(.granted)::before {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: linear-gradient(120deg, transparent 20%, var(--hf-brand-1), var(--hf-brand-2), transparent 80%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+}
+ul { padding-left: 20px; margin: 8px 0; } li { margin: 3px 0; }
+fieldset { border: none; padding: 0; margin: 0; min-width: 0; }
+fieldset:disabled { opacity: .55; }
+
+/* ---------- Text ---------- */
+.muted { color: var(--hf-muted); font-size: 13px; }
+.status { margin-left: 10px; font-size: 13px; color: var(--hf-muted); }
+.warn, .err {
+  display: flex; gap: 8px; align-items: flex-start; border-radius: 10px; padding: 8px 10px; font-size: 13px; margin: 8px 0;
+}
+.warn { background: var(--hf-unk-bg); border: 1px solid var(--hf-unk-border); }
+.err { background: var(--hf-bad-bg); border: 1px solid var(--hf-bad-border); }
+.warn::before, .err::before { flex: none; font-weight: 700; }
+.warn::before { content: "!"; color: var(--hf-unk); }
+.err::before { content: "×"; color: var(--hf-bad); }
+
+/* ---------- Form controls ---------- */
+label { display: block; margin: 10px 0 4px; font-weight: 500; }
+label.inline { display: flex; gap: 10px; align-items: center; font-weight: 400; margin: 8px 0; }
+input[type=text], input[type=password], input[type=url], select, textarea {
+  display: block; width: 100%; margin-top: 4px; padding: 8px 10px; border: 1px solid var(--hf-border); border-radius: 10px;
+  background: var(--hf-surface-2); color: var(--hf-fg); font: inherit; transition: border-color .15s, box-shadow .15s, background .15s;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--hf-brand-1); box-shadow: 0 0 0 4px var(--hf-ring); background: var(--hf-surface); }
+input:disabled, select:disabled, textarea:disabled { opacity: .55; }
+textarea { min-height: 70px; resize: vertical; }
+
+/* Checkboxes render as switches. */
+input[type=checkbox] {
+  appearance: none; -webkit-appearance: none; flex: none; position: relative; width: 36px; height: 20px; margin: 0;
+  border-radius: 999px; background: var(--hf-border); cursor: pointer; transition: background .2s var(--hf-ease);
+}
+input[type=checkbox]::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .25); transition: transform .2s var(--hf-ease);
+}
+input[type=checkbox]:checked { background: var(--hf-brand); }
+input[type=checkbox]:checked::after { transform: translateX(16px); }
+input[type=checkbox]:disabled { cursor: not-allowed; opacity: .5; }
+
+/* ---------- Buttons ---------- */
+button {
+  display: inline-flex; align-items: center; gap: 6px; font: inherit; font-weight: 500; font-size: 13px; padding: 7px 14px;
+  border-radius: 10px; border: 1px solid var(--hf-border); background: var(--hf-surface); color: var(--hf-fg); cursor: pointer;
+  transition: transform .12s var(--hf-ease), box-shadow .15s, background .15s, border-color .15s;
+}
+button:hover:not(:disabled) { border-color: color-mix(in srgb, var(--hf-brand-1) 40%, var(--hf-border)); box-shadow: 0 4px 14px -8px rgba(99, 102, 241, .6); }
+button:active:not(:disabled) { transform: translateY(1px) scale(.99); }
+button.primary { position: relative; overflow: hidden; border: none; color: #fff; background: var(--hf-brand); box-shadow: 0 6px 18px -8px rgba(99, 102, 241, .8); }
+/* Shimmer sweep on primary buttons (MagicUI "shimmer button"), only on hover. */
+button.primary::after {
+  content: ""; position: absolute; inset: 0; transform: translateX(-120%);
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .35) 50%, transparent 70%);
+}
+button.primary:hover:not(:disabled)::after { transform: translateX(120%); transition: transform .7s var(--hf-ease); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ---------- Chips & results ---------- */
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; border: 1px solid transparent; }
+.chip.supported { background: var(--hf-ok-bg); color: var(--hf-ok); border-color: var(--hf-ok-border); }
+.chip.contradicted { background: var(--hf-bad-bg); color: var(--hf-bad); border-color: var(--hf-bad-border); }
+.chip.unverifiable { background: var(--hf-unk-bg); color: var(--hf-unk); border-color: var(--hf-unk-border); }
+.chip.checked { background: var(--hf-surface-2); color: var(--hf-muted); border-color: var(--hf-border); }
+.chip.supported::before { content: "✓"; } .chip.contradicted::before { content: "✕"; } .chip.unverifiable::before { content: "?"; }
+ol.claims { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 8px; }
+ol.claims li { margin: 0; padding: 10px 12px; border: 1px solid var(--hf-border); border-radius: 12px; background: var(--hf-surface); animation: hf-rise .3s var(--hf-ease) both; }
+ol.claims li > .muted { margin-top: 4px; }
+blockquote { margin: 8px 0 0; padding: 8px 10px; border-left: 3px solid var(--hf-brand-1); background: var(--hf-surface-2); border-radius: 0 8px 8px 0; font-size: 13px; }
+blockquote a { display: inline-block; margin-top: 4px; font-size: 12px; }
+.correction { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: var(--hf-ok-bg); border: 1px solid var(--hf-ok-border); font-size: 13px; }
+
+@keyframes hf-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+
+/* ---------- Skeleton loaders (same footprint as the content they stand in for) ----------
+   In the components layer, so per-element sizes in the HTML (h-7, w-4/5) override the defaults. */
+@layer components {
+  .sk-line, .sk-title, .sk-chip, .sk-button {
+    background: linear-gradient(90deg, var(--hf-surface-2) 25%, var(--hf-border) 50%, var(--hf-surface-2) 75%);
+    background-size: 200% 100%; animation: hf-shimmer 1.2s linear infinite;
+  }
+  .sk-line { @apply block h-3 rounded-md my-2; }
+  .sk-title { @apply block h-2.5 w-20 rounded-md mb-3; }
+  .sk-chip { @apply inline-block h-[22px] w-[84px] rounded-full; }
+  .sk-button { @apply inline-block h-8 w-36 rounded-[10px]; }
+  .sk-card { @apply bg-(--hf-surface) border border-(--hf-border) rounded-xl p-3 my-2.5; box-shadow: var(--hf-shadow); }
+}
+@keyframes hf-shimmer { to { background-position: -200% 0; } }

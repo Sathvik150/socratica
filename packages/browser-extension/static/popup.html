@@ -5,9 +5,40 @@
   <title>Hallucination Firewall</title>
   <link rel="icon" href="icons/icon-32.png">
   <link rel="stylesheet" href="theme.css">
+  <style>
+    /* Popup-specific layout on top of theme.css. Chrome draws the popup window itself;
+       the content sits in a softly rounded card so the popup doesn't read as a hard square. */
+    body { width: 380px; padding: 5px; font-size: 13px; background: var(--hf-surface); }
+    .card { max-height: 580px; overflow-y: auto; overscroll-behavior: contain; border-radius: 12px; background: var(--hf-bg); border: 1px solid var(--hf-border); }
+    header {
+      position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+      background: color-mix(in srgb, var(--hf-surface) 82%, transparent); backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--hf-border); border-radius: 12px 12px 0 0;
+    }
+    header img { width: 26px; height: 26px; border-radius: 8px; box-shadow: 0 4px 12px -4px rgba(99, 102, 241, .7); }
+    header h1 { font-size: 14px; margin: 0; flex: 1; letter-spacing: -.01em; }
+    header h1::before { content: none; }
+    main { padding: 12px 14px 14px; }
+    section { margin: 0 0 10px; padding: 12px; border-radius: 12px; }
+    h2 { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--hf-muted); margin: 0 0 6px; }
+    p { margin: 0 0 6px; }
+    /* On/off switch: small and quiet, slightly rounded rather than a pill. */
+    .switch {
+      gap: 7px; padding: 4px 2px 4px 6px; border: 0; border-radius: 8px; background: transparent;
+      font-size: 11.5px; font-weight: 600; color: var(--hf-muted);
+    }
+    .switch:hover:not(:disabled) { background: var(--hf-surface-2); box-shadow: none; }
+    .switch .track { position: relative; width: 28px; height: 16px; border-radius: 6px; background: var(--hf-border); transition: background .2s var(--hf-ease); }
+    .switch .knob { position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 4px; background: #fff; box-shadow: 0 1px 2px rgba(15, 23, 42, .25); transition: transform .2s var(--hf-ease); }
+    .switch[aria-checked="true"] { color: var(--hf-fg); }
+    .switch[aria-checked="true"] .track { background: var(--hf-brand); }
+    .switch[aria-checked="true"] .knob { transform: translateX(12px); }
+    .switch:disabled { opacity: .6; cursor: progress; }
+    #app > .row:last-child { justify-content: flex-end; }
+    #selection-output:not(:empty) { margin-top: 10px; }
+  </style>
 </head>
-<!-- Chrome draws the popup window itself; the content sits in a rounded card so the popup reads as rounded. -->
-<body class="popup">
+<body>
   <div class="card">
     <header>
       <img src="icons/icon-32.png" alt="">

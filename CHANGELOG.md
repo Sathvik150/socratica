@@ -3,6 +3,18 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [SemVer](https://semver.org/).
 
+## [0.1.6] - 2026-10-25
+
+### Changed
+- **Restored the original design** (indigo-violet gradient, soft cards) from v0.1.4 across the popup, settings page,
+  demo and the in-ChatGPT overlay, keeping every 0.1.5 feature: the on/off switch, "Show details" at the bottom, the
+  evidence panel that follows the text, skeleton loaders, and the faster, smarter checks.
+- The popup's on/off switch is smaller and quieter: a slim track with slightly rounded corners instead of a pill, and
+  the popup content sits in a softly rounded card.
+
+### Removed
+- The Linear-based design tokens (open-design and awesome-design-md files). Tailwind CSS still compiles the styles.
+
 ## [0.1.5] - 2026-10-25
 
 ### Added
@@ -120,6 +132,7 @@ All notable changes to this project are documented here. The format follows
 - **Benchmark**: 37 labeled synthetic items, a runner, and a `BaselineVerifier` plug-in interface.
 - Release packaging (`pnpm package`) and GitHub Actions for CI and tagged releases.
 
+[0.1.6]: https://github.com/sathvik150/cac26/releases/tag/v0.1.6
 [0.1.5]: https://github.com/sathvik150/cac26/releases/tag/v0.1.5
 [0.1.4]: https://github.com/sathvik150/cac26/releases/tag/v0.1.4
 [0.1.3]: https://github.com/sathvik150/cac26/releases/tag/v0.1.3

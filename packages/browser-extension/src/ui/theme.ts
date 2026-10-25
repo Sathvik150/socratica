@@ -1,7 +1,7 @@
 /**
- * Shared look for the in-page overlay (Shadow DOM). The CSS is written with Tailwind in
- * styles/overlay.css (tokens from DESIGN.md) and compiled into overlay.generated.ts by
- * `pnpm build:css`. The overlay follows the host page's theme (ChatGPT light/dark).
+ * Shared look for the in-page overlay (Shadow DOM). The CSS lives in styles/overlay.css and is
+ * compiled by `pnpm build:css` (Tailwind CLI) into overlay.generated.ts. Same tokens as static/theme.css;
+ * the overlay follows the host page's theme (ChatGPT light/dark), not just the OS setting.
  */
 import OVERLAY_CSS from './overlay.generated.js';
 
@@ -10,11 +10,10 @@ export { OVERLAY_CSS };
 /**
  * Page-level stylesheet for native text highlights. Applied through
  * `adoptedStyleSheets`, which page CSP rules for inline <style> do not block.
- * Colours are the verdict colours from DESIGN.md.
  */
 export const HIGHLIGHT_CSS = `
-::highlight(hf-contradicted) { background-color: rgba(235, 87, 87, .18); text-decoration: underline wavy #e5484d; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
-::highlight(hf-unverifiable) { text-decoration: underline dashed rgba(242, 153, 74, .95); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+::highlight(hf-contradicted) { background-color: rgba(244, 63, 94, .18); text-decoration: underline wavy #e11d48; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+::highlight(hf-unverifiable) { text-decoration: underline dashed rgba(217, 119, 6, .95); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
 `;
 
 /** True when the host page currently renders dark (ChatGPT uses `html.dark` and/or `color-scheme`). */
