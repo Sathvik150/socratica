@@ -9,3 +9,5 @@ coverage/
 .DS_Store
 benchmark/results/
 release/
+package-lock.json
+yarn.lock
