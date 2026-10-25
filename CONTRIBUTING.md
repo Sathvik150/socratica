@@ -12,7 +12,7 @@ pnpm build
 pnpm test              # no network, no API key needed
 ```
 
-Requirements: Node.js 20+ (see `.nvmrc`). Python 3 is optional and only used by the skill's validator parity test.
+Requirements: Node.js 20+ (see `.nvmrc`). Use **pnpm**, not npm or yarn: `npm install` is blocked on purpose, because mixing package managers creates a second lockfile and an inconsistent `node_modules`. Python 3 is optional and only used by the skill's validator parity test.
 
 ## Project rules
 
