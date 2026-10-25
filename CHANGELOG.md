@@ -3,6 +3,13 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [SemVer](https://semver.org/).
 
+## [0.1.2] - 2026-10-25
+
+### Fixed
+- Skill: SKILL.md now names the folder claude.ai actually uses for uploaded skills
+  (`/mnt/skills/plugins/hallucination-firewall`) and tells Claude to read reference files with its
+  file tool rather than shell commands, which claude.ai's command check can interrupt.
+
 ## [0.1.1] - 2026-10-25
 
 ### Added
@@ -44,5 +51,6 @@ All notable changes to this project are documented here. The format follows
 - **Benchmark**: 37 labeled synthetic items, a runner, and a `BaselineVerifier` plug-in interface.
 - Release packaging (`pnpm package`) and GitHub Actions for CI and tagged releases.
 
+[0.1.2]: https://github.com/sathvik150/cac26/releases/tag/v0.1.2
 [0.1.1]: https://github.com/sathvik150/cac26/releases/tag/v0.1.1
 [0.1.0]: https://github.com/sathvik150/cac26/releases/tag/v0.1.0
