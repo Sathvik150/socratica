@@ -3,6 +3,21 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [SemVer](https://semver.org/).
 
+## [0.1.3] - 2026-10-24
+
+### Added
+- Six release downloads: Chrome extension, full and instruction-only Agent Skills,
+  full and instruction-only ChatGPT plugins, and the standalone CLI. The plugin
+  and instruction-only bundles were merged after the v0.1.2 tag and were not in that release.
+- Plugin archives include a root `plugin.json` and `skills/hallucination-firewall/`.
+  Instruction-only variants use manual quote checks without bundled scripts.
+- Evidence sources and retrieval improvements merged since v0.1.2, including
+  Wikidata, World Bank, scholarly sources, GOV.UK, fact-check search, Tavily, and supplied URLs.
+
+### Fixed
+- Release notes and installation instructions distinguish plugin uploads from standalone skill uploads.
+- CLI proxy support and evidence retrieval fixes from live validation.
+
 ## [0.1.2] - 2026-10-25
 
 ### Fixed
@@ -51,6 +66,7 @@ All notable changes to this project are documented here. The format follows
 - **Benchmark**: 37 labeled synthetic items, a runner, and a `BaselineVerifier` plug-in interface.
 - Release packaging (`pnpm package`) and GitHub Actions for CI and tagged releases.
 
+[0.1.3]: https://github.com/sathvik150/cac26/releases/tag/v0.1.3
 [0.1.2]: https://github.com/sathvik150/cac26/releases/tag/v0.1.2
 [0.1.1]: https://github.com/sathvik150/cac26/releases/tag/v0.1.1
 [0.1.0]: https://github.com/sathvik150/cac26/releases/tag/v0.1.0

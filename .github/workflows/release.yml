@@ -55,17 +55,39 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: Hallucination Firewall ${{ steps.tag.outputs.name }}
           files: release/*.zip
+          fail_on_unmatched_files: true
           generate_release_notes: true
           body: |
             ## Downloads
 
             | Zip | Use it for |
             |---|---|
-            | `hallucination-firewall-extension-*.zip` | Chrome: unzip, `chrome://extensions` → Developer mode → **Load unpacked** |
-            | `hallucination-firewall-skill-v*.zip` | Full Agent Skill; ChatGPT upload compatibility unconfirmed (see docs/skill.md) |
-            | `hallucination-firewall-skill-instructions-v*.zip` | Instruction-only diagnostic variant; manual quote checks, no scripts |
-            | `hallucination-firewall-plugin-v*.zip` | ChatGPT Plugins → New Plugin; manifest plus full skill |
-            | `hallucination-firewall-plugin-instructions-v*.zip` | Instruction-only ChatGPT plugin; manual quote checks |
-            | `hf-verify-cli-*.zip` | Local use: `node hf-verify.mjs verify --answer a.txt --evidence docs/` (works with Ollama / LM Studio) |
+            | [Chrome extension](https://github.com/${{ github.repository }}/releases/download/${{ steps.tag.outputs.name }}/hallucination-firewall-extension-${{ steps.tag.outputs.name }}.zip) | Annotate answers on chatgpt.com |
+            | [Full Agent Skill](https://github.com/${{ github.repository }}/releases/download/${{ steps.tag.outputs.name }}/hallucination-firewall-skill-${{ steps.tag.outputs.name }}.zip) | Skills upload in Claude or another Agent Skills host; bundled validators |
+            | [Instruction-only Agent Skill](https://github.com/${{ github.repository }}/releases/download/${{ steps.tag.outputs.name }}/hallucination-firewall-skill-instructions-${{ steps.tag.outputs.name }}.zip) | Skills upload without scripts; manual quote checks |
+            | [Full ChatGPT plugin](https://github.com/${{ github.repository }}/releases/download/${{ steps.tag.outputs.name }}/hallucination-firewall-plugin-${{ steps.tag.outputs.name }}.zip) | Plugins → New Plugin; manifest, skill, and validators |
+            | [Instruction-only ChatGPT plugin](https://github.com/${{ github.repository }}/releases/download/${{ steps.tag.outputs.name }}/hallucination-firewall-plugin-instructions-${{ steps.tag.outputs.name }}.zip) | Plugin upload without scripts; manual quote checks |
+            | [Standalone CLI](https://github.com/${{ github.repository }}/releases/download/${{ steps.tag.outputs.name }}/hf-verify-cli-${{ steps.tag.outputs.name }}.zip) | Local verification with Node 20+, including Ollama / LM Studio |
 
-            See the [README](https://github.com/${{ github.repository }}#readme) and [CHANGELOG](https://github.com/${{ github.repository }}/blob/${{ github.sha }}/CHANGELOG.md).
+            ## Install the ChatGPT plugin
+
+            1. Download the full ChatGPT plugin ZIP above and keep it zipped.
+            2. Open **Plugins → New Plugin**, upload the ZIP, and choose **Add plugin**.
+            3. Start a new chat, select the plugin, and ask: **Fact-check this answer against these sources.** Attach or paste the answer and source documents.
+            4. For a variant without scripts, upload the instruction-only plugin ZIP instead. It checks quotes manually and does not machine-validate them.
+
+            Plugin upload has been confirmed; fact-checking behavior after installation still needs verification. Install one variant at a time because both use the same plugin and skill names.
+
+            ## Install the standalone skill
+
+            - **Claude:** enable code execution, open **Settings → Skills → Upload skill**, and select the full Agent Skill ZIP without extracting it.
+            - **Claude Code:** unzip the full Agent Skill ZIP into `~/.claude/skills/` (all projects) or `.claude/skills/` (one project).
+            - **Other Skills uploaders:** use an Agent Skill ZIP. Use a plugin ZIP for **Plugins → New Plugin**; the standalone skill does not include a plugin manifest.
+            - Choose the instruction-only skill ZIP if you need the variant without scripts. Quotes are checked manually. Install only one skill variant at a time.
+
+            ## Install the Chrome extension or CLI
+
+            - **Chrome:** unzip the extension ZIP, open `chrome://extensions`, enable **Developer mode**, select **Load unpacked**, and choose the extracted folder containing `manifest.json`. Accept the privacy notice and configure the judge/evidence sources in Settings.
+            - **CLI:** unzip the CLI ZIP, open the `hf-verify` folder, then run `node hf-verify.mjs verify --answer a.txt --evidence docs/` with Node 20+.
+
+            See the [README](https://github.com/${{ github.repository }}/blob/${{ steps.tag.outputs.name }}/README.md), [skill and plugin guide](https://github.com/${{ github.repository }}/blob/${{ steps.tag.outputs.name }}/docs/skill.md), and [CHANGELOG](https://github.com/${{ github.repository }}/blob/${{ steps.tag.outputs.name }}/CHANGELOG.md). Plugin layout follows [OpenAI's packaging guide](https://developers.openai.com/plugins/build/plugins).

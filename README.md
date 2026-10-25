@@ -35,19 +35,19 @@ Grab the zips from the **[latest release](https://github.com/sathvik150/cac26/re
 
 | Zip | For | What's inside |
 |---|---|---|
-| hallucination-firewall-extension-v0.1.2.zip | **Chrome**: annotate ChatGPT answers in place | Ready-to-load MV3 extension plus an offline demo page |
-| hallucination-firewall-plugin-v0.1.2.zip | **ChatGPT → Plugins → New Plugin** | Plugin manifest plus full skill and validators |
-| hallucination-firewall-plugin-instructions-v0.1.2.zip | **ChatGPT plugin troubleshooting** | Plugin manifest plus instruction-only skill; manual quote checks |
-| hallucination-firewall-skill-instructions-v0.1.2.zip | **Skills upload troubleshooting** | Instruction-only variant; manual quote checks, no scripts ([details](docs/skill.md#troubleshooting-a-chatgpt-upload-failure)) |
-| hallucination-firewall-skill-v0.1.2.zip | **Claude, Claude Code** and other Agent Skills hosts | `SKILL.md`, rules, and Node and Python validators |
-| hf-verify-cli-v0.1.2.zip | **Local use** with your own model, scripts and agents | Single-file CLI (Node 20+, no install) plus examples |
+| hallucination-firewall-extension-v0.1.3.zip | **Chrome**: annotate ChatGPT answers in place | Ready-to-load MV3 extension plus an offline demo page |
+| hallucination-firewall-plugin-v0.1.3.zip | **ChatGPT → Plugins → New Plugin** | Plugin manifest plus full skill and validators |
+| hallucination-firewall-plugin-instructions-v0.1.3.zip | **ChatGPT plugin troubleshooting** | Plugin manifest plus instruction-only skill; manual quote checks |
+| hallucination-firewall-skill-instructions-v0.1.3.zip | **Skills upload troubleshooting** | Instruction-only variant; manual quote checks, no scripts ([details](docs/skill.md#troubleshooting-a-chatgpt-upload-failure)) |
+| hallucination-firewall-skill-v0.1.3.zip | **Claude, Claude Code** and other Agent Skills hosts | `SKILL.md`, rules, and Node and Python validators |
+| hf-verify-cli-v0.1.3.zip | **Local use** with your own model, scripts and agents | Single-file CLI (Node 20+, no install) plus examples |
 
 ## 🚀 Quick start
 
 <details open>
 <summary><b>Chrome extension (ChatGPT)</b></summary>
 
-1. Unzip `hallucination-firewall-extension-v0.1.2.zip`.
+1. Unzip `hallucination-firewall-extension-v0.1.3.zip`.
 2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and pick the unzipped folder.
 3. Read and accept the privacy notice on the settings page that opens. **Nothing is checked or sent before you accept.**
 4. **Choose a judge** in the same settings page. The default offline judge only recognises very literal matches, so on real answers it mostly says "unverifiable". For real checks, pick one of:
@@ -65,9 +65,12 @@ Want to see it without ChatGPT? Open `demo.html` from the unzipped folder. It ru
 <details>
 <summary><b>Agent Skill (Claude / ChatGPT / Claude Code)</b></summary>
 
-- **Claude:** with code execution enabled, open the Skills section in Settings, click **Upload skill**, and choose `hallucination-firewall-skill-v0.1.2.zip`.
-- **Claude Code:** `unzip hallucination-firewall-skill-v0.1.2.zip -d ~/.claude/skills/`
-- **ChatGPT:** install the same zip where your plan supports [Skills](https://help.openai.com/en/articles/20001066-skills-in-chatgpt), or turn it into a Custom GPT.
+- **Claude:** with code execution enabled, open the Skills section in Settings, click **Upload skill**, and choose `hallucination-firewall-skill-v0.1.3.zip`.
+- **Claude Code:** `unzip hallucination-firewall-skill-v0.1.3.zip -d ~/.claude/skills/`
+- **ChatGPT plugin:** download `hallucination-firewall-plugin-v0.1.3.zip`, keep it zipped, then open **Plugins → New Plugin**, upload it, and select **Add plugin**. Use `hallucination-firewall-plugin-instructions-v0.1.3.zip` for the variant without bundled scripts.
+- **Standalone Skills upload:** use `hallucination-firewall-skill-v0.1.3.zip` in a Skills uploader, or `hallucination-firewall-skill-instructions-v0.1.3.zip` for manual quote checks. A standalone skill ZIP does not contain the manifest required by the plugin uploader.
+
+Install one full or instruction-only variant at a time; they share the same plugin/skill name. Instruction-only variants do not machine-validate quotes.
 
 Then ask: *"Fact-check this answer against these sources."* Full guide: [docs/skill.md](docs/skill.md).
 
@@ -77,7 +80,7 @@ Then ask: *"Fact-check this answer against these sources."* Full guide: [docs/sk
 <summary><b>CLI and local models</b></summary>
 
 ```bash
-unzip hf-verify-cli-v0.1.2.zip && cd hf-verify
+unzip hf-verify-cli-v0.1.3.zip && cd hf-verify
 
 # Offline: your documents + the built-in deterministic judge
 node hf-verify.mjs verify --answer examples/answer.txt --evidence examples/evidence/
