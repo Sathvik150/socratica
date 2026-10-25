@@ -3,7 +3,7 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.1.4] - 2026-10-25
 
 ### Changed
 - **Redesigned extension UI** (popup, settings, in-ChatGPT overlay, demo) with one shared design system in plain CSS:
@@ -87,6 +87,7 @@ All notable changes to this project are documented here. The format follows
 - **Benchmark**: 37 labeled synthetic items, a runner, and a `BaselineVerifier` plug-in interface.
 - Release packaging (`pnpm package`) and GitHub Actions for CI and tagged releases.
 
+[0.1.4]: https://github.com/sathvik150/cac26/releases/tag/v0.1.4
 [0.1.3]: https://github.com/sathvik150/cac26/releases/tag/v0.1.3
 [0.1.2]: https://github.com/sathvik150/cac26/releases/tag/v0.1.2
 [0.1.1]: https://github.com/sathvik150/cac26/releases/tag/v0.1.1
