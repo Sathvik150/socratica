@@ -3,7 +3,7 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.1.1] - 2026-10-25
 
 ### Added
 - **Toolbar popup**: shows on/off state, judge and evidence setup, answers detected on the current ChatGPT tab and the
@@ -14,6 +14,13 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 - Clicking the toolbar icon opens the popup instead of the settings tab.
+
+### Fixed
+- Agent Skill on claude.ai (#3): SKILL.md now calls scripts by their full path (the skill folder is
+  read-only and isn't the working directory) and needs only Python. Passages can be given as `"path"`
+  to a saved source file instead of retyped text, `find_quote.py` returns exact source wording for
+  quotes, and `validate_verdicts.py --format text` prints a ready-to-paste report.
+  `hf-verify validate` supports the same `"path"` passages and `--format text`.
 
 ## [0.1.0] - 2026-10-24
 
@@ -37,4 +44,5 @@ All notable changes to this project are documented here. The format follows
 - **Benchmark**: 37 labeled synthetic items, a runner, and a `BaselineVerifier` plug-in interface.
 - Release packaging (`pnpm package`) and GitHub Actions for CI and tagged releases.
 
+[0.1.1]: https://github.com/sathvik150/cac26/releases/tag/v0.1.1
 [0.1.0]: https://github.com/sathvik150/cac26/releases/tag/v0.1.0

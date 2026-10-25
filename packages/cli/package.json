@@ -1,6 +1,6 @@
 {
   "name": "@hallucination-firewall/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "hf-verify: fact-check text against evidence from the command line. Works offline, with your own API key, or with a local OpenAI-compatible model.",
   "license": "MIT",
   "type": "module",
