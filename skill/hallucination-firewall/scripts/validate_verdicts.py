@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Post-validate fact-check verdicts (Python port of `hf-verify validate`; stdlib only).
 
-Usage:  python3 validate_verdicts.py verdicts.json        (or "-" for stdin)
+Usage:  python3 validate_verdicts.py verdicts.json [--format json|text]     ("-" reads stdin)
 
-Input JSON: {"claims":[{"id","text"}], "passages":[{"id","text","title"?,"url"?}],
+Input JSON: {"claims":[{"id","text"}], "passages":[{"id","text" | "path","title"?,"url"?}],
              "verdicts":[{"claimId","verdict","confidence","rationale","quotes":[{"passage_id","quote"}],"correction"}]}
 
 Rules (same as the TypeScript core):
@@ -14,8 +14,12 @@ Rules (same as the TypeScript core):
   * confidence below 0.5 -> unverifiable
   * a correction survives only on contradicted verdicts, and only if every new word and
     number it introduces appears in the quotes
+
+A passage may give "path" instead of "text": the file (relative to verdicts.json) is read
+verbatim, so source text never has to be retyped into the JSON.
 """
 import json
+import os
 import re
 import sys
 
@@ -103,7 +107,44 @@ def validate_one(claim, raw, passages):
     return v
 
 
-def validate(data):
+def load_passages(data, base_dir):
+    """Resolve "path" passages to their exact file contents."""
+    out = []
+    for p in data["passages"]:
+        p = dict(p)
+        if "text" not in p and "path" in p:
+            path = p["path"] if os.path.isabs(p["path"]) else os.path.join(base_dir, p["path"])
+            with open(path, encoding="utf-8") as f:
+                p["text"] = f.read()
+        if not isinstance(p.get("text"), str):
+            raise ValueError(f'passage {p.get("id")!r} needs "text" or "path"')
+        out.append(p)
+    return out
+
+
+def format_text(result):
+    """Human-readable report, contradicted first; safe to paste to the user as-is."""
+    order = {"contradicted": 0, "unverifiable": 1, "supported": 2}
+    icon = {"supported": "✔", "contradicted": "✘", "unverifiable": "?"}
+    lines = [f'Summary: {result["summary"]["text"]}', ""]
+    for v in sorted(result["verdicts"], key=lambda v: order[v["verdict"]]):
+        lines.append(f'{icon[v["verdict"]]} [{v["verdict"].upper()}] {v["claim"]}')
+        if v.get("rationale"):
+            lines.append(f'    reason: {v["rationale"]}')
+        for q in v["quotes"]:
+            src = q["source"]
+            lines.append(f'    evidence: "{q["quote"]}"')
+            lines.append(f'      source: {src.get("title", q["passageId"])}' + (f' <{src["url"]}>' if src.get("url") else ""))
+        if v.get("correction"):
+            lines.append(f'    correction: {v["correction"]}')
+        if v.get("downgradeReason") and v.get("rawVerdict"):
+            lines.append(f'    note: model said "{v["rawVerdict"]}", discarded ({v["downgradeReason"]})')
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def validate(data, base_dir="."):
+    data = dict(data, passages=load_passages(data, base_dir))
     verdicts = []
     for c in data["claims"]:
         raw = next((x for x in data["verdicts"] if x.get("claimId") == c["id"]), None)
@@ -115,7 +156,19 @@ def validate(data):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    args = sys.argv[1:]
+    fmt = "json"
+    if "--format" in args:
+        i = args.index("--format")
+        fmt = args[i + 1] if i + 1 < len(args) else ""
+        del args[i:i + 2]
+    if len(args) != 1 or fmt not in ("json", "text"):
         sys.exit(__doc__)
-    src = sys.stdin if sys.argv[1] == "-" else open(sys.argv[1], encoding="utf-8")
-    print(json.dumps(validate(json.load(src)), indent=2, ensure_ascii=False))
+    if args[0] == "-":
+        data, base = json.load(sys.stdin), os.getcwd()
+    else:
+        with open(args[0], encoding="utf-8") as f:
+            data = json.load(f)
+        base = os.path.dirname(os.path.abspath(args[0]))
+    result = validate(data, base)
+    print(format_text(result) if fmt == "text" else json.dumps(result, indent=2, ensure_ascii=False), end="" if fmt == "text" else "\n")

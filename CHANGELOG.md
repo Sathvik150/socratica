@@ -15,6 +15,13 @@ All notable changes to this project are documented here. The format follows
 ### Changed
 - Clicking the toolbar icon opens the popup instead of the settings tab.
 
+### Fixed
+- Agent Skill on claude.ai (#3): SKILL.md now calls scripts by their full path (the skill folder is
+  read-only and isn't the working directory) and needs only Python. Passages can be given as `"path"`
+  to a saved source file instead of retyped text, `find_quote.py` returns exact source wording for
+  quotes, and `validate_verdicts.py --format text` prints a ready-to-paste report.
+  `hf-verify validate` supports the same `"path"` passages and `--format text`.
+
 ## [0.1.0] - 2026-10-24
 
 ### Fixed (from live testing)

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { isAbsolute, join } from 'node:path';
 import { MockLLM, scoreResults, verifyClaim, type Claim, type ClaimVerdict, type Passage, type VerificationSummary } from '@hallucination-firewall/core';
 
 /**
@@ -6,7 +8,8 @@ import { MockLLM, scoreResults, verifyClaim, type Claim, type ClaimVerdict, type
  */
 export interface ValidateInput {
   claims: Array<{ id: string; text: string }>;
-  passages: Array<{ id: string; text: string; title?: string; url?: string }>;
+  /** Give `text`, or `path` to a file (relative to `baseDir`) whose contents are used verbatim. */
+  passages: Array<{ id: string; text?: string; path?: string; title?: string; url?: string }>;
   verdicts: Array<{
     claimId: string;
     verdict: string;
@@ -22,10 +25,10 @@ export interface ValidateInput {
  * verbatim-quote check, quotes required for supported/contradicted, confidence
  * floor, and correction grounding. Anything that fails becomes `unverifiable`.
  */
-export async function validateVerdicts(input: ValidateInput): Promise<{ verdicts: ClaimVerdict[]; summary: VerificationSummary }> {
+export async function validateVerdicts(input: ValidateInput, baseDir = '.'): Promise<{ verdicts: ClaimVerdict[]; summary: VerificationSummary }> {
   const passages: Passage[] = input.passages.map((p) => ({
     id: p.id,
-    text: p.text,
+    text: passageText(p, baseDir),
     score: 1,
     source: { title: p.title ?? p.id, providerId: 'supplied', ...(p.url ? { url: p.url } : {}) },
   }));
@@ -38,4 +41,10 @@ export async function validateVerdicts(input: ValidateInput): Promise<{ verdicts
     out.push(await verifyClaim(claim, passages, new MockLLM(raw)));
   }
   return scoreResults(out);
+}
+
+function passageText(p: ValidateInput['passages'][number], baseDir: string): string {
+  if (typeof p.text === 'string') return p.text;
+  if (p.path) return readFileSync(isAbsolute(p.path) ? p.path : join(baseDir, p.path), 'utf8');
+  throw new Error(`passage "${p.id}" needs "text" or "path"`);
 }
