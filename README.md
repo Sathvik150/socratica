@@ -36,6 +36,9 @@ Grab the zips from the **[latest release](https://github.com/sathvik150/cac26/re
 | Zip | For | What's inside |
 |---|---|---|
 | `hallucination-firewall-extension-v0.1.0.zip` | **Chrome**: annotate ChatGPT answers in place | Ready-to-load MV3 extension plus an offline demo page |
+| `hallucination-firewall-plugin-v0.1.0.zip` | **ChatGPT → Plugins → New Plugin** | Plugin manifest plus full skill and validators |
+| `hallucination-firewall-plugin-instructions-v0.1.0.zip` | **ChatGPT plugin troubleshooting** | Plugin manifest plus instruction-only skill; manual quote checks |
+| `hallucination-firewall-skill-instructions-v0.1.0.zip` | **Skills upload troubleshooting** | Instruction-only variant; manual quote checks, no scripts ([details](docs/skill.md#troubleshooting-a-chatgpt-upload-failure)) |
 | `hallucination-firewall-skill-v0.1.0.zip` | **Claude, ChatGPT, Claude Code** and other Agent Skills hosts | `SKILL.md`, rules, and Node and Python validators |
 | `hf-verify-cli-v0.1.0.zip` | **Local use** with your own model, scripts and agents | Single-file CLI (Node 20+, no install) plus examples |
 

@@ -55,7 +55,8 @@ export function createZip(entries) {
     central.writeUInt32LE(body.length, 20);
     central.writeUInt32LE(data.length, 24);
     central.writeUInt16LE(nameBuf.length, 28);
-    central.writeUInt32LE(((0o100000 | mode) << 16) >>> 0, 38);
+    const directory = name.endsWith('/');
+    central.writeUInt32LE((((directory ? 0o040000 : 0o100000) | mode) << 16 | (directory ? 0x10 : 0)) >>> 0, 38);
     central.writeUInt32LE(offset, 42);
     centrals.push(central, nameBuf);
 

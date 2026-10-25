@@ -62,7 +62,10 @@ jobs:
             | Zip | Use it for |
             |---|---|
             | `hallucination-firewall-extension-*.zip` | Chrome: unzip, `chrome://extensions` → Developer mode → **Load unpacked** |
-            | `hallucination-firewall-skill-*.zip` | Upload as a skill in Claude / ChatGPT, or unzip into `~/.claude/skills/` |
+            | `hallucination-firewall-skill-v*.zip` | Full Agent Skill; ChatGPT upload compatibility unconfirmed (see docs/skill.md) |
+            | `hallucination-firewall-skill-instructions-v*.zip` | Instruction-only diagnostic variant; manual quote checks, no scripts |
+            | `hallucination-firewall-plugin-v*.zip` | ChatGPT Plugins → New Plugin; manifest plus full skill |
+            | `hallucination-firewall-plugin-instructions-v*.zip` | Instruction-only ChatGPT plugin; manual quote checks |
             | `hf-verify-cli-*.zip` | Local use: `node hf-verify.mjs verify --answer a.txt --evidence docs/` (works with Ollama / LM Studio) |
 
             See the [README](https://github.com/${{ github.repository }}#readme) and [CHANGELOG](https://github.com/${{ github.repository }}/blob/${{ github.sha }}/CHANGELOG.md).
