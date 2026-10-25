@@ -8,7 +8,7 @@ export interface JudgeInput {
   question?: string;
   claim: string;
   context: string;
-  passages: Array<{ id: string; source: string; text: string }>;
+  passages: Array<{ id: string; source: string; text: string; kind?: Passage['source']['kind'] }>;
 }
 
 /** Schema the LLM's JSON verdict must satisfy. Anything else is treated as invalid output. */
@@ -35,7 +35,7 @@ export function buildVerifierPrompt(claim: Claim, passages: Passage[], question?
     ...(question ? { question } : {}),
     claim: claim.text,
     context: claim.context,
-    passages: passages.map((p) => ({ id: p.id, source: p.source.title, text: p.text })),
+    passages: passages.map((p) => ({ id: p.id, source: p.source.title, text: p.text, ...(p.source.kind ? { kind: p.source.kind } : {}) })),
   };
   return [
     'You are an evidence-bound fact-checking judge.',
@@ -47,9 +47,13 @@ export function buildVerifierPrompt(claim: Claim, passages: Passage[], question?
     '- "contradicted": at least one passage explicitly states something that cannot be true at the same time as the claim.',
     '  A passage that merely omits the information, or talks about something else, is NOT a contradiction.',
     '- "unverifiable": anything else, including partial, ambiguous, or missing evidence. When unsure, choose "unverifiable".',
+    '- A "review" passage attributes a publisher rating to a reviewed claim. The quoted claim is NOT an assertion that it is true. Use the rating only when the reviewed claim has the same meaning and scope as the CLAIM; ambiguous ratings are unverifiable.',
+    '- A "metadata" passage establishes only publication metadata or qualified structured statements, not the truth of a paper title or findings. Respect dates, units, precision, and qualifiers in structured evidence.',
+    '- Statistical observations must match the claim country, indicator definition, year, and units. A value for a different year or measure does not refute the claim. A source competent in one topic is not automatically authoritative on another.',
     '',
     'Output rules:',
     '- Every quote must be copied character-for-character from a single passage and name that passage_id. Quotes that are not exact substrings will cause your verdict to be discarded.',
+    '- Quote review passages in full so the reviewed claim and the actual publisher rating are both included.',
     '- "supported" and "contradicted" require at least one quote.',
     '- "rationale" is one or two short sentences stating which passage decides the verdict. Do not include step-by-step reasoning.',
     '- "correction" is only for "contradicted", and only if a quote directly states the correct fact; otherwise null.',

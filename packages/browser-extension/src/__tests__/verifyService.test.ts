@@ -13,7 +13,7 @@ function deps(granted = true) {
   return { calls, deps: { fetch, hasPermission: async () => granted } };
 }
 
-const consented: Settings = { ...DEFAULT_SETTINGS, consent: { granted: true, version: CONSENT_VERSION } };
+const consented: Settings = { ...DEFAULT_SETTINGS, consent: { granted: true, version: CONSENT_VERSION }, evidence: { ...DEFAULT_SETTINGS.evidence, wikidata: false, europePmc: false } };
 const req = { platform: 'chatgpt' as const, answer: 'The Zentha Bridge opened in 1987.' };
 
 describe('background verify service', () => {
@@ -56,7 +56,7 @@ describe('background verify service', () => {
 
   it('requires a key for remote LLM providers', async () => {
     const { deps: d } = deps();
-    const s = { ...consented, llm: { provider: 'openai' as const, model: '', apiKey: '' } };
+    const s = { ...consented, llm: { provider: 'openai' as const, model: '', apiKey: '', baseUrl: '' } };
     expect((await handleVerify(req, s, d)).status).toBe('error');
   });
 });
@@ -64,7 +64,7 @@ describe('background verify service', () => {
 describe('local model judge', () => {
   const local: Settings = {
     ...consented,
-    evidence: { wikipedia: false, webSearch: false, webSearchApiKey: '' },
+    evidence: { ...consented.evidence, wikipedia: false, webSearch: false, webSearchApiKey: '' },
     llm: { provider: 'local', model: 'qwen2.5:7b', apiKey: '', baseUrl: 'http://localhost:11434/v1' },
   };
 

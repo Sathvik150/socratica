@@ -15,7 +15,8 @@ export class HeuristicLLM implements LLMProvider {
   async complete(prompt: string): Promise<string> {
     const input = parseVerifierPrompt(prompt);
     if (!input) return JSON.stringify(unverifiable('Input could not be parsed.'));
-    return JSON.stringify(judge(input.claim, input.passages));
+    // Lexical overlap cannot interpret publisher ratings or distinguish a paper title from its findings.
+    return JSON.stringify(judge(input.claim, input.passages.filter((p) => p.kind !== 'review' && p.kind !== 'metadata')));
   }
 }
 
