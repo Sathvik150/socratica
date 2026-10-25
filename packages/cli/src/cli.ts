@@ -5,6 +5,7 @@
  * so they do not end up in shell history.
  */
 import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import {
   AnthropicProvider,
   HeuristicLLM,
@@ -20,14 +21,14 @@ import {
 import { loadEvidence } from './evidence.js';
 import { validateVerdicts, type ValidateInput } from './validate.js';
 
-export const VERSION = '0.1.0';
+export const VERSION = '0.1.2';
 
 export const HELP = `hf-verify ${VERSION} - evidence-linked fact checking (supported / contradicted / unverifiable)
 
 USAGE
   hf-verify verify   --answer <file|-> [--evidence <file|dir>]... [options]
   hf-verify extract  --answer <file|->
-  hf-verify validate --input <file|->
+  hf-verify validate --input <file|-> [--format text|json]
   hf-verify --help | --version
 
 COMMANDS
@@ -171,8 +172,12 @@ export async function main(argv: string[], io: Io): Promise<number> {
     if (!Array.isArray(data.claims) || !Array.isArray(data.passages) || !Array.isArray(data.verdicts)) {
       throw new UsageError('validate input must have "claims", "passages" and "verdicts" arrays');
     }
-    const result = await validateVerdicts(data);
-    io.stdout(JSON.stringify(result, null, 2) + '\n');
+    const result = await validateVerdicts(data, input === '-' ? process.cwd() : dirname(resolve(input)));
+    io.stdout(
+      one(flags, 'format') === 'text'
+        ? formatReport({ ...result, claims: [], passages: {}, errors: [] })
+        : JSON.stringify(result, null, 2) + '\n',
+    );
     return 0;
   }
 

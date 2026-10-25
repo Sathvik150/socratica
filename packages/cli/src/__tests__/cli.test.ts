@@ -118,3 +118,32 @@ describe.skipIf(!hasPython())('Python validator parity (skill/…/validate_verdi
     expect(node.summary.text).toBe('2 checked, 0 supported, 1 contradicted, 1 unverifiable');
   });
 });
+
+describe('skill run in a separate working folder (passages loaded from files)', () => {
+  const skillRun = (f: string) => join(process.cwd(), 'src/__tests__/data/skill-run', f);
+  const script = (f: string) => join(process.cwd(), '../../skill/hallucination-firewall/scripts', f);
+  const expected = { c1: ['contradicted', null], c2: ['unverifiable', 'quote-not-in-passage'] };
+
+  it('hf-verify validate reads "path" passages relative to verdicts.json', async () => {
+    const t = io();
+    await main(['validate', '--input', skillRun('verdicts.json')], t.x);
+    const out = JSON.parse(t.out());
+    expect(Object.fromEntries(out.verdicts.map((v: Record<string, unknown>) => [v.claimId, [v.verdict, v.downgradeReason ?? null]]))).toEqual(expected);
+  });
+
+  it.skipIf(!hasPython())('the Python validator agrees, from any working directory, and prints a text report', () => {
+    const json = JSON.parse(execFileSync('python3', [script('validate_verdicts.py'), skillRun('verdicts.json')], { encoding: 'utf8', cwd: '/' }));
+    expect(Object.fromEntries(json.verdicts.map((v: Record<string, unknown>) => [v.claimId, [v.verdict, v.downgradeReason ?? null]]))).toEqual(expected);
+    const text = execFileSync('python3', [script('validate_verdicts.py'), skillRun('verdicts.json'), '--format', 'text'], { encoding: 'utf8', cwd: '/' });
+    expect(text.split('\n')[0]).toBe('Summary: 2 checked, 0 supported, 1 contradicted, 1 unverifiable');
+    expect(text).toContain('✘ [CONTRADICTED] The Zentha Bridge opened in 1987.');
+    expect(text).toContain('correction: The Zentha Bridge opened in 1991.');
+    expect(text).toContain('discarded (quote-not-in-passage)');
+  });
+
+  it.skipIf(!hasPython())('find_quote.py turns approximate wording into the exact source text', () => {
+    const out = execFileSync('python3', [script('find_quote.py'), skillRun('sources'), 'it opened to traffic in 1991 - after six years'], { encoding: 'utf8' });
+    expect(JSON.parse(out.trim()).quote).toBe('It opened to traffic in 1991 – after six years');
+    expect(() => execFileSync('python3', [script('find_quote.py'), skillRun('sources'), 'opened in 1987'], { stdio: 'pipe' })).toThrow();
+  });
+});

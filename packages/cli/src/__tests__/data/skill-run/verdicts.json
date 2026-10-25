@@ -1,0 +1,11 @@
+{
+  "claims": [
+    { "id": "c1", "text": "The Zentha Bridge opened in 1987." },
+    { "id": "c2", "text": "The Zentha Bridge is in Velmora." }
+  ],
+  "passages": [{ "id": "p1", "title": "Zentha Bridge", "url": "https://example.org/zentha", "path": "sources/zentha.txt" }],
+  "verdicts": [
+    { "claimId": "c1", "verdict": "contradicted", "confidence": 0.9, "rationale": "p1 says 1991.", "quotes": [{ "passage_id": "p1", "quote": "It opened to traffic in 1991 – after six years of work." }], "correction": "The Zentha Bridge opened in 1991." },
+    { "claimId": "c2", "verdict": "supported", "confidence": 0.9, "rationale": "Stated.", "quotes": [{ "passage_id": "p1", "quote": "It opened to traffic in 1991 - after six years of work." }] }
+  ]
+}
