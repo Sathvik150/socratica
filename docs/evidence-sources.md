@@ -17,7 +17,8 @@ accepts your own `--evidence` files instead).
 
 | Engine | Evidence returned | Key | Notes |
 |---|---|---|---|
-| Firecrawl (default) | Result titles, links and snippets | None. An optional free Firecrawl key (sign up with Google or GitHub, 1,000 credits) works on any network | No sign-up. Keyless use has a daily limit per network address, and Firecrawl turns away keyless requests from VPN, proxy and IPv6 addresses (HTTP 403 or 401). Without a key, DuckDuckGo backs it up (below) address; when it runs out, the check continues with the other sources and says so |
+| Socratica search (default) | Google's answer box, knowledge panel and result snippets, through Socratica's relay | None | The relay ([`relay/`](../relay/README.md), a Vercel Function) asks Serper with the project's key, so nobody needs one. 30 searches a minute and 400 a day per network address; when it's busy or out of credits, DuckDuckGo backs it up |
+| Firecrawl | Result titles, links and snippets | None. An optional free Firecrawl key (sign up with Google or GitHub, 1,000 credits) works on any network | No sign-up. Keyless use has a daily limit per network address, and Firecrawl turns away keyless requests from VPN, proxy and IPv6 addresses (HTTP 403 or 401). Without a key, DuckDuckGo backs it up (below) address; when it runs out, the check continues with the other sources and says so |
 | Google results via Serper | Google's answer box, knowledge panel and result snippets | Free Serper key (2,500 searches, no card) | The closest thing to Google web search with a free key. Google's own Custom Search JSON API is closed to new customers, so it is not offered |
 | Brave Search | Result snippets | Brave Search API key | Brave's independent index |
 
@@ -27,12 +28,12 @@ links, cleaned of markup, and ranked by how closely they match the claim's subje
 
 ### The DuckDuckGo backup
 
-Nobody has to add a key. When Firecrawl runs without one, every check also asks DuckDuckGo's Instant
+Nobody has to add a key. With Socratica search, or Firecrawl without a key, every check also asks DuckDuckGo's Instant
 Answer API (keyless, with no documented network limits) about the subject of each claim. It answers with a
 short summary of that thing, usually Wikipedia's, and related topics: encyclopedia-style evidence, not
-full web results. Where Firecrawl's free tier turns a network away, the check carries on with
-DuckDuckGo, Wikipedia and Wikidata, and the note says that an optional free Firecrawl key adds full
-web results there. With a Firecrawl key, or with Serper or Brave, the backup isn't used.
+full web results. When the relay is busy or out of credits, or Firecrawl's free tier turns a network
+away, the check carries on with DuckDuckGo, Wikipedia and Wikidata, and the note says what happened.
+With a Firecrawl key, or with Serper or Brave, the backup isn't used.
 
 ## How searches are built
 
@@ -79,14 +80,15 @@ because a user expects the claim to be false.
 
 ## Chrome extension
 
-Open Settings and accept the privacy notice. The **Web search** card is marked Required: Firecrawl
-is selected by default and needs nothing else. To use Serper or Brave instead, select it and paste
+Open Settings and accept the privacy notice. The **Web search** card is marked Required: Socratica
+search is selected by default and needs nothing else (it has no key field). Settings from 0.2 that used
+Firecrawl without a key move to Socratica search. To use Serper or Brave instead, select it and paste
 its key; Save refuses an engine that needs a key and has none. Each engine's key is remembered
 separately, so switching back and forth keeps them. If the engine's site permission is declined,
 checks stop with a message telling you to press Save and allow it.
 
 Wikipedia, Wikidata and Europe PMC are also enabled by default after consent; every other source has
-an independent toggle. Existing users must accept consent version 4 before any requests resume.
+an independent toggle. Existing users must accept consent version 5 before any requests resume.
 Settings from earlier versions are migrated: a Brave key becomes the Brave engine choice, and Tavily
 settings are dropped.
 
@@ -110,12 +112,12 @@ Disabling a source stops its requests, even if Chrome still retains a previously
 
 ## CLI
 
-`verify` needs a web search engine (`--web firecrawl`, `--web serper` or `--web brave`) unless you
+`verify` needs a web search engine (`--web socratica`, `--web firecrawl`, `--web serper` or `--web brave`) unless you
 check against your own files with `--evidence`. With `--evidence` alone it stays fully offline.
 
 ```bash
-# Web search with no key, plus Wikipedia
-node packages/cli/dist/socratica.mjs verify --answer answer.txt --web firecrawl --wikipedia
+# Web search with no key (Socratica search), plus Wikipedia
+node packages/cli/dist/socratica.mjs verify --answer answer.txt --web socratica --wikipedia
 
 # Google results through Serper; SOCRATICA_SERPER_API_KEY must already be in the environment.
 node packages/cli/dist/socratica.mjs verify --answer answer.txt --web serper

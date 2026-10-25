@@ -65,6 +65,30 @@ describe('evidence source CLI flags', () => {
     expect(result.errors[0].message).toContain("Firecrawl's free tier doesn't search from this network (HTTP 403)");
   });
 
+  it('searches through the Socratica relay with no key, backed up by DuckDuckGo', async () => {
+    const t = io();
+    const fetch = t.x.fetch;
+    t.x.fetch = async (url, init) => {
+      if (!url.includes('socratica-search.vercel.app')) return fetch(url, init);
+      t.calls.push({ url, init });
+      return { ok: true, status: 200, text: async () => '', json: async () => ({ organic: [{ title: 'Eiffel Tower', link: 'https://example.org/tower', snippet: 'The Eiffel Tower opened in 1889.' }] }) };
+    };
+    expect(await main(['verify', '--answer', '-', '--format', 'json', '--web', 'socratica', '--fail-on-contradiction'], t.x)).toBe(2);
+    const relay = t.calls.find((c) => c.url.includes('socratica-search.vercel.app'))!;
+    expect(relay.url).toBe('https://socratica-search.vercel.app/api/search');
+    expect(JSON.parse(String(relay.init!.body))).toEqual({ q: 'eiffel tower opened' });
+    expect(t.calls.some((c) => c.url.includes('api.duckduckgo.com'))).toBe(true);
+    expect(JSON.parse(t.output()).verdicts[0].quotes[0].source.providerId).toBe('socratica');
+  });
+
+  it('uses another relay from SOCRATICA_RELAY_URL, and only an https one', async () => {
+    const t = io({ SOCRATICA_RELAY_URL: 'https://my-relay.example/api/search' });
+    await main(['verify', '--answer', '-', '--format', 'json', '--web', 'socratica'], t.x);
+    expect(t.calls.some((c) => c.url === 'https://my-relay.example/api/search')).toBe(true);
+    const insecure = io({ SOCRATICA_RELAY_URL: 'http://my-relay.example/api/search' });
+    await expect(main(['verify', '--answer', '-', '--web', 'socratica'], insecure.x)).rejects.toThrow('https://');
+  });
+
   it('uses no DuckDuckGo backup when Firecrawl has a key', async () => {
     const t = io({ SOCRATICA_FIRECRAWL_API_KEY: 'fc-test' }, tower);
     await main(args, t.x);
@@ -98,7 +122,7 @@ describe('evidence source CLI flags', () => {
 
   it('requires a web search engine unless local evidence files are supplied', async () => {
     const t = io();
-    await expect(main(['verify', '--answer', '-'], t.x)).rejects.toThrow('--web firecrawl (free, no key needed)');
+    await expect(main(['verify', '--answer', '-'], t.x)).rejects.toThrow('--web socratica (free, no key needed)');
     await expect(main(['verify', '--answer', '-', '--web', 'toString'], t.x)).rejects.toThrow('Unknown --web toString');
     expect(t.calls).toEqual([]);
   });

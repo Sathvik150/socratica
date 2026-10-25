@@ -1,6 +1,6 @@
 {
   "name": "socratica",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Model-independent, evidence-linked fact verification for chatbot answers.",

@@ -29,7 +29,7 @@ describe('options page', () => {
     accept.click();
     await flush();
     expect(hasValidConsent(state.settings)).toBe(true);
-    expect(state.requested[0]).toEqual(['https://api.firecrawl.dev/*', 'https://api.duckduckgo.com/*', 'https://en.wikipedia.org/*', 'https://www.wikidata.org/*', 'https://www.ebi.ac.uk/*']);
+    expect(state.requested[0]).toEqual(['https://socratica-search.vercel.app/*', 'https://api.duckduckgo.com/*', 'https://en.wikipedia.org/*', 'https://www.wikidata.org/*', 'https://www.ebi.ac.uk/*']);
     expect(document.querySelector('#withdraw')).not.toBeNull();
   });
 

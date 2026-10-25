@@ -3,7 +3,16 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [SemVer](https://semver.org/).
 
-## [0.2.1] - 2026-10-25
+## [0.3.0] - 2026-10-25
+
+### Added
+- **Socratica search, the new default engine: Google results with no key for anyone.** A small search relay
+  ([`relay/`](relay/README.md), one Vercel Function) forwards each claim-based query to Serper with the project's key,
+  which lives only in Vercel's environment settings. It keeps no record of queries, answers repeats from a 10-minute
+  in-memory cache, and limits each network address to 30 searches a minute and 400 a day. When it is busy or out of
+  credits, the DuckDuckGo backup takes over. Settings from 0.2 that used Firecrawl without a key move to it; the CLI
+  uses it with `--web socratica` (`SOCRATICA_RELAY_URL` points at another deployment). It is a new destination, so the
+  privacy notice moves to version 5.
 
 ### Fixed
 - **Firecrawl's "could not be reached (HTTP 403)", and no key needed anywhere.** Without a key, Firecrawl turns away
@@ -11,7 +20,7 @@ All notable changes to this project are documented here. The format follows
   (HTTP 429). Keyless Firecrawl is now backed up by DuckDuckGo's Instant Answer API, which needs no key and has no documented network limits,
   so checks carry on with DuckDuckGo, Wikipedia and Wikidata and nobody has to add a key. The note says what happened and
   that an optional free Firecrawl key adds full web results on that network. The CLI's `--web firecrawl` uses the same
-  backup. DuckDuckGo is a new destination, so the privacy notice moves to version 4.
+  backup.
 - **Every claim came back unverifiable on long, framed answers.** Searches went to the reporter or the first capitalized
   word ("NASA", "According", "Scientists") and passages about the actual fact scored too low to reach the judge.
   Searches now target each fact (`james webb space telescope launch`, `earth oxygen concentration`,
@@ -180,7 +189,7 @@ Hallucination Firewall is now **Socratica**. This release also replaces the unre
 - **Benchmark**: 37 labeled synthetic items, a runner, and a `BaselineVerifier` plug-in interface.
 - Release packaging (`pnpm package`) and GitHub Actions for CI and tagged releases.
 
-[0.2.1]: https://github.com/sathvik150/cac26/releases/tag/v0.2.1
+[0.3.0]: https://github.com/sathvik150/cac26/releases/tag/v0.3.0
 [0.2.0]: https://github.com/sathvik150/cac26/releases/tag/v0.2.0
 [0.1.5]: https://github.com/sathvik150/cac26/releases/tag/v0.1.5
 [0.1.4]: https://github.com/sathvik150/cac26/releases/tag/v0.1.4

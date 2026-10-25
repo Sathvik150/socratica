@@ -51,12 +51,13 @@ To check claims about the real world, `verify` needs a web search engine. Pick o
 
 | Engine | Flag | Key |
 |---|---|---|
+| Socratica search | `--web socratica` | None. Google results through Socratica's relay; `SOCRATICA_RELAY_URL` points at another deployment |
 | Firecrawl | `--web firecrawl` | None. Without a key, DuckDuckGo's keyless answers back it up where Firecrawl's free tier refuses the network. An optional `SOCRATICA_FIRECRAWL_API_KEY` gives full web results on any network |
 | Google results via Serper | `--web serper` | `SOCRATICA_SERPER_API_KEY` (free sign-up at serper.dev) |
 | Brave Search | `--web brave` | `SOCRATICA_BRAVE_API_KEY` |
 
 ```bash
-echo "The Eiffel Tower opened in 1899." | node socratica.mjs verify --answer - --web firecrawl --wikipedia
+echo "The Eiffel Tower opened in 1899." | node socratica.mjs verify --answer - --web socratica --wikipedia
 ```
 
 Without `--web` or `--evidence`, `verify` stops and asks for one. The engine receives short queries

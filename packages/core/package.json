@@ -1,6 +1,6 @@
 {
   "name": "@socratica/core",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Platform-agnostic claim extraction, evidence retrieval and evidence-linked verification.",
   "license": "MIT",
   "type": "module",

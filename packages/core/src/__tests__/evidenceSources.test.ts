@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  BraveSearchEvidenceProvider, DuckDuckGoEvidenceProvider, EuropePmcEvidenceProvider, FirecrawlSearchEvidenceProvider, GoogleFactCheckEvidenceProvider, HeuristicLLM,
+  BraveSearchEvidenceProvider, DuckDuckGoEvidenceProvider, EuropePmcEvidenceProvider, FirecrawlSearchEvidenceProvider, SocraticaSearchEvidenceProvider, SOCRATICA_RELAY_URL, GoogleFactCheckEvidenceProvider, HeuristicLLM,
   SerperEvidenceProvider, UrlEvidenceProvider, WikidataEvidenceProvider, WikipediaEvidenceProvider, createWebSearch,
   retrieveEvidence, runVerification, trustedUrl, verifyClaim, type Claim, type FetchLike, type Passage,
 } from '../index.js';
@@ -384,11 +384,33 @@ describe('web search engines (fake fetch, no network)', () => {
     expect(f.calls[0]!.init!.headers ?? {}).not.toHaveProperty('authorization');
   });
 
+  it('Socratica search sends only the focused query to the relay, with no key, and reads its Serper-shaped answer', async () => {
+    const f = fake(() => response({
+      answerBox: { title: 'Eiffel Tower opening', link: 'https://example.org/answer', snippet },
+      organic: [{ title: 'History', link: 'https://example.org/history', snippet: 'Construction of the Eiffel Tower finished and it opened in 1889.' }],
+    }));
+    const found = await new SocraticaSearchEvidenceProvider({ fetch: f.fetch }).retrieve(claim, opts);
+    expect(found.map((p) => p.source.url).sort()).toEqual(['https://example.org/answer', 'https://example.org/history']);
+    expect(found.every((p) => p.source.providerId === 'socratica')).toBe(true);
+    expect(f.calls[0]!.url).toBe(SOCRATICA_RELAY_URL);
+    expect(JSON.parse(f.calls[0]!.init!.body!)).toEqual({ q: 'eiffel tower opened' });
+    expect(Object.keys(f.calls[0]!.init!.headers as Record<string, string>)).toEqual(['content-type']);
+  });
+
+  it('Socratica search reports an unavailable or busy relay without failing the check', async () => {
+    const down = fake(() => response({ error: 'Shared search is unavailable right now.' }, 503));
+    await expect(new SocraticaSearchEvidenceProvider({ fetch: down.fetch }).retrieve(claim, opts)).rejects.toThrow("Socratica's shared search is unavailable right now (HTTP 503). The other sources were still used.");
+    const busy = fake(() => response({ error: 'Too many searches' }, 429, { 'retry-after': '40' }));
+    await expect(new SocraticaSearchEvidenceProvider({ fetch: busy.fetch }).retrieve(claim, opts)).rejects.toThrow('Socratica search is temporarily unavailable (HTTP 429); try again in 40 seconds.');
+    expect(() => new SocraticaSearchEvidenceProvider({ fetch: down.fetch, relayUrl: 'http://insecure.example/api/search' })).toThrow('https://');
+  });
+
   it('createWebSearch builds Firecrawl without a key and explains a missing key for the others', () => {
     const { fetch } = fake(() => response({}));
     expect(createWebSearch('firecrawl', { fetch }).id).toBe('firecrawl');
+    expect(createWebSearch('socratica', { fetch }).id).toBe('socratica');
     expect(createWebSearch('serper', { fetch, apiKey: 'k' }).id).toBe('serper');
-    expect(() => createWebSearch('serper', { fetch })).toThrow('Google (via Serper) needs an API key (free sign-up at https://serper.dev), or choose Firecrawl, which works without a key on most networks.');
+    expect(() => createWebSearch('serper', { fetch })).toThrow('Google (via Serper) needs an API key (free sign-up at https://serper.dev), or choose Socratica search, which needs none.');
     expect(() => createWebSearch('brave', { fetch, apiKey: '  ' })).toThrow(/Brave Search needs an API key/);
   });
 });

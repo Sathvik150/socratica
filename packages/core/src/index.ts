@@ -14,11 +14,14 @@ export {
   BraveSearchEvidenceProvider,
   FirecrawlSearchEvidenceProvider,
   SerperEvidenceProvider,
+  SocraticaSearchEvidenceProvider,
+  SOCRATICA_RELAY_URL,
   WEB_SEARCH_ENGINES,
   createWebSearch,
   type BraveSearchOptions,
   type FirecrawlSearchOptions,
   type SerperOptions,
+  type SocraticaSearchOptions,
   type WebSearchEngine,
 } from './providers/evidence/webSearch.js';
 export { WikidataEvidenceProvider, type WikidataOptions } from './providers/evidence/wikidata.js';

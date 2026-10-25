@@ -20,7 +20,7 @@ import {
 } from '@socratica/core';
 import type { PlatformId } from './adapters/adapter.js';
 import type { TestJudgeResponse, VerifyResponse } from './messages.js';
-import { DEFAULT_MODELS, HOST_PERMISSIONS, WEB_KEY_FIELD, hasValidConsent, localOrigin, usesKeylessBackup, type Settings } from './settings.js';
+import { DEFAULT_MODELS, HOST_PERMISSIONS, hasValidConsent, localOrigin, usesKeylessBackup, webSearchKey, type Settings } from './settings.js';
 
 // One Wikipedia provider per fetch function, so its article cache survives across answers
 // and the extension sends Wikimedia fewer requests.
@@ -101,7 +101,7 @@ function withLocalHints(fetch: FetchLike, baseUrl: string, model: string): Fetch
  */
 export async function webSearchFor(settings: Settings, deps: ServiceDeps): Promise<{ provider: EvidenceProvider } | { error: string }> {
   const { engine } = settings.evidence.web;
-  const apiKey = settings.evidence.web[WEB_KEY_FIELD[engine]].trim();
+  const apiKey = webSearchKey(settings);
   const name = WEB_SEARCH_ENGINES[engine].name;
   let provider: EvidenceProvider;
   try {

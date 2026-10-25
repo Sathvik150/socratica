@@ -31,7 +31,7 @@ import {
 import { loadEvidence } from './evidence.js';
 import { validateVerdicts, type ValidateInput } from './validate.js';
 
-export const VERSION = '0.2.1';
+export const VERSION = '0.3.0';
 
 export const HELP = `socratica ${VERSION} - evidence-linked fact checking (supported / contradicted / unverifiable)
 
@@ -52,9 +52,10 @@ VERIFY OPTIONS
   --answer <file|->        Answer text to check ("-" reads stdin).
   --question <text>        The question that produced the answer (context only).
   --evidence <file|dir>    Evidence documents: .json ([{title,text,url}]), .txt/.md, or a folder. Repeatable.
-  --web <engine>           Web search engine: firecrawl (free, no key; backed up by DuckDuckGo answers),
-                           serper (Google results, free key) or brave (your key). Required unless you
-                           pass --evidence files.
+  --web <engine>           Web search engine: socratica (Google results through Socratica's relay; free,
+                           no key), firecrawl (free, no key), serper (Google results, your free key) or
+                           brave (your key). The keyless ones are backed up by DuckDuckGo answers.
+                           Required unless you pass --evidence files.
   --wikipedia              Also search English Wikipedia (network).
   --wikidata               Search structured Wikidata statements (network, no key).
   --europe-pmc             Search biomedical abstracts (network, no key).
@@ -74,6 +75,7 @@ ENVIRONMENT
   SOCRATICA_ANTHROPIC_API_KEY     Key for --llm anthropic.
   SOCRATICA_LOCAL_API_KEY         Optional key for --llm local.
   SOCRATICA_GOOGLE_FACT_CHECK_API_KEY  Key for --fact-check.
+  SOCRATICA_RELAY_URL             Another deployment of the search relay for --web socratica (https only).
   SOCRATICA_FIRECRAWL_API_KEY     Optional key for --web firecrawl (full results on VPNs and past the free limit).
   SOCRATICA_SERPER_API_KEY        Key for --web serper (free sign-up at serper.dev).
   SOCRATICA_BRAVE_API_KEY         Key for --web brave.
@@ -81,7 +83,7 @@ ENVIRONMENT
 
 EXAMPLES
   socratica verify --answer answer.txt --evidence sources/
-  echo "The Eiffel Tower opened in 1899." | socratica verify --answer - --web firecrawl --wikipedia
+  echo "The Eiffel Tower opened in 1899." | socratica verify --answer - --web socratica --wikipedia
   socratica verify --answer a.txt --evidence docs.json --llm local --model llama3.1
 `;
 
@@ -93,6 +95,7 @@ export interface ParsedArgs {
 const BOOLEAN_FLAGS = new Set(['wikipedia', 'wikidata', 'europe-pmc', 'world-bank', 'gov-uk', 'fact-check', 'help', 'version', 'fail-on-contradiction']);
 
 const WEB_KEY_ENV: Record<WebSearchEngine, string> = {
+  socratica: 'SOCRATICA_RELAY_URL',
   firecrawl: 'SOCRATICA_FIRECRAWL_API_KEY',
   serper: 'SOCRATICA_SERPER_API_KEY',
   brave: 'SOCRATICA_BRAVE_API_KEY',
@@ -228,14 +231,16 @@ export async function main(argv: string[], io: Io): Promise<number> {
     const providers: EvidenceProvider[] = [];
     const engine = one(flags, 'web');
     if (engine !== undefined) {
-      if (!Object.hasOwn(WEB_SEARCH_ENGINES, engine)) throw new UsageError(`Unknown --web ${engine} (expected firecrawl, serper or brave)`);
-      const key = env[WEB_KEY_ENV[engine as WebSearchEngine]];
-      try { providers.push(createWebSearch(engine as WebSearchEngine, { fetch: io.fetch, ...(key ? { apiKey: key } : {}) })); }
+      if (!Object.hasOwn(WEB_SEARCH_ENGINES, engine)) throw new UsageError(`Unknown --web ${engine} (expected socratica, firecrawl, serper or brave)`);
+      const relay = engine === 'socratica';
+      const key = relay ? undefined : env[WEB_KEY_ENV[engine as WebSearchEngine]];
+      const relayUrl = relay ? env.SOCRATICA_RELAY_URL : undefined;
+      try { providers.push(createWebSearch(engine as WebSearchEngine, { fetch: io.fetch, ...(key ? { apiKey: key } : {}), ...(relayUrl ? { relayUrl } : {}) })); }
       catch (err) { throw new UsageError(`${err instanceof Error ? err.message : 'Web search is not set up.'} Set ${WEB_KEY_ENV[engine as WebSearchEngine]} in the environment.`); }
-      // Keyless Firecrawl is backed up by DuckDuckGo's keyless answers where Firecrawl's free tier refuses the network.
-      if (engine === 'firecrawl' && !key) providers.push(new DuckDuckGoEvidenceProvider({ fetch: io.fetch }));
+      // The keyless engines are backed up by DuckDuckGo's keyless answers when they can't search.
+      if (relay || (engine === 'firecrawl' && !key)) providers.push(new DuckDuckGoEvidenceProvider({ fetch: io.fetch }));
     } else if (documents.length === 0) {
-      throw new UsageError('verify needs a web search engine: add --web firecrawl (free, no key needed), --web serper or --web brave. Or check against your own files with --evidence.');
+      throw new UsageError('verify needs a web search engine: add --web socratica (free, no key needed), --web firecrawl, --web serper or --web brave. Or check against your own files with --evidence.');
     }
     if (flags.has('wikipedia')) providers.push(new WikipediaEvidenceProvider({ fetch: io.fetch }));
     if (flags.has('wikidata')) providers.push(new WikidataEvidenceProvider({ fetch: io.fetch }));

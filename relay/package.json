@@ -1,0 +1,12 @@
+{
+  "name": "@socratica/relay",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Socratica's search relay: a Vercel Function that searches Google results via Serper for users without a key.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  }
+}

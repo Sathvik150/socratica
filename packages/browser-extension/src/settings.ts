@@ -2,7 +2,7 @@ import { trustedUrl, type WebSearchEngine } from '@socratica/core';
 import type { PlatformId } from './adapters/adapter.js';
 
 /** Bump when the consent text changes materially; users must consent again. */
-export const CONSENT_VERSION = 4;
+export const CONSENT_VERSION = 5;
 
 export type LLMChoice = 'heuristic' | 'openai' | 'anthropic' | 'local';
 
@@ -18,7 +18,7 @@ export interface Settings {
     wikipedia: boolean; wikidata: boolean; europePmc: boolean; worldBank: boolean; govUk: boolean;
     googleFactCheck: boolean; googleFactCheckApiKey: string;
     urls: boolean; trustedUrls: string[];
-    /** Web search is required: every check uses the chosen engine. Firecrawl needs no key (DuckDuckGo backs it up). */
+    /** Web search is required: every check uses the chosen engine. Socratica search and Firecrawl need no key (DuckDuckGo backs them up). */
     web: { engine: WebSearchEngine; firecrawlApiKey: string; serperApiKey: string; braveApiKey: string };
   };
 }
@@ -33,7 +33,7 @@ export const DEFAULT_SETTINGS: Settings = {
     wikipedia: true, wikidata: true, europePmc: true, worldBank: false, govUk: false,
     googleFactCheck: false, googleFactCheckApiKey: '',
     urls: false, trustedUrls: [],
-    web: { engine: 'firecrawl', firecrawlApiKey: '', serperApiKey: '', braveApiKey: '' },
+    web: { engine: 'socratica', firecrawlApiKey: '', serperApiKey: '', braveApiKey: '' },
   },
 };
 
@@ -57,17 +57,28 @@ export const HOST_PERMISSIONS = {
   serper: 'https://google.serper.dev/*',
   brave: 'https://api.search.brave.com/*',
   duckduckgo: 'https://api.duckduckgo.com/*',
+  socratica: 'https://socratica-search.vercel.app/*',
 } as const;
 
-/** The key field for each web search engine (Firecrawl's is optional). */
-export const WEB_KEY_FIELD = { firecrawl: 'firecrawlApiKey', serper: 'serperApiKey', brave: 'braveApiKey' } as const;
+/** The key field for each web search engine: none for Socratica search, optional for Firecrawl. */
+export const WEB_KEY_FIELD: Record<WebSearchEngine, 'firecrawlApiKey' | 'serperApiKey' | 'braveApiKey' | undefined> = {
+  socratica: undefined, firecrawl: 'firecrawlApiKey', serper: 'serperApiKey', brave: 'braveApiKey',
+};
+
+/** The key saved for the chosen engine ('' when it has none). */
+export function webSearchKey(s: Settings): string {
+  const field = WEB_KEY_FIELD[s.evidence.web.engine];
+  return field ? s.evidence.web[field].trim() : '';
+}
 
 /**
- * Firecrawl without a key is backed up by DuckDuckGo's keyless answers, because Firecrawl's free tier
- * turns some networks away (VPNs, proxies, IPv6) and has a daily cap. Nobody has to add a key.
+ * The keyless engines are backed up by DuckDuckGo's keyless answers: Socratica search can be busy or
+ * out of credits, and Firecrawl's free tier turns some networks away (VPNs, proxies, IPv6) and has a
+ * daily cap. Nobody has to add a key.
  */
 export function usesKeylessBackup(s: Settings): boolean {
-  return s.evidence.web.engine === 'firecrawl' && !s.evidence.web.firecrawlApiKey.trim();
+  const { engine, firecrawlApiKey } = s.evidence.web;
+  return engine === 'socratica' || (engine === 'firecrawl' && !firecrawlApiKey.trim());
 }
 
 /** Host-permission pattern for a local OpenAI-compatible server, e.g. http://localhost:11434/v1 -> http://localhost/* */
@@ -109,13 +120,18 @@ const LEGACY_KEY = 'hf-settings';
 
 function merge(stored: Partial<Settings> | undefined): Settings {
   const s = stored ?? {};
+  const evidence = mergeEvidence(s.evidence);
+  // Before 0.3 keyless Firecrawl was the default; those settings move to Socratica search, which replaced it.
+  if ((s.consent?.version ?? 0) < 5 && evidence.web.engine === 'firecrawl' && !evidence.web.firecrawlApiKey.trim()) {
+    evidence.web = { ...evidence.web, engine: 'socratica' };
+  }
   return {
     consent: { ...DEFAULT_SETTINGS.consent, ...s.consent },
     enabled: s.enabled ?? DEFAULT_SETTINGS.enabled,
     platforms: { ...DEFAULT_SETTINGS.platforms, ...s.platforms },
     autoCheck: s.autoCheck ?? DEFAULT_SETTINGS.autoCheck,
     llm: { ...DEFAULT_SETTINGS.llm, ...s.llm },
-    evidence: mergeEvidence(s.evidence),
+    evidence,
   };
 }
 

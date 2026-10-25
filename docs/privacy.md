@@ -5,12 +5,17 @@
 - **Default: no network calls.** Until you accept the privacy notice, the background worker returns before any
   provider is created. Tests cover this.
 - **After consent:**
-  - The web search engine you choose (Firecrawl by default, or Google results via Serper, or Brave Search)
-    receives **short search queries built from individual claims**, never the whole conversation. Web search is
-    required, so every check sends these queries. Without a key, Firecrawl counts usage by your network address
-    (and refuses addresses it judges to be a VPN or proxy); with your key, it counts usage against your account.
-  - With Firecrawl and no key, DuckDuckGo's Instant Answer API also receives the name of what each claim is about
-    (for example "james webb space telescope"), as a keyless backup.
+  - The web search engine you choose receives **short search queries built from individual claims**, never the
+    whole conversation. Web search is required, so every check sends these queries.
+  - **Socratica search** (the default) sends them to Socratica's own relay on Vercel ([`relay/`](../relay/README.md)),
+    which passes each one to Serper (Google results) with the project's key. The relay does not log or store
+    queries; it answers a repeated query from a 10-minute in-memory cache, and uses your network address only to
+    limit searches (30 a minute, 400 a day), counted in memory. Vercel, which hosts it, and Serper see the request
+    as their own services normally do.
+  - The alternatives: Firecrawl (without a key it counts usage by your network address and refuses addresses it
+    judges to be a VPN or proxy), and Serper or Brave Search with your own key, which receive the queries directly.
+  - With Socratica search or keyless Firecrawl, DuckDuckGo's Instant Answer API also receives the name of what each
+    claim is about (for example "james webb space telescope"), as a keyless backup.
   - Wikipedia, Europe PMC, GOV.UK and Google Fact Check also receive short claim-based queries. Wikidata receives
     entity names from claim context. World Bank receives country, indicator and date requests. Wikipedia, Wikidata
     and Europe PMC are enabled by default after consent; each of these can be disabled independently.
@@ -29,15 +34,16 @@
   the engine you choose and the sources you enable.
   The optional HTTPS wildcard declaration enables user-supplied URLs; permission requests use only the specific
   site origins the user enters, never blanket access to all HTTPS sites.
-- **Consent version 4:** adding new destinations (the web search engines in 0.2.0, the DuckDuckGo backup in 0.2.1)
-  requires existing users to accept the updated notice before any requests resume. Declining a source's permission skips that source and
+- **Consent version 5:** adding new destinations (the web search engines in 0.2.0, the DuckDuckGo backup and the
+  Socratica search relay in 0.3.0) requires existing users to accept the updated notice before any requests resume. Declining a source's permission skips that source and
   displays a warning; declining the web search engine's permission stops checks until it is allowed.
 - **Local model judge:** claims and passages go only to the server URL you enter, which must be on your own machine.
-- **No backend, accounts, telemetry or analytics.**
+- **No accounts, telemetry or analytics.** The only Socratica server is the search relay described above; choose
+  another engine and nothing goes through it.
 
 ## CLI
 
-- `verify` needs a web search engine (`--web firecrawl`, `--web serper` or `--web brave`), which receives
+- `verify` needs a web search engine (`--web socratica`, `--web firecrawl`, `--web serper` or `--web brave`), which receives
   claim-based queries, unless you check only against your own `--evidence` files; then it stays offline.
   More network evidence is opt-in using `--wikipedia`, `--wikidata`, `--europe-pmc`, `--world-bank`, `--gov-uk`,
   `--fact-check` or `--evidence-url`. Model requests use `--llm openai`, `--llm anthropic`, or

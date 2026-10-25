@@ -85,7 +85,7 @@ export function friendlyWarning(warning: string): string {
 const SOURCE_NAMES: Record<string, string> = {
   wikipedia: 'Wikipedia', wikidata: 'Wikidata', 'europe-pmc': 'Europe PMC', 'world-bank': 'World Bank', 'gov-uk': 'GOV.UK',
   'google-fact-check': 'Google Fact Check', urls: 'Trusted URLs',
-  firecrawl: 'Firecrawl', serper: 'Google (via Serper)', brave: 'Brave Search', duckduckgo: 'DuckDuckGo',
+  socratica: 'Socratica search', firecrawl: 'Firecrawl', serper: 'Google (via Serper)', brave: 'Brave Search', duckduckgo: 'DuckDuckGo',
 };
 
 export const OFFLINE_JUDGE_PREFIX = 'Using the offline heuristic judge';
