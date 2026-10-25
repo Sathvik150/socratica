@@ -19,7 +19,11 @@ await build({
   // IIFE everywhere: content scripts cannot be ES modules, and the demo page must also open from file://.
   format: 'iife',
   target: 'chrome120',
-  sourcemap: true,
+  // Minified for load speed (Chrome Web Store allows minified, not obfuscated, code);
+  // linked source maps keep stack traces readable and are left out of release zips.
+  minify: true,
+  sourcemap: 'linked',
+  legalComments: 'linked',
   logLevel: 'info',
 });
 

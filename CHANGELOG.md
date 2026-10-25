@@ -5,6 +5,22 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- **Redesigned extension UI** (popup, settings, in-ChatGPT overlay, demo) with one shared design system in plain CSS:
+  light/dark themes, switch toggles, verdict meter and icons, evidence panel with confidence meter, and a new
+  extension icon. The overlay follows ChatGPT's own light/dark theme.
+- **Highlights use the CSS Custom Highlight API** where available: the browser styles the claim text itself, so
+  highlights no longer lag behind the text while scrolling and no DOM is rebuilt. Positioned boxes remain as a fallback.
+- **Rate-limit (HTTP 429) and source failures** are shown as plain-language notes ("Wikipedia is rate-limiting
+  requests right now (try again in 29s). Other enabled sources were still used.").
+- Claim details under an answer start collapsed, and the "checking" bar matches the final bar's height, so results
+  no longer push the page down.
+
+### Performance
+- Verdict validation uses `zod/mini` (same rules, ~13 KB instead of ~440 KB).
+- Extension and CLI bundles are minified, with linked source maps (not shipped in release zips).
+  background.js 848 KB → 59 KB, demo.js 828 KB → 60 KB, hf-verify.mjs 886 KB → 467 KB.
+
 ### Removed
 - Crossref evidence source (core provider, CLI `--crossref` flag, extension option and permission).
 
