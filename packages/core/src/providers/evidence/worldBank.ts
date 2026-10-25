@@ -27,7 +27,7 @@ function mentions(haystack: string, value: string): boolean {
 export class WorldBankEvidenceProvider implements EvidenceProvider {
   readonly id = 'world-bank';
   readonly #http: EvidenceHttp;
-  constructor(opts: WorldBankOptions) { this.#http = new EvidenceHttp('World Bank', opts.fetch); }
+  constructor(opts: WorldBankOptions) { this.#http = new EvidenceHttp('World Bank', opts.fetch, false, 2); }
 
   async retrieve(claim: Claim, options: RetrieveOptions): Promise<Array<Omit<Passage, 'id'>>> {
     const indicator = INDICATORS.find((i) => i.test.test(claim.text));

@@ -6,7 +6,8 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json --noEmit && node build.mjs",
+    "build:css": "node scripts/build-css.mjs",
+    "build": "node scripts/build-css.mjs && tsc -p tsconfig.json --noEmit && node build.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
@@ -14,8 +15,10 @@
     "@hallucination-firewall/core": "workspace:*"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "4.3.3",
     "@types/chrome": "0.1.43",
     "esbuild": "0.28.2",
-    "jsdom": "26.1.0"
+    "jsdom": "26.1.0",
+    "tailwindcss": "4.3.3"
   }
 }

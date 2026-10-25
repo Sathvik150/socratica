@@ -1,0 +1,111 @@
+/*
+ * In-page overlay (summary bar + evidence panel), rendered inside Shadow DOM.
+ * Compiled by the Tailwind CLI into src/ui/overlay.generated.ts. No preflight: the shadow
+ * root is isolated already, and :host { all: initial } resets inherited page styles.
+ */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@import "./tokens.css";
+
+@layer base {
+  :host { all: initial; @apply hf-light; }
+  /* The overlay follows ChatGPT's theme, not only the OS setting. */
+  :host([data-theme="dark"]) { @apply hf-dark; }
+  * { box-sizing: border-box; font-family: var(--font-sans); }
+  [hidden] { display: none !important; }
+  svg { flex: none; }
+}
+
+@layer components {
+  /* ---------- Summary bar ---------- */
+  .bar {
+    @apply relative mt-2.5 mb-1.5 px-3 py-2.5 rounded-card text-[13px] leading-[1.45]
+      bg-surface text-fg border border-line animate-rise;
+  }
+  .head { @apply flex items-center gap-2; }
+  .brand { @apply inline-flex items-center gap-[7px] font-semibold tracking-[-.01em]; }
+  .logo { @apply size-5 rounded-md grid place-items-center bg-accent text-white; }
+  .spacer { @apply flex-1; }
+  .status { @apply text-muted; }
+
+  .skeleton { @apply hf-skeleton; }
+  /* Skeleton: the finished bar's footprint (meter, chip row, details toggle), so results don't shift the page. */
+  .skeleton.meter-ph { @apply h-1.5 mt-2.5 mb-2; }
+  .skeleton-row { @apply flex gap-1.5; }
+  .skeleton.chip-ph { @apply w-[92px] h-[22px]; }
+  .skeleton.chip-ph:nth-child(2) { @apply w-[104px]; }
+  .skeleton.chip-ph:last-child { @apply w-[68px]; }
+  .skeleton.toggle-ph { @apply w-[96px] h-3.5 mt-[11px] mb-[3px] rounded-md; }
+
+  .meter { @apply flex gap-0.5 h-1.5 mt-2.5 mb-2 rounded-full overflow-hidden bg-surface-3; }
+  .meter i { @apply block h-full origin-left animate-grow; }
+  .meter .supported { @apply bg-ok; }
+  .meter .contradicted { @apply bg-bad; }
+  .meter .unverifiable { @apply bg-unk; }
+
+  .row { @apply flex flex-wrap items-center gap-1.5; }
+  .chip { @apply inline-flex items-center gap-1 px-[9px] py-0.5 rounded-full text-xs font-semibold whitespace-nowrap border border-transparent; }
+  .chip.supported { @apply bg-ok-bg text-ok border-ok-line; }
+  .chip.contradicted { @apply bg-bad-bg text-bad border-bad-line; }
+  .chip.unverifiable { @apply bg-unk-bg text-unk border-unk-line; }
+  .chip.checked { @apply bg-transparent text-muted font-medium pl-0.5; }
+  .tag { @apply inline-flex items-center px-2 py-px rounded-full text-[11px] font-medium text-muted border border-dashed border-line-strong cursor-help; }
+
+  button {
+    @apply inline-flex items-center gap-[5px] text-xs font-medium cursor-pointer rounded-control px-[9px] py-1
+      border border-line bg-surface text-fg transition-[border-color,background-color,transform] duration-150;
+    font-family: inherit;
+  }
+  button:hover { @apply bg-surface-2 border-line-strong; }
+  button:active { @apply translate-y-px; }
+  button:focus-visible { @apply outline-2 outline-accent outline-offset-2; }
+  button.ghost { @apply border-transparent bg-transparent; }
+  button.ghost:hover { @apply bg-surface-2 border-line; }
+  button.more-toggle { @apply mt-1.5 px-1.5 py-[3px] text-muted font-medium; }
+  button.more-toggle svg { @apply transition-transform duration-150; }
+  button.more-toggle.open svg { @apply rotate-180; }
+
+  ul.details { @apply list-none mt-1 mb-0 p-0 grid gap-0.5; }
+  ul.details li { @apply flex gap-2 items-baseline px-1 py-1.5 border-t border-line; }
+  ul.details li button.claim {
+    @apply border-0 bg-transparent text-left p-0 text-fg text-[12.5px] font-normal underline decoration-line-strong underline-offset-[3px];
+  }
+  ul.details li button.claim:hover { @apply decoration-accent bg-transparent; }
+
+  .note { @apply flex gap-1.5 items-start mt-2 px-[9px] py-1.5 rounded-control text-xs bg-unk-bg text-fg border border-unk-line; }
+  .note svg { @apply text-unk mt-px; }
+  .note.info { @apply bg-surface-2 border-line text-muted; }
+  .note.info svg { @apply text-muted; }
+
+  /* ---------- Fallback highlight boxes (browsers without the CSS Custom Highlight API) ---------- */
+  .mark { @apply absolute left-0 top-0 will-change-transform pointer-events-auto cursor-pointer rounded-[3px]; }
+  .mark.contradicted { background: rgba(235, 87, 87, .16); box-shadow: inset 0 -2px 0 #eb5757; }
+  .mark.unverifiable { box-shadow: inset 0 -2px 0 rgba(242, 153, 74, .95); }
+
+  /* ---------- Evidence panel (the one floating element, so the one with a shadow) ---------- */
+  .panel {
+    @apply fixed z-[2] pointer-events-auto w-[min(440px,calc(100vw-24px))] max-h-[min(70vh,560px)] overflow-auto overscroll-contain
+      bg-surface text-fg border border-line-strong rounded-float shadow-float px-4 pt-3.5 pb-4 text-[13px] leading-normal animate-pop;
+  }
+  .panel::before { content: ""; @apply absolute inset-x-0 top-0 h-[3px] rounded-t-float bg-(--accent,var(--color-accent)); }
+  .panel.contradicted { --accent: var(--hf-bad); }
+  .panel.supported { --accent: var(--hf-ok); }
+  .panel.unverifiable { --accent: var(--hf-unk); }
+  .panel h3 { @apply mt-0.5 mb-2 text-[13px] flex items-center gap-2.5; }
+  .conf { @apply inline-flex items-center gap-1.5 text-muted font-medium text-xs; }
+  .conf .track { @apply w-16 h-[5px] rounded-full bg-surface-3 overflow-hidden; }
+  .conf .fill { @apply block h-full rounded-[inherit] bg-(--accent,var(--color-accent)); }
+  .panel .claim { @apply text-sm font-semibold mt-1 mb-2.5 tracking-[-.005em]; }
+  .panel .label { @apply text-[10.5px] font-bold uppercase tracking-[.08em] text-muted mt-3 mb-[5px]; }
+  .panel blockquote { @apply mt-0 mx-0 mb-2 px-[11px] py-[9px] rounded-r-control border-l-[3px] border-(--accent,var(--color-accent)) bg-surface-2; }
+  .panel .quote { @apply text-[13px]; }
+  .panel .source { @apply inline-flex items-center gap-1 mt-1.5 text-[11.5px] font-medium no-underline text-(--hf-link); }
+  .panel a.source:hover { @apply underline; }
+  .panel span.source { @apply text-muted; }
+  .panel .correction { @apply px-[11px] py-[9px] rounded-control bg-ok-bg border border-ok-line font-medium; }
+  .panel .close { @apply absolute top-2.5 right-2.5 size-7 p-0 justify-center rounded-control; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before { animation: none !important; transition: none !important; }
+}

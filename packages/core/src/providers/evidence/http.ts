@@ -4,14 +4,29 @@ declare const setTimeout: (fn: () => void, ms: number) => unknown;
 declare const clearTimeout: (timer: unknown) => void;
 declare const AbortController: { new(): { signal: unknown; abort(): void } };
 
-/** Shared bounded, short-lived request cache and per-source cooldown. No response bodies or keys in errors. */
+/**
+ * Shared bounded, short-lived request cache, per-source cooldown and request pacing
+ * (at most `concurrency` requests in flight per source). No response bodies or keys in errors.
+ */
 export class EvidenceHttp {
   readonly #cache = new Map<string, { expires: number; value: Promise<unknown> }>();
   #retryAt = 0;
   #retryStatus = 429;
-  #queue: Promise<unknown> = Promise.resolve();
+  #active = 0;
+  readonly #waiting: Array<() => void> = [];
 
-  constructor(readonly name: string, readonly fetch: FetchLike, readonly retryShort429 = false) {}
+  constructor(readonly name: string, readonly fetch: FetchLike, readonly retryShort429 = false, readonly concurrency = 1) {}
+
+  async #slot<T>(work: () => Promise<T>): Promise<T> {
+    if (this.#active >= this.concurrency) await new Promise<void>((resolve) => this.#waiting.push(resolve));
+    this.#active++;
+    try {
+      return await work();
+    } finally {
+      this.#active--;
+      this.#waiting.shift()?.();
+    }
+  }
 
   #cooldownError(): Error {
     const seconds = Math.max(1, Math.ceil((this.#retryAt - Date.now()) / 1000));
@@ -34,10 +49,11 @@ export class EvidenceHttp {
   }
 
   request<T>(url: string, read: (res: Awaited<ReturnType<FetchLike>>) => Promise<T>, init?: Parameters<FetchLike>[1]): Promise<T> {
-    const work = this.#queue.then(async () => {
+    return this.#slot(async () => {
       if (Date.now() < this.#retryAt) throw this.#cooldownError();
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 15_000);
+      // A source that hasn't answered in 8 s is treated as unavailable; slower waits made checks feel stuck.
+      const timer = setTimeout(() => controller.abort(), 8_000);
       try {
         for (let attempt = 0; ; attempt++) {
           let res;
@@ -61,8 +77,6 @@ export class EvidenceHttp {
         }
       } finally { clearTimeout(timer); }
     });
-    this.#queue = work.catch(() => undefined);
-    return work;
   }
 }
 

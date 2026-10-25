@@ -1,5 +1,5 @@
 import type { Claim, EvidenceProvider, FetchLike, Passage, RetrieveOptions } from '../../types.js';
-import { chunkText, scorePassage, searchQuery } from '../../rank.js';
+import { chunkText, scorePassage, searchQuery, subjectQuery } from '../../rank.js';
 import { MIN_RELEVANCE } from './documents.js';
 import { EvidenceHttp } from './http.js';
 
@@ -31,13 +31,25 @@ export class WikipediaEvidenceProvider implements EvidenceProvider {
   readonly #maxArticles: number;
 
   constructor(opts: WikipediaOptions) {
+    // Wikimedia asks API clients to send requests one at a time.
     this.#http = new EvidenceHttp('Wikipedia', opts.fetch, true);
     this.#base = `https://${opts.lang ?? 'en'}.wikipedia.org`;
     this.#maxArticles = opts.maxArticles ?? 2;
   }
 
   async retrieve(claim: Claim, options: RetrieveOptions): Promise<Array<Omit<Passage, 'id'>>> {
-    const q = encodeURIComponent(searchQuery(claim));
+    // Search by subject first: claims about the same thing share one cached search and
+    // article, which cuts requests (and rate-limit pressure) for a typical answer several-fold.
+    const subject = subjectQuery(claim);
+    if (subject) {
+      const found = await this.#retrieveFor(subject, claim, options);
+      if (found.length) return found;
+    }
+    return this.#retrieveFor(searchQuery(claim), claim, options);
+  }
+
+  async #retrieveFor(query: string, claim: Claim, options: RetrieveOptions): Promise<Array<Omit<Passage, 'id'>>> {
+    const q = encodeURIComponent(query);
     const data = (await this.#http.json(
       `${this.#base}/w/api.php?action=query&list=search&format=json&origin=*&srlimit=${this.#maxArticles}&srsearch=${q}`,
       { headers: WIKI_HEADERS },

@@ -1,11 +1,14 @@
 import type { PageStatus, Request, TabRequest, VerifyResponse } from './messages.js';
 import { mountPopup } from './popupView.js';
-import { loadSettings } from './settings.js';
+import { loadSettings, saveSettings } from './settings.js';
 
 const send = <T>(msg: Request) => chrome.runtime.sendMessage(msg) as Promise<T>;
 
-void mountPopup(document.getElementById('app')!, document.getElementById('pill'), {
+void mountPopup(document.getElementById('app')!, document.getElementById('power') as HTMLButtonElement | null, {
   getSettings: loadSettings,
+  async setEnabled(on) {
+    await saveSettings({ ...(await loadSettings()), enabled: on });
+  },
   async activeTab() {
     // ?tabId=N lets the popup be opened in a normal tab for debugging.
     const forced = Number(new URLSearchParams(location.search).get('tabId'));

@@ -1,5 +1,6 @@
 import type { Claim, ClaimVerdict, DowngradeReason, EvidenceQuote, LLMProvider, Passage, VerifyOptions } from './types.js';
 import { buildVerifierPrompt, parseLLMVerdict } from './prompt.js';
+import { mapConcurrent } from './retrieveEvidence.js';
 
 export interface VerifyClaimsOptions extends VerifyOptions {
   question?: string;
@@ -103,8 +104,7 @@ export async function verifyClaims(
   llm: LLMProvider,
   options: VerifyClaimsOptions = {},
 ): Promise<ClaimVerdict[]> {
-  const out: ClaimVerdict[] = [];
-  // Sequential on purpose: keeps request rate to the user's own API key modest.
-  for (const claim of claims) out.push(await verifyClaim(claim, evidence[claim.id] ?? [], llm, options));
-  return out;
+  // A small, fixed number of judge calls at once: much faster than one-by-one,
+  // while keeping the request rate to the user's own API key (or local model) modest.
+  return mapConcurrent(claims, options.concurrency ?? 3, (claim) => verifyClaim(claim, evidence[claim.id] ?? [], llm, options));
 }

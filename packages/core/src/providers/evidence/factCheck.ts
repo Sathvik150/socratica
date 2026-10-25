@@ -13,7 +13,7 @@ export class GoogleFactCheckEvidenceProvider implements EvidenceProvider {
   readonly #key: string;
   constructor(opts: GoogleFactCheckOptions) {
     if (!opts.apiKey.trim()) throw new Error('Google Fact Check requires an API key.');
-    this.#http = new EvidenceHttp('Google Fact Check', opts.fetch);
+    this.#http = new EvidenceHttp('Google Fact Check', opts.fetch, false, 3);
     this.#key = opts.apiKey;
     this.#count = count(opts.count);
   }

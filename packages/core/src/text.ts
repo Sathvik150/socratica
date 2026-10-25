@@ -9,6 +9,10 @@ const STOPWORDS = new Set(
   here s t`.split(/\s+/),
 );
 
+export function isStopword(token: string): boolean {
+  return STOPWORDS.has(token);
+}
+
 export function normalizeWhitespace(s: string): string {
   return s.replace(/\s+/g, ' ').trim();
 }

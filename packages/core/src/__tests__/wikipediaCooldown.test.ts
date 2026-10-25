@@ -23,7 +23,7 @@ describe('Wikipedia shared cooldown', () => {
     await vi.advanceTimersByTimeAsync(20_000);
     fetch.mockResolvedValue(ok({}));
     await expect(wiki.retrieve(claim!, { limit: 2 })).resolves.toEqual([]);
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch).toHaveBeenCalledTimes(3); // subject search found nothing, so the claim's own search ran too
   });
 
   it.each([null, '', 'invalid', '-1'])('uses a safe fallback for Retry-After %s', async (header) => {
@@ -62,8 +62,13 @@ describe('Wikipedia shared cooldown', () => {
     expect(results[0]!.length).toBeGreaterThan(0);
     expect(fetch).toHaveBeenCalledTimes(2);
     fetch.mockResolvedValue(limited('21'));
-    await expect(wiki.retrieve(other!, { limit: 2 })).rejects.toThrow('21 seconds');
+    // Another claim about the same subject is answered from the cached search and article, even while rate-limited.
+    expect((await wiki.retrieve(other!, { limit: 2 })).length).toBeGreaterThan(0);
     await expect(wiki.retrieve(claim!, { limit: 2 })).resolves.toEqual(results[0]);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    // A claim about something else still needs a request, and gets the cooldown error.
+    const [unrelated] = extractClaims('The Orrin Library holds 2.4 million volumes.');
+    await expect(wiki.retrieve(unrelated!, { limit: 2 })).rejects.toThrow('21 seconds');
     expect(fetch).toHaveBeenCalledTimes(3);
   });
 

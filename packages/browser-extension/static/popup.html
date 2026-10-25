@@ -5,33 +5,22 @@
   <title>Hallucination Firewall</title>
   <link rel="icon" href="icons/icon-32.png">
   <link rel="stylesheet" href="theme.css">
-  <style>
-    /* Popup-specific layout on top of theme.css */
-    body { width: 380px; max-height: 590px; overflow-y: auto; font-size: 13px; }
-    header {
-      position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 10px; padding: 12px 14px;
-      background: color-mix(in srgb, var(--hf-surface) 82%, transparent); backdrop-filter: blur(10px);
-      border-bottom: 1px solid var(--hf-border);
-    }
-    header img { width: 26px; height: 26px; border-radius: 8px; box-shadow: 0 4px 12px -4px rgba(99, 102, 241, .7); }
-    header h1 { font-size: 14px; margin: 0; flex: 1; letter-spacing: -.01em; }
-    header h1::before { content: none; }
-    main { padding: 12px 14px 14px; }
-    section { margin: 0 0 10px; padding: 12px; border-radius: 12px; }
-    h2 { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--hf-muted); margin: 0 0 6px; }
-    p { margin: 0 0 6px; }
-    .pill { font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 999px; background: var(--hf-surface-2); color: var(--hf-muted); border: 1px solid var(--hf-border); }
-    .pill.on { background: var(--hf-ok-bg); color: var(--hf-ok); border-color: var(--hf-ok-border); }
-    .pill.on::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px var(--hf-ok-bg); vertical-align: 1px; animation: hf-pulse 2s infinite; }
-    .pill.off { background: var(--hf-unk-bg); color: var(--hf-unk); border-color: var(--hf-unk-border); }
-    #app > .row:last-child { justify-content: flex-end; }
-    #selection-output:not(:empty) { margin-top: 10px; }
-    @keyframes hf-pulse { 50% { opacity: .35; } }
-  </style>
 </head>
-<body>
-  <header><img src="icons/icon-32.png" alt=""><h1>Hallucination Firewall</h1><span id="pill" class="pill">…</span></header>
-  <main id="app"><p class="muted">Loading…</p></main>
+<!-- Chrome draws the popup window itself; the content sits in a rounded card so the popup reads as rounded. -->
+<body class="popup">
+  <div class="card">
+    <header>
+      <img src="icons/icon-32.png" alt="">
+      <h1>Hallucination Firewall</h1>
+      <button type="button" id="power" class="switch" role="switch" aria-checked="false"><span class="switch-label">…</span><span class="track" aria-hidden="true"><span class="knob"></span></span></button>
+    </header>
+    <main id="app" aria-busy="true">
+      <!-- Skeleton until settings load: same layout as the "Setup" and "This page" cards. -->
+      <section class="sk-card" aria-hidden="true"><span class="sk-title"></span><span class="sk-line w-4/5"></span><span class="sk-line w-3/5"></span></section>
+      <section class="sk-card" aria-hidden="true"><span class="sk-title"></span><span class="sk-line w-1/2"></span><span class="sk-button"></span></section>
+      <section class="sk-card" aria-hidden="true"><span class="sk-title"></span><span class="sk-line w-2/3"></span><span class="sk-button w-32"></span></section>
+    </main>
+  </div>
   <script src="popup.js"></script>
 </body>
 </html>

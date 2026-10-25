@@ -26,6 +26,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      - name: Generated CSS is up to date (run `pnpm --filter ./packages/browser-extension build:css` and commit)
+        run: git diff --exit-code -- packages/browser-extension/src/ui/overlay.generated.ts packages/browser-extension/static/theme.css
       - run: pnpm test
       - name: Benchmark (offline)
         run: pnpm bench

@@ -24,6 +24,7 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
 
   const render = () => {
     root.replaceChildren();
+    root.removeAttribute('aria-busy');
     const consented = hasValidConsent(settings);
     root.append(
       h(doc, 'h1', {}, 'Hallucination Firewall'),

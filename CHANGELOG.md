@@ -3,6 +3,39 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **On/off switch** at the top of the popup. Off means nothing is read, highlighted or sent anywhere; open ChatGPT
+  tabs clear their highlights immediately and re-check when it's switched back on.
+- **Skeleton loaders** in the popup, the settings page, the selected-text check and the in-page bar, each the same
+  size as the content it stands in for.
+- `benchmark/data/wiki-style.jsonl` and `wiki-style-holdout.jsonl`: encyclopedia-style evidence for the offline judge.
+
+### Changed
+- **Faster checks.** Claims are retrieved and judged 4 at a time; Wikipedia searches once per subject instead of once
+  per claim; independent sources such as Europe PMC send up to 4 requests at once (Wikimedia stays at one at a time);
+  a slow source is dropped after 10 s (8 s per request) instead of holding up the result; finished ChatGPT turns are
+  picked up in ~150 ms instead of after 1.5 s of quiet. On a simulated 15-claim answer with 250 ms per request:
+  4.3 s → 1.5 s and 33 → 19 requests (600 ms per request: 10.3 s → 3.6 s).
+- **The offline judge gives real verdicts on encyclopedia wording**: unit-aware numbers (330 m vs 1,083 ft is a
+  conversion, not a conflict), metres/meters and other spelling variants, rounding (8,849 for 8,848.86), hedged
+  figures within 5%, "the tower"/"the statue" back-references, and years compared with years. It no longer mistakes
+  a date or the subject itself for a swapped name. Held-out accuracy 45.8% → 75.0% with no false contradictions.
+- **Summary bar:** the details (claim list, how the check ran, source notes) are behind a "Show details" toggle at
+  the bottom. The offline-judge notice is a quiet "Offline judge" label instead of a warning, and source notes appear
+  once per source.
+- **The evidence panel follows the underlined text** when the page or the chat scrolls, instead of staying fixed on
+  screen.
+- **UI rebuilt with Tailwind CSS v4** on design tokens from open-design's Linear package and the rules of the Linear
+  DESIGN.md from awesome-design-md (see `packages/browser-extension/DESIGN.md`): one lavender accent, stepped
+  surfaces, hairline borders, no gradients. The popup is a rounded card.
+- README title uses the extension icon.
+
+### Fixed
+- Markdown headings in an answer ("The History of the Eiffel Tower: Six Detailed Paragraphs") are no longer
+  checked as claims.
+
 ## [0.1.4] - 2026-10-25
 
 ### Changed

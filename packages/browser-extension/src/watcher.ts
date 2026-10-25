@@ -34,13 +34,15 @@ export class MessageWatcher {
   constructor(adapter: ChatAdapter, root: Document, opts: WatcherOptions) {
     this.#adapter = adapter;
     this.#root = root;
-    this.#opts = { debounceMs: 1500, ...opts };
+    this.#opts = { debounceMs: 600, ...opts };
   }
 
   start(): void {
     this.#observer = new MutationObserver((mutations) => {
       if (mutations.every((m) => isOwnUi(m.target))) return;
-      this.#schedule();
+      // The chat app marked a turn as finished: no need to wait out the full quiet period.
+      const finished = mutations.some((m) => m.type === 'attributes' && (m.attributeName === 'data-message-complete' || m.attributeName === 'data-talvt-turn-state'));
+      this.#schedule(finished ? Math.min(150, this.#opts.debounceMs) : this.#opts.debounceMs);
     });
     this.#observer.observe(this.#root.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class', 'data-message-id', 'data-message-complete', 'data-talvt-turn-state'] });
     this.#schedule();
@@ -56,9 +58,9 @@ export class MessageWatcher {
     this.#reported.delete(id);
   }
 
-  #schedule(): void {
+  #schedule(delay = this.#opts.debounceMs): void {
     if (this.#timer) clearTimeout(this.#timer);
-    this.#timer = setTimeout(() => this.check(), this.#opts.debounceMs);
+    this.#timer = setTimeout(() => this.check(), delay);
   }
 
   /** Run one detection pass now. Public for tests. */

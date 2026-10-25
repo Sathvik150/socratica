@@ -6,10 +6,15 @@ import { CONSENT_VERSION, DEFAULT_SETTINGS, type Settings } from '../settings.js
 const consented: Settings = { ...DEFAULT_SETTINGS, consent: { granted: true, version: CONSENT_VERSION } };
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
-function api(over: Partial<PopupApi> = {}, settings: Settings = consented) {
+function api(over: Partial<PopupApi> = {}, initial: Settings = consented) {
   const calls: string[] = [];
+  let settings = initial;
   const a: PopupApi = {
     getSettings: async () => settings,
+    setEnabled: async (on) => {
+      calls.push(`enabled:${on}`);
+      settings = { ...settings, enabled: on };
+    },
     activeTab: async () => ({ id: 7, url: 'https://chatgpt.com/c/abc' }),
     pageStatus: async () => ({ platform: 'chatgpt', answers: 2, state: 'idle', lastSummary: '3 checked, 2 supported, 1 contradicted, 0 unverifiable' }),
     checkLatest: async () => (calls.push('check-latest'), { ok: true }),
@@ -26,18 +31,46 @@ function api(over: Partial<PopupApi> = {}, settings: Settings = consented) {
 }
 
 async function mount(a: PopupApi) {
-  document.body.innerHTML = '<span id="pill"></span><main id="app"></main>';
-  await mountPopup(document.getElementById('app')!, document.getElementById('pill'), a);
+  document.body.innerHTML = '<button id="power"><span class="switch-label"></span></button><main id="app"></main>';
+  await mountPopup(document.getElementById('app')!, document.querySelector<HTMLButtonElement>('#power'), a);
 }
+
+const power = () => document.querySelector<HTMLButtonElement>('#power')!;
 
 describe('toolbar popup', () => {
   it('without consent: says it is off and links to the privacy notice', async () => {
     const { a, calls } = api({}, DEFAULT_SETTINGS);
     await mount(a);
-    expect(document.getElementById('pill')!.textContent).toBe('Off');
+    expect(power().textContent).toBe('Off');
+    expect(power().getAttribute('aria-checked')).toBe('false');
     expect(document.body.textContent).toContain('Nothing has been sent anywhere');
     document.querySelector<HTMLButtonElement>('#review-consent')!.click();
     expect(calls).toEqual(['options']);
+    power().click(); // the switch can't bypass consent: it opens the privacy notice too
+    expect(calls).toEqual(['options', 'options']);
+  });
+
+  it('the header switch turns checking off and back on', async () => {
+    const { a, calls } = api();
+    await mount(a);
+    expect(power().getAttribute('role')).toBe('switch');
+    expect(power().getAttribute('aria-checked')).toBe('true');
+    expect(power().textContent).toBe('On');
+
+    power().click();
+    await flush();
+    await flush();
+    expect(calls).toEqual(['enabled:false']);
+    expect(power().getAttribute('aria-checked')).toBe('false');
+    expect(document.querySelector('#paused')!.textContent).toContain('Nothing is read, highlighted or sent');
+    expect(document.querySelector('#check-selection')).toBeNull();
+
+    power().click();
+    await flush();
+    await flush();
+    expect(calls).toEqual(['enabled:false', 'enabled:true']);
+    expect(power().getAttribute('aria-checked')).toBe('true');
+    expect(document.querySelector('#check-selection')).not.toBeNull();
   });
 
   it('on ChatGPT: shows detected answers and the last result, and can re-check the latest answer', async () => {

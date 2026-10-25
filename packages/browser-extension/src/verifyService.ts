@@ -145,11 +145,18 @@ async function run(answer: string, question: string | undefined, settings: Setti
   if ('error' in judge) return { status: 'error', message: judge.error };
   const warnings: string[] = [];
   if (settings.llm.provider === 'heuristic') {
-    warnings.push('Using the offline heuristic judge: it only recognises very literal matches, so most real-world claims come out unverifiable. Choose a model in Settings for real checks.');
+    warnings.push('Using the offline heuristic judge: verdicts come from matching names, numbers and wording against the sources, without a language model. It misses paraphrases, so choose a model in Settings for more thorough checks.');
   }
   try {
     const providers = await evidenceProviders(settings, deps, warnings);
-    const result = await runVerification({ answer, llm: judge.llm, providers, ...(question ? { question } : {}) });
+    const result = await runVerification({
+      answer,
+      llm: judge.llm,
+      providers,
+      ...(question ? { question } : {}),
+      // Fast turnaround: claims in parallel, and never wait more than 10 s for evidence.
+      options: { concurrency: 4, retrievalDeadlineMs: 10_000 },
+    });
     for (const e of result.errors) warnings.push(`${e.providerId}: ${e.message}`);
     // A judge failure shows up per claim; surface it once so the user can fix it.
     const judgeError = result.verdicts.find((v) => v.downgradeReason === 'llm-error');
@@ -169,13 +176,14 @@ export async function handleVerify(
   settings: Settings,
   deps: ServiceDeps,
 ): Promise<VerifyResponse> {
-  if (!settings.platforms[req.platform]) return { status: 'disabled' };
+  if (!settings.enabled || !settings.platforms[req.platform]) return { status: 'disabled' };
   if (!hasValidConsent(settings)) return { status: 'consent-required' };
   return run(req.answer, req.question, settings, deps);
 }
 
 /** Text the user explicitly selected and asked to check from the popup (any site). Same consent rule. */
 export async function handleVerifyText(req: { text: string }, settings: Settings, deps: ServiceDeps): Promise<VerifyResponse> {
+  if (!settings.enabled) return { status: 'disabled' };
   if (!hasValidConsent(settings)) return { status: 'consent-required' };
   if (!req.text.trim()) return { status: 'error', message: 'Select some text on the page first.' };
   return run(req.text.slice(0, 20_000), undefined, settings, deps);

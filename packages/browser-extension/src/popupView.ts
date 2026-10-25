@@ -12,6 +12,8 @@ export interface PopupApi {
   checkLatest(tabId: number): Promise<{ ok: boolean; message?: string }>;
   getSelection(tabId: number): Promise<string>;
   verifyText(text: string): Promise<VerifyResponse>;
+  /** The master on/off switch (saved to settings; open ChatGPT tabs react immediately). */
+  setEnabled(on: boolean): Promise<void>;
   openOptions(): void;
 }
 
@@ -25,7 +27,7 @@ function h<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, props: 
 
 function judgeLabel(s: Settings): { text: string; limited: boolean } {
   const p = s.llm.provider;
-  if (p === 'heuristic') return { text: 'Offline heuristic (very literal: most real claims come out unverifiable)', limited: true };
+  if (p === 'heuristic') return { text: 'Offline heuristic (matches names, numbers and wording; misses paraphrases)', limited: true };
   const model = s.llm.model || DEFAULT_MODELS[p];
   return { text: p === 'local' ? `${model} on ${s.llm.baseUrl}` : `${model} (${p})`, limited: false };
 }
@@ -46,6 +48,21 @@ function safeHref(url: string | undefined): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+/** Placeholder with the shape of a result (chip row, then claim cards) while a check runs. */
+export function resultSkeleton(doc: Document): HTMLElement {
+  const box = h(doc, 'div', { id: 'result-skeleton' });
+  box.setAttribute('role', 'status');
+  box.setAttribute('aria-label', 'Checking the selected text…');
+  box.setAttribute('aria-busy', 'true');
+  const row = h(doc, 'div', { className: 'row' });
+  for (let i = 0; i < 4; i++) row.append(h(doc, 'span', { className: 'sk-chip' }));
+  box.append(row);
+  for (const widths of [['w-11/12', 'w-3/5'], ['w-4/5', 'w-1/2']]) {
+    box.append(h(doc, 'div', { className: 'sk-card' }, ...widths.map((w) => h(doc, 'span', { className: `sk-line ${w}` }))));
+  }
+  return box;
 }
 
 /** Render a verification response (all text via textContent; evidence is untrusted). */
@@ -91,18 +108,48 @@ export function renderResult(doc: Document, res: VerifyResponse): HTMLElement {
   return box;
 }
 
-export async function mountPopup(root: HTMLElement, pill: HTMLElement | null, api: PopupApi): Promise<void> {
+/**
+ * `power` is the header's on/off switch (a `<button role="switch">`). Without
+ * consent it stays off and leads to the privacy notice instead.
+ */
+export async function mountPopup(root: HTMLElement, power: HTMLButtonElement | null, api: PopupApi): Promise<void> {
   const doc = root.ownerDocument;
   const settings = await api.getSettings();
   const consent = hasValidConsent(settings);
+  const on = consent && settings.enabled;
   root.replaceChildren();
-  if (pill) {
-    pill.textContent = consent ? 'On' : 'Off';
-    pill.className = `pill ${consent ? 'on' : 'off'}`;
+  root.removeAttribute('aria-busy');
+  if (power) {
+    power.setAttribute('role', 'switch');
+    power.setAttribute('aria-checked', String(on));
+    power.setAttribute('aria-label', on ? 'Checking is on. Turn off' : 'Checking is off. Turn on');
+    power.title = on ? 'Turn checking off' : 'Turn checking on';
+    power.querySelector('.switch-label')?.replaceChildren(on ? 'On' : 'Off');
+    power.onclick = async () => {
+      if (!consent) return api.openOptions();
+      power.disabled = true;
+      try {
+        await api.setEnabled(!settings.enabled);
+        await mountPopup(root, power, api);
+      } finally {
+        power.disabled = false;
+      }
+    };
   }
 
   const settingsBtn = h(doc, 'button', { type: 'button', id: 'open-settings' }, 'Settings');
   settingsBtn.addEventListener('click', () => api.openOptions());
+
+  if (consent && !settings.enabled) {
+    root.append(
+      h(doc, 'section', { id: 'paused' },
+        h(doc, 'p', {}, h(doc, 'b', {}, 'Checking is off. ')),
+        h(doc, 'p', { className: 'muted' }, 'Nothing is read, highlighted or sent anywhere. Use the switch above to turn it back on.'),
+      ),
+      h(doc, 'div', { className: 'row' }, settingsBtn),
+    );
+    return;
+  }
 
   if (!consent) {
     const accept = h(doc, 'button', { type: 'button', className: 'primary', id: 'review-consent' }, 'Review privacy notice');
@@ -159,7 +206,7 @@ export async function mountPopup(root: HTMLElement, pill: HTMLElement | null, ap
   const selBtn = h(doc, 'button', { type: 'button', id: 'check-selection' }, 'Check selected text');
   const selOut = h(doc, 'div', { id: 'selection-output' });
   selBtn.addEventListener('click', async () => {
-    selOut.replaceChildren(h(doc, 'p', { className: 'muted' }, 'Checking…'));
+    selOut.replaceChildren(resultSkeleton(doc));
     selBtn.disabled = true;
     try {
       if (tab?.id === undefined) throw new Error('No active tab.');

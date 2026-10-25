@@ -154,4 +154,12 @@ export interface VerifyOptions {
   minQuoteLength?: number;
   /** Max claims verified per answer. Default 20. */
   maxClaims?: number;
+  /**
+   * Stop waiting for evidence after this many milliseconds. Claims whose sources have not
+   * answered by then are judged on what arrived (usually `unverifiable`) and an error is
+   * reported per slow source. Default: no deadline.
+   */
+  retrievalDeadlineMs?: number;
+  /** Claims retrieved and judged at the same time. Default 4. */
+  concurrency?: number;
 }

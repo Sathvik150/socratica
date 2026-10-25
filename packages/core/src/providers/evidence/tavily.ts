@@ -14,7 +14,7 @@ export class TavilyEvidenceProvider implements EvidenceProvider {
   readonly #domains: string[];
   constructor(opts: TavilyOptions) {
     if (!opts.apiKey.trim()) throw new Error('Tavily requires an API key.');
-    this.#http = new EvidenceHttp('Tavily', opts.fetch);
+    this.#http = new EvidenceHttp('Tavily', opts.fetch, false, 3);
     this.#key = opts.apiKey;
     this.#count = count(opts.count);
     this.#domains = trustedDomains(opts.domains ?? []);
