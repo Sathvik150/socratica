@@ -79,6 +79,8 @@ export class EvidenceHttp {
             this.#retryAt = Date.now() + wait;
             if (this.retryShort429 && res.status === 429 && attempt === 0 && wait <= 5000) {
               await new Promise<void>((resolve) => setTimeout(resolve, wait));
+              // The requested wait is over; a timer that fires a little early must not leave a cooldown behind.
+              this.#retryAt = 0;
               continue;
             }
             throw this.#cooldownError();

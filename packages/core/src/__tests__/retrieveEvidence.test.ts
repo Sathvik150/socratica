@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   BraveSearchEvidenceProvider,
   DocumentEvidenceProvider,
@@ -94,6 +94,24 @@ describe('WikipediaEvidenceProvider rate limiting', () => {
     const searched = urls.map((u) => new URL(u).searchParams.get('gsrsearch'));
     // 429, then the retry; the second claim is about the same subject and reuses that search.
     expect(searched).toEqual(['zentha bridge opened', 'zentha bridge opened', 'zentha bridge', 'zentha bridge velmora']);
+  });
+
+  it('does not leave a cooldown behind when the retry timer fires a little early', async () => {
+    const realTimeout = globalThis.setTimeout;
+    vi.stubGlobal('setTimeout', (fn: () => void, ms?: number) => realTimeout(fn, Math.max(0, (ms ?? 0) - 20)));
+    try {
+      let requests = 0;
+      const searched: Array<string | null> = [];
+      const fetch: FetchLike = async (url) => {
+        searched.push(new URL(url).searchParams.get('gsrsearch'));
+        if (requests++ === 0) return { ok: false, status: 429, headers: { get: () => '0' }, json: async () => ({}), text: async () => '' };
+        return { ok: true, status: 200, json: async () => ({ query: { pages: { 1: { title: 'Zentha Bridge', extract: docs[0]!.text } } } }), text: async () => '' };
+      };
+      await new WikipediaEvidenceProvider({ fetch }).retrieve(extractClaims('The Zentha Bridge opened in 1987.')[0]!, { limit: 2 });
+      expect(searched).toEqual(['zentha bridge opened', 'zentha bridge opened', 'zentha bridge']);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('gives up on a long Retry-After instead of stalling', async () => {
