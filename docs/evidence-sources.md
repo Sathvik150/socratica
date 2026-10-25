@@ -16,7 +16,6 @@ the opening date. Check the subject, property, date, units, and scope of the sou
 | Wikipedia | Plain-text article excerpts | None | General background |
 | Wikidata | Rendered structured statements with entity/property links | None | Opening, birth, death and publication dates; people, places and quantities |
 | Europe PMC | Biomedical abstract text, with article links | None | Evidence in biomedical papers |
-| Crossref | Attributed publication metadata | None | Authors, publication dates, journals and DOI records; not study findings |
 | World Bank | Country-level observations with years, units and indicator definitions | None | Population, GDP, GDP per capita, life expectancy and inflation |
 | GOV.UK | Official guidance body text and guide sections | None | UK government policy, public services and rules |
 | Google Fact Check | Publisher, reviewed claim, textual rating, review date and review link | Google API key | Claims already reviewed by fact-checkers |
@@ -31,7 +30,7 @@ and can share Wikimedia rate limits. A search service may return unreliable site
 to trusted domains, or supply URLs from sources you trust.
 
 OpenAlex, additional statistical mappings (such as Eurostat), and Exa are candidates for future
-providers. Tavily implements the proposed extracted-web-search option; Europe PMC, Crossref,
+providers. Tavily implements the proposed extracted-web-search option; Europe PMC,
 World Bank and GOV.UK provide independent key-free alternatives to Wikimedia now.
 
 For general-purpose checking, enable extracted web search and choose a local or hosted model.
@@ -96,10 +95,6 @@ node packages/cli/dist/hf-verify.mjs verify --answer answer.txt --tavily \
 # Space claims: search NASA and ESA, and cite the original institutional page.
 node packages/cli/dist/hf-verify.mjs verify --answer answer.txt --tavily \
   --search-domain nasa.gov --search-domain esa.int
-
-# Publication metadata; choose a model to interpret it.
-node packages/cli/dist/hf-verify.mjs verify --answer answer.txt --crossref \
-  --llm local --model qwen2.5:7b
 
 # Official statistics and government guidance
 node packages/cli/dist/hf-verify.mjs verify --answer answer.txt --world-bank --gov-uk \
@@ -175,8 +170,7 @@ dependency and does not perform DNS resolution.
 - GOV.UK fetches official Content API bodies and guide sections, not search descriptions. Withdrawn
   guidance is skipped (an empty withdrawal notice means an active page), and content paths are
   restricted to the government origin. Searches use subject terms instead of the asserted false
-  number. Crossref searches explicit publication titles separately from the claimed year and
-  excludes similarly titled papers when an exact title was supplied.
+  number.
 - URL extraction prefers a page's main content or a single article over global navigation. Passage
   ranking weights subject/property terms more heavily than numbers, since the claim's number may
   itself be wrong. A measurement that happens to contain the wrong number must not displace the

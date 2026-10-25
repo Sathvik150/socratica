@@ -47,8 +47,7 @@ Nothing leaves your machine unless you explicitly enable a network evidence sour
 
 ## Additional evidence sources
 
-Use `--wikidata` for structured facts, `--europe-pmc` for biomedical abstracts, or `--crossref` for
-publication metadata. Use `--world-bank` for country statistics or `--gov-uk` for official UK guidance.
+Use `--wikidata` for structured facts, or `--europe-pmc` for biomedical abstracts. Use `--world-bank` for country statistics or `--gov-uk` for official UK guidance.
 These are key-free network sources. Add `--evidence-url https://trusted.org/page`
 for an authoritative public HTTPS page; repeat the flag for up to ten pages.
 

@@ -24,8 +24,8 @@ const args = ['verify', '--answer', '-', '--format', 'json'];
 
 describe('evidence source CLI flags', () => {
   it('parses new boolean flags without consuming the next option', () => {
-    const p = parseArgs([...args, '--wikidata', '--europe-pmc', '--crossref', '--world-bank', '--gov-uk', '--fact-check', '--tavily', '--evidence-url', 'https://trusted.org/a', '--evidence-url=https://trusted.org/b']);
-    for (const name of ['wikidata', 'europe-pmc', 'crossref', 'world-bank', 'gov-uk', 'fact-check', 'tavily']) expect(p.flags.get(name)).toEqual(['true']);
+    const p = parseArgs([...args, '--wikidata', '--europe-pmc', '--world-bank', '--gov-uk', '--fact-check', '--tavily', '--evidence-url', 'https://trusted.org/a', '--evidence-url=https://trusted.org/b']);
+    for (const name of ['wikidata', 'europe-pmc', 'world-bank', 'gov-uk', 'fact-check', 'tavily']) expect(p.flags.get(name)).toEqual(['true']);
     expect(p.flags.get('evidence-url')).toEqual(['https://trusted.org/a', 'https://trusted.org/b']);
   });
 

@@ -115,7 +115,7 @@ export async function mountPopup(root: HTMLElement, pill: HTMLElement | null, ap
   const judge = judgeLabel(settings);
   const evidence = [
     settings.evidence.wikipedia && 'Wikipedia', settings.evidence.wikidata && 'Wikidata',
-    settings.evidence.europePmc && 'Europe PMC', settings.evidence.crossref && 'Crossref',
+    settings.evidence.europePmc && 'Europe PMC',
     settings.evidence.worldBank && 'World Bank', settings.evidence.govUk && 'GOV.UK',
     settings.evidence.googleFactCheck && 'Google Fact Check', settings.evidence.tavily && 'Tavily',
     settings.evidence.urls && 'Trusted URLs', settings.evidence.webSearch && 'Brave web search',

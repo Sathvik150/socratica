@@ -15,7 +15,6 @@
     "https://api.search.brave.com/*",
     "https://www.wikidata.org/*",
     "https://www.ebi.ac.uk/*",
-    "https://api.crossref.org/*",
     "https://api.worldbank.org/*",
     "https://www.gov.uk/*",
     "https://factchecktools.googleapis.com/*",

@@ -3,6 +3,11 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Removed
+- Crossref evidence source (core provider, CLI `--crossref` flag, extension option and permission).
+
 ## [0.1.3] - 2026-10-24
 
 ### Added

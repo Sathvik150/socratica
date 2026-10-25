@@ -16,7 +16,6 @@ import {
   TavilyEvidenceProvider,
   UrlEvidenceProvider,
   EuropePmcEvidenceProvider,
-  CrossrefEvidenceProvider,
   WorldBankEvidenceProvider,
   GovUkEvidenceProvider,
   extractClaims,
@@ -53,7 +52,6 @@ VERIFY OPTIONS
   --wikipedia              Also search English Wikipedia (network).
   --wikidata               Search structured Wikidata statements (network, no key).
   --europe-pmc             Search biomedical abstracts (network, no key).
-  --crossref               Search publication metadata (network, no key).
   --world-bank             Retrieve country statistics with years and units (no key).
   --gov-uk                 Retrieve official UK government guidance (no key).
   --fact-check             Search Google ClaimReview records (your key).
@@ -85,7 +83,7 @@ export interface ParsedArgs {
   flags: Map<string, string[]>;
 }
 
-const BOOLEAN_FLAGS = new Set(['wikipedia', 'wikidata', 'europe-pmc', 'crossref', 'world-bank', 'gov-uk', 'fact-check', 'tavily', 'help', 'version', 'fail-on-contradiction']);
+const BOOLEAN_FLAGS = new Set(['wikipedia', 'wikidata', 'europe-pmc', 'world-bank', 'gov-uk', 'fact-check', 'tavily', 'help', 'version', 'fail-on-contradiction']);
 
 export function parseArgs(argv: string[]): ParsedArgs {
   const flags = new Map<string, string[]>();
@@ -208,7 +206,6 @@ export async function main(argv: string[], io: Io): Promise<number> {
     const providers: EvidenceProvider[] = flags.has('wikipedia') ? [new WikipediaEvidenceProvider({ fetch: io.fetch })] : [];
     if (flags.has('wikidata')) providers.push(new WikidataEvidenceProvider({ fetch: io.fetch }));
     if (flags.has('europe-pmc')) providers.push(new EuropePmcEvidenceProvider({ fetch: io.fetch }));
-    if (flags.has('crossref')) providers.push(new CrossrefEvidenceProvider({ fetch: io.fetch }));
     if (flags.has('world-bank')) providers.push(new WorldBankEvidenceProvider({ fetch: io.fetch }));
     if (flags.has('gov-uk')) providers.push(new GovUkEvidenceProvider({ fetch: io.fetch }));
     if (flags.has('fact-check')) {

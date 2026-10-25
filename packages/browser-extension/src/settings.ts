@@ -22,7 +22,7 @@ export interface Settings {
   /** `baseUrl` is only used by `local` (an OpenAI-compatible server such as Ollama or LM Studio). */
   llm: { provider: LLMChoice; model: string; apiKey: string; baseUrl: string };
   evidence: {
-    wikipedia: boolean; wikidata: boolean; europePmc: boolean; crossref: boolean; worldBank: boolean; govUk: boolean;
+    wikipedia: boolean; wikidata: boolean; europePmc: boolean; worldBank: boolean; govUk: boolean;
     googleFactCheck: boolean; googleFactCheckApiKey: string;
     tavily: boolean; tavilyApiKey: string; tavilyDomains: string[];
     urls: boolean; trustedUrls: string[];
@@ -36,7 +36,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autoCheck: true,
   llm: { provider: 'heuristic', model: '', apiKey: '', baseUrl: 'http://localhost:11434/v1' },
   evidence: {
-    wikipedia: true, wikidata: true, europePmc: true, crossref: false, worldBank: false, govUk: false,
+    wikipedia: true, wikidata: true, europePmc: true, worldBank: false, govUk: false,
     googleFactCheck: false, googleFactCheckApiKey: '', tavily: false, tavilyApiKey: '',
     tavilyDomains: [],
     urls: false, trustedUrls: [], webSearch: false, webSearchApiKey: '',
@@ -54,7 +54,6 @@ export const HOST_PERMISSIONS = {
   wikipedia: 'https://en.wikipedia.org/*',
   wikidata: 'https://www.wikidata.org/*',
   europePmc: 'https://www.ebi.ac.uk/*',
-  crossref: 'https://api.crossref.org/*',
   worldBank: 'https://api.worldbank.org/*',
   govUk: 'https://www.gov.uk/*',
   googleFactCheck: 'https://factchecktools.googleapis.com/*',
@@ -83,7 +82,7 @@ export function hasValidConsent(s: Settings): boolean {
 export function requiredOrigins(s: Settings): string[] {
   const out: string[] = [];
   if (s.evidence.wikipedia) out.push(HOST_PERMISSIONS.wikipedia);
-  for (const source of ['wikidata', 'europePmc', 'crossref', 'worldBank', 'govUk', 'googleFactCheck', 'tavily'] as const) {
+  for (const source of ['wikidata', 'europePmc', 'worldBank', 'govUk', 'googleFactCheck', 'tavily'] as const) {
     if (s.evidence[source]) out.push(HOST_PERMISSIONS[source]);
   }
   if (s.evidence.urls) for (const url of s.evidence.trustedUrls) out.push(trustedUrl(url).origin);
