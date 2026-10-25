@@ -27,10 +27,13 @@ reported as a falsehood.
 `SKILL_DIR` below means **the folder that contains this SKILL.md**. It is often read-only and is
 not your working directory, so always call the scripts by their full path:
 
-- claude.ai / Claude desktop: usually `/mnt/skills/user/hallucination-firewall`
+- claude.ai / Claude desktop: `/mnt/skills/plugins/hallucination-firewall` or `/mnt/skills/user/hallucination-firewall`
 - Claude Code: `~/.claude/skills/hallucination-firewall` or `.claude/skills/hallucination-firewall`
 
 If unsure, find it: `find / -name validate_verdicts.py -path '*hallucination-firewall*' 2>/dev/null`.
+
+Read `SKILL.md` and the `references/` files with your file-reading tool, not with shell commands
+such as `cat`. Use the shell only to run the scripts.
 Do all work in a writable folder of your own (for example `./hf-work`), never inside `SKILL_DIR`.
 
 The scripts need only **Python 3** (standard library). Node is optional.

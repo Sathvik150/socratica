@@ -1,6 +1,6 @@
 {
   "name": "@hallucination-firewall/browser-extension",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "Chrome MV3 extension: Review Mode fact verification for ChatGPT answers.",
   "license": "MIT",
