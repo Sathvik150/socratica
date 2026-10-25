@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mountOptions, type OptionsApi } from '../optionsView.js';
-import { DEFAULT_SETTINGS, hasValidConsent, type Settings } from '../settings.js';
+import { CONSENT_VERSION, DEFAULT_SETTINGS, hasValidConsent, type Settings } from '../settings.js';
 
 function api(initial: Settings = DEFAULT_SETTINGS) {
   const state = { settings: structuredClone(initial), requested: [] as string[][] };
@@ -29,7 +29,7 @@ describe('options page', () => {
     accept.click();
     await flush();
     expect(hasValidConsent(state.settings)).toBe(true);
-    expect(state.requested[0]).toEqual(['https://en.wikipedia.org/*']);
+    expect(state.requested[0]).toEqual(['https://en.wikipedia.org/*', 'https://www.wikidata.org/*', 'https://www.ebi.ac.uk/*']);
     expect(document.querySelector('#withdraw')).not.toBeNull();
   });
 
@@ -46,7 +46,7 @@ describe('options page', () => {
   });
 
   it('local judge: requests localhost permission on save and rejects non-local URLs', async () => {
-    const { state, a } = api({ ...DEFAULT_SETTINGS, consent: { granted: true, version: 1 } });
+    const { state, a } = api({ ...DEFAULT_SETTINGS, consent: { granted: true, version: CONSENT_VERSION } });
     document.body.innerHTML = '<main id="app"></main>';
     await mountOptions(document.getElementById('app')!, a);
     const select = document.querySelector<HTMLSelectElement>('#llm-provider')!;
@@ -70,7 +70,7 @@ describe('options page', () => {
   });
 
   it('withdrawing consent turns checking off again', async () => {
-    const { state, a } = api({ ...DEFAULT_SETTINGS, consent: { granted: true, version: 1 } });
+    const { state, a } = api({ ...DEFAULT_SETTINGS, consent: { granted: true, version: CONSENT_VERSION } });
     document.body.innerHTML = '<main id="app"></main>';
     await mountOptions(document.getElementById('app')!, a);
     document.querySelector<HTMLButtonElement>('#withdraw')!.click();

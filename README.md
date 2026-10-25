@@ -51,7 +51,7 @@ Grab the zips from the **[latest release](https://github.com/sathvik150/cac26/re
 2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and pick the unzipped folder.
 3. Read and accept the privacy notice on the settings page that opens. **Nothing is checked or sent before you accept.**
 4. **Choose a judge** in the same settings page. The default offline judge only recognises very literal matches, so on real answers it mostly says "unverifiable". For real checks, pick one of:
-   - **Local model (free, private):** install [Ollama](https://ollama.com), run `ollama pull qwen2.5:7b`, then start it with `OLLAMA_ORIGINS="chrome-extension://*" ollama serve`. In settings, choose **Local model**, press **Save**, then **Test connection**.
+  - **Local model (free, private):** install [Ollama](https://ollama.com), run `ollama pull qwen2.5:7b`, then start it with `OLLAMA_ORIGINS="chrome-extension://*" ollama serve`. In settings, choose **Local model**, press **Save**, then **Test connection**.
    - **OpenAI or Anthropic:** paste your own API key.
 5. Use [chatgpt.com](https://chatgpt.com) normally. When an answer finishes, a summary bar appears under it. Click a highlighted claim to see the reason, the source quotes and a correction.
 6. Click the toolbar icon at any time for the **popup**. It shows whether checking is on, which judge is in use, how many answers were detected, and the last result. It has a **Check latest answer** button, plus **Check selected text**, which works on any website.
@@ -138,6 +138,13 @@ Pass `llm` (e.g. `new OpenAIProvider({ apiKey, fetch })`, or `{ baseUrl: 'http:/
 
 The core engine has no DOM or browser code and doesn't know which chatbot wrote the text. The extension, CLI, skill and SDK are thin layers on top of it. Details: [docs/architecture.md](docs/architecture.md).
 
+Evidence can come from **Wikipedia, Wikidata, Europe PMC, Crossref, World Bank, GOV.UK, Google Fact Check, trusted URLs,
+Tavily or Brave Search**. Enable sources independently in extension settings, or use CLI flags such as
+`--wikidata --europe-pmc`, `--evidence-url <url>`, `--fact-check`, or `--tavily --search-domain who.int`.
+Wikipedia, Wikidata and Europe PMC are enabled by default after accepting the updated privacy notice.
+A failed source does not stop other sources. Contradictions must cite an explicitly conflicting passage;
+missing evidence stays unverifiable. See [the source and trust guide](docs/evidence-sources.md).
+
 > **Review Mode, not a blocker.** A browser extension cannot guarantee it sees an answer before you do, so the extension checks answers **after** they finish streaming. Guaranteed pre-display blocking ("Shield Mode") needs API middleware. Only its interface is defined ([`shield.ts`](packages/core/src/shield.ts)).
 
 ## 🔒 Privacy
@@ -169,7 +176,7 @@ All of these judges are in-repo or local; **no hosted LLM (OpenAI or Anthropic A
 
 | Surface | How it was tested | Result |
 |---|---|---|
-| Core, SDK, CLI, extension logic | 93 automated tests (`pnpm test`); no network | ✅ pass |
+| Core, SDK, CLI, extension logic | Automated tests (`pnpm test`); no network | ✅ pass |
 | GitHub CI | Node 20 and 22 on GitHub Actions, building, testing, benchmarking and packaging | ✅ pass |
 | Extension on **live chatgpt.com** | Real Chromium with the extension, logged-out ChatGPT, 2026-10-24 | ✅ detects finished answers, extracts claims, highlights and explains them (details below) |
 | Agent Skill in **Claude Code** | Installed from the release zip into `.claude/skills`, then a fact-check request run headless | ✅ skill auto-loaded, validator ran, semantic contradiction caught |
@@ -184,8 +191,8 @@ All of these judges are in-repo or local; **no hosted LLM (OpenAI or Anthropic A
 
 - **Review Mode only.** You see the answer before it's checked.
 - **ChatGPT's page can change.** The adapter was verified on live chatgpt.com in logged-out and logged-in UIs on 2026-10-24, with sanitized fixtures for both. This covers the tested layouts; other accounts or rollouts may differ. Older selectors are kept as a fallback. Fixes go in [`adapters/chatgpt.ts`](packages/browser-extension/src/adapters/chatgpt.ts).
-- **Wikipedia rate limits.** Wikimedia throttles clients by IP. In testing from a cloud machine, requests were rate-limited (HTTP 429) after a few bursts. The extension identifies itself as Wikimedia's API policy asks, caches articles and backs off; rate-limited claims fall back to `unverifiable`.
-- **The offline heuristic judge is literal.** It handles simple number, name and negation conflicts, but real encyclopedia wording usually comes out `unverifiable`. For real-world answers, use an LLM judge: OpenAI or Anthropic in the extension, or a local model with the CLI.
+- **Wikimedia rate limits.** Wikipedia and Wikidata can be throttled by IP (HTTP 429). Requests are cached and backed off; independent sources continue when a source fails. Claims without sufficient evidence remain `unverifiable`.
+- **The offline heuristic judge is literal.** It handles simple number, name and negation conflicts, but real encyclopedia wording usually comes out `unverifiable`. It abstains on publisher reviews, publication metadata and qualified statistics. For real-world answers, use an LLM judge: OpenAI or Anthropic in the extension, or a local model with the CLI.
 - **Local models need one setting.** Ollama refuses browser extensions unless started with `OLLAMA_ORIGINS="chrome-extension://*"`; LM Studio needs **Enable CORS**. The extension tells you this if it hits the error. Only servers on `localhost` / `127.0.0.1` are allowed. The first request can take minutes while the model loads.
 - **Small local models are unreliable judges.** In testing, `qwen2.5:3b` fabricated a quote, which the validator caught and downgraded, and it missed most contradictions. 7B-class models did far better.
 - **Claim extraction is rule-based.** It can miss claims, such as pronoun clauses without a named entity.

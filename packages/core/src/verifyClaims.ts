@@ -88,6 +88,9 @@ export async function verifyClaim(
   if (quotes.length === 0) {
     return downgrade(verdict, 'no-quotes', 'The verifier gave a verdict without quoting evidence, so it was discarded.');
   }
+  if (quotes.some((q) => q.source.kind === 'review' && q.quote !== byId.get(q.passageId)!.text)) {
+    return downgrade(verdict, 'incomplete-review', 'A fact-check citation must include both the reviewed claim and the publisher rating; quoting the claim alone does not establish its truth.');
+  }
   if (confidence < minConfidence) {
     return downgrade(verdict, 'low-confidence', `Evidence was too weak for a confident verdict (${verdict.rationale})`);
   }

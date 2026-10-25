@@ -30,12 +30,16 @@ export function queryTerms(claim: Claim): { primary: string[]; secondary: string
 /** Lexical relevance in [0, 1]: weighted fraction of query terms present in the passage. */
 export function scorePassage(claim: Claim, passage: string): number {
   const { primary, secondary } = queryTerms(claim);
-  const total = primary.length + 0.5 * secondary.length;
+  // The number in a hallucination may be wrong. Matching it in an unrelated
+  // measurement must not outweigh matching the claim's subject and property.
+  const weight = (term: string) => /^\d/.test(term) ? 0.25 : 1;
+  const total = primary.reduce((sum, t) => sum + weight(t), 0) +
+    0.5 * secondary.reduce((sum, t) => sum + weight(t), 0);
   if (total === 0) return 0;
   const have = new Set(contentTokens(passage));
   let hit = 0;
-  for (const t of primary) if (have.has(t)) hit += 1;
-  for (const t of secondary) if (have.has(t)) hit += 0.5;
+  for (const t of primary) if (have.has(t)) hit += weight(t);
+  for (const t of secondary) if (have.has(t)) hit += 0.5 * weight(t);
   return hit / total;
 }
 

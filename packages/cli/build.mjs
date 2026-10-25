@@ -10,7 +10,8 @@ await build({
   platform: 'node',
   format: 'esm',
   target: 'node20',
-  banner: { js: '#!/usr/bin/env node' },
+  // Undici includes CommonJS modules that load Node builtins at runtime.
+  banner: { js: '#!/usr/bin/env node\nimport { createRequire as __hfCreateRequire } from "node:module";\nconst require = __hfCreateRequire(import.meta.url);' },
   logLevel: 'info',
 });
 chmodSync('dist/hf-verify.mjs', 0o755);

@@ -43,7 +43,26 @@ node hf-verify.mjs verify --answer answer.txt --evidence sources/ --llm local --
 node hf-verify.mjs verify --answer answer.txt --evidence sources/ --llm local --model qwen2.5-7b-instruct --base-url http://localhost:1234/v1
 ```
 
-Nothing leaves your machine unless you add `--wikipedia` or choose a hosted judge.
+Nothing leaves your machine unless you explicitly enable a network evidence source or choose a hosted judge.
+
+## Additional evidence sources
+
+Use `--wikidata` for structured facts, `--europe-pmc` for biomedical abstracts, or `--crossref` for
+publication metadata. Use `--world-bank` for country statistics or `--gov-uk` for official UK guidance.
+These are key-free network sources. Add `--evidence-url https://trusted.org/page`
+for an authoritative public HTTPS page; repeat the flag for up to ten pages.
+
+`--fact-check` uses `HF_GOOGLE_FACT_CHECK_API_KEY`; `--tavily` uses `HF_TAVILY_API_KEY`.
+Keys come only from the environment. Restrict Tavily to trusted sites with repeatable
+`--search-domain who.int` flags. The offline judge abstains on publisher reviews and publication
+metadata: use a local or hosted model to interpret those records.
+
+All network evidence sources are opt-in and can be combined with local documents. A failed source
+produces a warning while the other sources continue. See [source behavior, privacy and trust](../../docs/evidence-sources.md).
+
+The standalone CLI honors `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` (lowercase variants also work),
+including on Node 20. Proxy credentials remain in your environment; invalid proxy configuration
+errors do not expose them. TLS certificate verification stays enabled.
 
 ## Hosted judges (your own key, from the environment)
 

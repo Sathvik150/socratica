@@ -31,6 +31,8 @@ export interface EvidenceSource {
   url?: string;
   /** Id of the provider that returned it, e.g. `documents`, `wikipedia`, `web-search`. */
   providerId: string;
+  /** Reviews and publication metadata must not be mistaken for direct assertions of a quoted claim. */
+  kind?: 'review' | 'metadata' | 'structured';
 }
 
 /** A retrieved passage of evidence text. */
@@ -64,6 +66,7 @@ export type DowngradeReason =
   | 'invalid-llm-output'
   | 'quote-not-in-passage'
   | 'no-quotes'
+  | 'incomplete-review'
   | 'low-confidence'
   | 'llm-error';
 
@@ -128,13 +131,18 @@ export interface EvidenceProvider {
  */
 export type FetchLike = (
   url: string,
-  init?: { method?: string; headers?: Record<string, string>; body?: string; signal?: unknown },
+  init?: { method?: string; headers?: Record<string, string>; body?: string; signal?: unknown; redirect?: 'error'; credentials?: 'omit'; referrerPolicy?: 'no-referrer' },
 ) => Promise<{
   ok: boolean;
   status: number;
   json(): Promise<unknown>;
   text(): Promise<string>;
   headers?: { get(name: string): string | null };
+  /** Optional streaming body, used to bound downloaded page size before buffering it all. */
+  body?: { getReader(): {
+    read(): Promise<{ done: boolean; value?: Uint8Array }>;
+    cancel(): Promise<void>;
+  } } | null;
 }>;
 
 export interface VerifyOptions {

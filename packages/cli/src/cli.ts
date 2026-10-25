@@ -11,6 +11,14 @@ import {
   HeuristicLLM,
   OpenAIProvider,
   WikipediaEvidenceProvider,
+  WikidataEvidenceProvider,
+  GoogleFactCheckEvidenceProvider,
+  TavilyEvidenceProvider,
+  UrlEvidenceProvider,
+  EuropePmcEvidenceProvider,
+  CrossrefEvidenceProvider,
+  WorldBankEvidenceProvider,
+  GovUkEvidenceProvider,
   extractClaims,
   runVerification,
   type EvidenceProvider,
@@ -43,6 +51,15 @@ VERIFY OPTIONS
   --question <text>        The question that produced the answer (context only).
   --evidence <file|dir>    Evidence documents: .json ([{title,text,url}]), .txt/.md, or a folder. Repeatable.
   --wikipedia              Also search English Wikipedia (network).
+  --wikidata               Search structured Wikidata statements (network, no key).
+  --europe-pmc             Search biomedical abstracts (network, no key).
+  --crossref               Search publication metadata (network, no key).
+  --world-bank             Retrieve country statistics with years and units (no key).
+  --gov-uk                 Retrieve official UK government guidance (no key).
+  --fact-check             Search Google ClaimReview records (your key).
+  --tavily                 Search extracted web page text (your key).
+  --search-domain <host>   Restrict Tavily to trusted domains. Repeatable.
+  --evidence-url <url>     Fetch a trusted public HTTPS page. Repeatable, up to 10.
   --llm <name>             Judge: heuristic (default, offline) | openai | anthropic | local
   --model <name>           Model name for the judge.
   --base-url <url>         OpenAI-compatible endpoint for --llm local
@@ -54,6 +71,8 @@ ENVIRONMENT
   HF_OPENAI_API_KEY        Key for --llm openai.
   HF_ANTHROPIC_API_KEY     Key for --llm anthropic.
   HF_LOCAL_API_KEY         Optional key for --llm local.
+  HF_GOOGLE_FACT_CHECK_API_KEY  Key for --fact-check.
+  HF_TAVILY_API_KEY        Key for --tavily.
 
 EXAMPLES
   hf-verify verify --answer answer.txt --evidence sources/
@@ -66,7 +85,7 @@ export interface ParsedArgs {
   flags: Map<string, string[]>;
 }
 
-const BOOLEAN_FLAGS = new Set(['wikipedia', 'help', 'version', 'fail-on-contradiction']);
+const BOOLEAN_FLAGS = new Set(['wikipedia', 'wikidata', 'europe-pmc', 'crossref', 'world-bank', 'gov-uk', 'fact-check', 'tavily', 'help', 'version', 'fail-on-contradiction']);
 
 export function parseArgs(argv: string[]): ParsedArgs {
   const flags = new Map<string, string[]>();
@@ -187,6 +206,26 @@ export async function main(argv: string[], io: Io): Promise<number> {
     const answer = readInput(answerPath, io.stdin);
     const documents = loadEvidence(flags.get('evidence') ?? []);
     const providers: EvidenceProvider[] = flags.has('wikipedia') ? [new WikipediaEvidenceProvider({ fetch: io.fetch })] : [];
+    if (flags.has('wikidata')) providers.push(new WikidataEvidenceProvider({ fetch: io.fetch }));
+    if (flags.has('europe-pmc')) providers.push(new EuropePmcEvidenceProvider({ fetch: io.fetch }));
+    if (flags.has('crossref')) providers.push(new CrossrefEvidenceProvider({ fetch: io.fetch }));
+    if (flags.has('world-bank')) providers.push(new WorldBankEvidenceProvider({ fetch: io.fetch }));
+    if (flags.has('gov-uk')) providers.push(new GovUkEvidenceProvider({ fetch: io.fetch }));
+    if (flags.has('fact-check')) {
+      if (!io.env.HF_GOOGLE_FACT_CHECK_API_KEY) throw new UsageError('--fact-check needs HF_GOOGLE_FACT_CHECK_API_KEY in the environment');
+      providers.push(new GoogleFactCheckEvidenceProvider({ apiKey: io.env.HF_GOOGLE_FACT_CHECK_API_KEY, fetch: io.fetch }));
+    }
+    if (flags.has('tavily')) {
+      if (!io.env.HF_TAVILY_API_KEY) throw new UsageError('--tavily needs HF_TAVILY_API_KEY in the environment');
+      try { providers.push(new TavilyEvidenceProvider({ apiKey: io.env.HF_TAVILY_API_KEY, domains: flags.get('search-domain') ?? [], fetch: io.fetch })); }
+      catch (err) { throw new UsageError(err instanceof Error ? err.message : 'Invalid search domain'); }
+    }
+    const urls = flags.get('evidence-url') ?? [];
+    if (urls.length > 10) throw new UsageError('--evidence-url accepts up to 10 URLs');
+    for (const url of [...new Set(urls)]) {
+      try { providers.push(new UrlEvidenceProvider({ urls: [url], fetch: io.fetch })); }
+      catch (err) { throw new UsageError(err instanceof Error ? err.message : 'Invalid evidence URL'); }
+    }
     const question = one(flags, 'question');
     const result = await runVerification({
       answer,

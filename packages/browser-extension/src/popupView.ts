@@ -113,7 +113,13 @@ export async function mountPopup(root: HTMLElement, pill: HTMLElement | null, ap
   }
 
   const judge = judgeLabel(settings);
-  const evidence = [settings.evidence.wikipedia && 'Wikipedia', settings.evidence.webSearch && 'Brave web search'].filter(Boolean).join(', ') || 'none';
+  const evidence = [
+    settings.evidence.wikipedia && 'Wikipedia', settings.evidence.wikidata && 'Wikidata',
+    settings.evidence.europePmc && 'Europe PMC', settings.evidence.crossref && 'Crossref',
+    settings.evidence.worldBank && 'World Bank', settings.evidence.govUk && 'GOV.UK',
+    settings.evidence.googleFactCheck && 'Google Fact Check', settings.evidence.tavily && 'Tavily',
+    settings.evidence.urls && 'Trusted URLs', settings.evidence.webSearch && 'Brave web search',
+  ].filter(Boolean).join(', ') || 'none';
   const setup = h(doc, 'section', {}, h(doc, 'h2', {}, 'Setup'), h(doc, 'p', {}, h(doc, 'b', {}, 'Judge: '), judge.text), h(doc, 'p', {}, h(doc, 'b', {}, 'Evidence: '), evidence));
   if (judge.limited) setup.append(h(doc, 'p', { className: 'warn', id: 'judge-warning' }, 'For real checks, choose a model in Settings: a local one (Ollama / LM Studio) or your OpenAI / Anthropic key.'));
   root.append(setup);

@@ -4,6 +4,15 @@ import {
   HeuristicLLM,
   OpenAIProvider,
   WikipediaEvidenceProvider,
+  WikidataEvidenceProvider,
+  EuropePmcEvidenceProvider,
+  CrossrefEvidenceProvider,
+  WorldBankEvidenceProvider,
+  GovUkEvidenceProvider,
+  GoogleFactCheckEvidenceProvider,
+  TavilyEvidenceProvider,
+  UrlEvidenceProvider,
+  trustedUrl,
   runVerification,
   type EvidenceProvider,
   type FetchLike,
@@ -20,6 +29,19 @@ function wikipediaFor(fetch: FetchLike): WikipediaEvidenceProvider {
   let p = wikipediaProviders.get(fetch);
   if (!p) wikipediaProviders.set(fetch, (p = new WikipediaEvidenceProvider({ fetch })));
   return p;
+}
+
+const sourceProviders = new WeakMap<FetchLike, Map<string, EvidenceProvider>>();
+function cachedSource(fetch: FetchLike, key: string, create: () => EvidenceProvider): EvidenceProvider {
+  let cache = sourceProviders.get(fetch);
+  if (!cache) sourceProviders.set(fetch, (cache = new Map()));
+  let provider = cache.get(key);
+  if (!provider) {
+    provider = create();
+    cache.set(key, provider);
+    if (cache.size > 32) cache.delete(cache.keys().next().value!);
+  }
+  return provider;
 }
 
 export interface ServiceDeps {
@@ -80,6 +102,36 @@ function evidenceProviders(settings: Settings, deps: ServiceDeps, warnings: stri
       if (await deps.hasPermission(HOST_PERMISSIONS.wikipedia)) providers.push(wikipediaFor(deps.fetch));
       else warnings.push('Wikipedia is enabled but its permission was not granted.');
     }
+    for (const [source, label, create] of [
+      ['wikidata', 'Wikidata', () => new WikidataEvidenceProvider({ fetch: deps.fetch })],
+      ['europePmc', 'Europe PMC', () => new EuropePmcEvidenceProvider({ fetch: deps.fetch })],
+      ['crossref', 'Crossref', () => new CrossrefEvidenceProvider({ fetch: deps.fetch })],
+      ['worldBank', 'World Bank', () => new WorldBankEvidenceProvider({ fetch: deps.fetch })],
+      ['govUk', 'GOV.UK', () => new GovUkEvidenceProvider({ fetch: deps.fetch })],
+    ] as const) {
+      if (!settings.evidence[source]) continue;
+      if (await deps.hasPermission(HOST_PERMISSIONS[source])) providers.push(cachedSource(deps.fetch, source, create));
+      else warnings.push(`${label} is enabled but its permission was not granted.`);
+    }
+    for (const [source, label, apiKey, create] of [
+      ['googleFactCheck', 'Google Fact Check', settings.evidence.googleFactCheckApiKey, () => new GoogleFactCheckEvidenceProvider({ apiKey: settings.evidence.googleFactCheckApiKey, fetch: deps.fetch })],
+      ['tavily', 'Tavily', settings.evidence.tavilyApiKey, () => new TavilyEvidenceProvider({ apiKey: settings.evidence.tavilyApiKey, domains: settings.evidence.tavilyDomains, fetch: deps.fetch })],
+    ] as const) {
+      if (!settings.evidence[source]) continue;
+      if (!apiKey.trim()) warnings.push(`${label} is enabled but no API key is set.`);
+      else if (!(await deps.hasPermission(HOST_PERMISSIONS[source]))) warnings.push(`${label} is enabled but its permission was not granted.`);
+      else providers.push(cachedSource(deps.fetch, `${source}:${apiKey}:${source === 'tavily' ? JSON.stringify(settings.evidence.tavilyDomains) : ''}`, create));
+    }
+    if (settings.evidence.urls) {
+      if (!settings.evidence.trustedUrls.length) warnings.push('Trusted URLs are enabled but no URLs are set.');
+      for (const value of settings.evidence.trustedUrls.slice(0, 10)) {
+        try {
+          const { url, origin } = trustedUrl(value);
+          if (!(await deps.hasPermission(origin))) warnings.push(`Trusted URL permission was not granted for ${origin}`);
+          else providers.push(cachedSource(deps.fetch, `url:${url}`, () => new UrlEvidenceProvider({ urls: [url], fetch: deps.fetch })));
+        } catch { warnings.push('An invalid trusted URL was skipped. Only public HTTPS sources are allowed.'); }
+      }
+    }
     if (settings.evidence.webSearch) {
       if (!settings.evidence.webSearchApiKey) warnings.push('Web search is enabled but no API key is set.');
       else if (!(await deps.hasPermission(HOST_PERMISSIONS.webSearch))) warnings.push('Web search is enabled but its permission was not granted.');
@@ -97,8 +149,8 @@ async function run(answer: string, question: string | undefined, settings: Setti
   if (settings.llm.provider === 'heuristic') {
     warnings.push('Using the offline heuristic judge: it only recognises very literal matches, so most real-world claims come out unverifiable. Choose a model in Settings for real checks.');
   }
-  const providers = await evidenceProviders(settings, deps, warnings);
   try {
+    const providers = await evidenceProviders(settings, deps, warnings);
     const result = await runVerification({ answer, llm: judge.llm, providers, ...(question ? { question } : {}) });
     for (const e of result.errors) warnings.push(`${e.providerId}: ${e.message}`);
     // A judge failure shows up per claim; surface it once so the user can fix it.

@@ -1,5 +1,6 @@
+import { trustedDomains, trustedUrl } from '@hallucination-firewall/core';
 import type { TestJudgeResponse } from './messages.js';
-import { DEFAULT_MODELS, HOST_PERMISSIONS, CONSENT_VERSION, hasValidConsent, localOrigin, requiredOrigins, type LLMChoice, type Settings } from './settings.js';
+import { DEFAULT_MODELS, HOST_PERMISSIONS, CONSENT_VERSION, TRUSTED_SOURCE_PRESETS, hasValidConsent, localOrigin, requiredOrigins, type LLMChoice, type Settings } from './settings.js';
 
 export interface OptionsApi {
   load(): Promise<Settings>;
@@ -38,7 +39,8 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
         doc,
         'ul',
         {},
-        h(doc, 'li', {}, 'Short search queries built from the answer’s individual claims are sent to the evidence sources you enable (Wikipedia, and optionally Brave Search with your own key).'),
+        h(doc, 'li', {}, 'Short search queries built from individual claims are sent to the sources you enable: Wikipedia, Wikidata, Europe PMC, Crossref, GOV.UK, World Bank, Google Fact Check, Tavily, or Brave Search. Google Fact Check, Tavily, and Brave require your own keys. Wikidata receives entity names; World Bank receives country, indicator and year requests; other search sources receive claim-based queries.'),
+        h(doc, 'li', {}, 'If you enable trusted URLs, their pages are fetched without cookies or credentials. Those sites receive the URL request, not your claim text. Only the HTTPS sites you enter are requested; redirects are refused.'),
         h(doc, 'li', {}, 'If you choose OpenAI or Anthropic as the judge, each claim, its surrounding sentence, your question, and the retrieved passages are sent to that provider using your own API key, under that provider’s terms.'),
         h(doc, 'li', {}, 'With the offline judge and no evidence sources enabled, nothing leaves your browser (but every claim will be unverifiable).'),
         h(doc, 'li', {}, 'API keys are stored only in this browser (chrome.storage.local). There is no Hallucination Firewall server, account, telemetry or analytics.'),
@@ -133,14 +135,49 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
     const wiki = h(doc, 'input', { type: 'checkbox', id: 'ev-wikipedia', checked: settings.evidence.wikipedia });
     const web = h(doc, 'input', { type: 'checkbox', id: 'ev-web', checked: settings.evidence.webSearch });
     const webKey = h(doc, 'input', { type: 'password', id: 'ev-web-key', value: settings.evidence.webSearchApiKey, autocomplete: 'off', placeholder: 'Brave Search API key' });
+    const wikidata = h(doc, 'input', { type: 'checkbox', id: 'ev-wikidata', checked: settings.evidence.wikidata });
+    const europePmc = h(doc, 'input', { type: 'checkbox', id: 'ev-europe-pmc', checked: settings.evidence.europePmc });
+    const crossref = h(doc, 'input', { type: 'checkbox', id: 'ev-crossref', checked: settings.evidence.crossref });
+    const worldBank = h(doc, 'input', { type: 'checkbox', id: 'ev-world-bank', checked: settings.evidence.worldBank });
+    const govUk = h(doc, 'input', { type: 'checkbox', id: 'ev-gov-uk', checked: settings.evidence.govUk });
+    const factCheck = h(doc, 'input', { type: 'checkbox', id: 'ev-fact-check', checked: settings.evidence.googleFactCheck });
+    const factCheckKey = h(doc, 'input', { type: 'password', id: 'ev-fact-check-key', value: settings.evidence.googleFactCheckApiKey, autocomplete: 'off', placeholder: 'Google Fact Check API key' });
+    const tavily = h(doc, 'input', { type: 'checkbox', id: 'ev-tavily', checked: settings.evidence.tavily });
+    const tavilyKey = h(doc, 'input', { type: 'password', id: 'ev-tavily-key', value: settings.evidence.tavilyApiKey, autocomplete: 'off', placeholder: 'Tavily API key' });
+    const tavilyDomains = h(doc, 'textarea', { id: 'ev-tavily-domains', value: settings.evidence.tavilyDomains.join('\n'), rows: 3, placeholder: 'who.int\nnih.gov\nOne trusted domain per line (optional)' });
+    const sourcePreset = h(doc, 'select', { id: 'ev-source-preset' }, h(doc, 'option', { value: '' }, 'Choose a trusted source set…'));
+    for (const preset of TRUSTED_SOURCE_PRESETS) sourcePreset.append(h(doc, 'option', { value: preset.id }, preset.label));
+    sourcePreset.addEventListener('change', () => {
+      const preset = TRUSTED_SOURCE_PRESETS.find((p) => p.id === sourcePreset.value);
+      if (preset) tavilyDomains.value = preset.domains.join('\n');
+    });
+    const urls = h(doc, 'input', { type: 'checkbox', id: 'ev-urls', checked: settings.evidence.urls });
+    const trustedUrls = h(doc, 'textarea', { id: 'ev-trusted-urls', value: settings.evidence.trustedUrls.join('\n'), rows: 4, placeholder: 'https://trusted-site.org/article\nOne public HTTPS URL per line (up to 10)' });
     const evidence = h(
       doc,
       'section',
       {},
       h(doc, 'h2', {}, 'Evidence sources'),
+      h(doc, 'p', { className: 'muted' }, 'For broad coverage across topics, use Tavily or Brave with your own search key and choose a model to compare the evidence. The key-free sources add specialist coverage. Trusted URLs let you check against a specific primary source. Missing evidence always stays unverifiable.'),
       h(doc, 'label', { className: 'inline' }, wiki, `Wikipedia (${HOST_PERMISSIONS.wikipedia.replace('/*', '')})`),
+      h(doc, 'label', { className: 'inline' }, wikidata, 'Wikidata — structured dates, numbers, people and places (no key)'),
+      h(doc, 'label', { className: 'inline' }, europePmc, 'Europe PMC — biomedical abstracts (no key)'),
+      h(doc, 'label', { className: 'inline' }, crossref, 'Crossref — publication metadata, not study findings (no key)'),
+      h(doc, 'label', { className: 'inline' }, worldBank, 'World Bank — country statistics with dates and units (no key; choose a model to interpret values)'),
+      h(doc, 'label', { className: 'inline' }, govUk, 'GOV.UK — official UK government guidance (no key)'),
+      h(doc, 'label', { className: 'inline' }, factCheck, 'Google Fact Check — publisher reviews (your key; choose a model to interpret ratings)'),
+      factCheckKey,
+      h(doc, 'label', { className: 'inline' }, tavily, 'Tavily — extracted web page text (your key; may incur usage charges)'),
+      tavilyKey,
+      h(doc, 'label', {}, 'Fill trusted domains for a topic', sourcePreset),
+      h(doc, 'label', {}, 'Restrict Tavily to trusted domains (one per line)', tavilyDomains),
+      h(doc, 'p', { className: 'muted' }, 'Search results are not automatically trustworthy. Restrict domains to authoritative sources for your topic, or use trusted URLs. An empty domain list searches the general web.'),
+      h(doc, 'p', { className: 'muted' }, 'For example, select NASA and ESA for space claims. To check a specific NASA page without a search key, paste its HTTPS URL below.'),
       h(doc, 'label', { className: 'inline' }, web, 'Web search via Brave Search API (your key)'),
       webKey,
+      h(doc, 'label', { className: 'inline' }, urls, 'Trusted URLs — check against pages you choose'),
+      h(doc, 'label', {}, 'Source URLs (one per line)', trustedUrls),
+      h(doc, 'p', { className: 'muted' }, 'Wikidata can share Wikimedia rate limits. Europe PMC and Crossref are independent sources. No source guarantees coverage; failures remain visible and other sources continue.'),
     );
 
     const save = h(doc, 'button', { id: 'save', type: 'button', className: 'primary' }, 'Save');
@@ -154,8 +191,24 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
         platforms: { ...settings.platforms, chatgpt: chatgpt.checked },
         autoCheck: auto.checked,
         llm: { provider: llmSelect.value as LLMChoice, model: model.value.trim(), apiKey: key.value.trim(), baseUrl: baseUrl.value.trim() || 'http://localhost:11434/v1' },
-        evidence: { wikipedia: wiki.checked, webSearch: web.checked, webSearchApiKey: webKey.value.trim() },
+        evidence: {
+          wikipedia: wiki.checked, wikidata: wikidata.checked, europePmc: europePmc.checked, crossref: crossref.checked, worldBank: worldBank.checked, govUk: govUk.checked,
+          googleFactCheck: factCheck.checked, googleFactCheckApiKey: factCheckKey.value.trim(),
+          tavily: tavily.checked, tavilyApiKey: tavilyKey.value.trim(), tavilyDomains: tavilyDomains.value.split(/\r?\n/).map((s) => s.trim()).filter(Boolean),
+          urls: urls.checked, trustedUrls: trustedUrls.value.split(/\r?\n/).map((s) => s.trim()).filter(Boolean),
+          webSearch: web.checked, webSearchApiKey: webKey.value.trim(),
+        },
       };
+      if (next.evidence.tavily) {
+        try { next.evidence.tavilyDomains = trustedDomains(next.evidence.tavilyDomains); }
+        catch (err) { status(err instanceof Error ? err.message : 'Invalid trusted search domain.'); return; }
+      }
+      if (next.evidence.urls) {
+        try {
+          if (!next.evidence.trustedUrls.length || next.evidence.trustedUrls.length > 10) throw new Error('Enter between 1 and 10 trusted URLs.');
+          next.evidence.trustedUrls = [...new Set(next.evidence.trustedUrls.map((url) => trustedUrl(url).url))];
+        } catch (err) { status(err instanceof Error ? err.message : 'Invalid trusted URL.'); return; }
+      }
       if (next.llm.provider === 'local') {
         const origin = localOrigin(next.llm.baseUrl);
         if (!origin || !/^http:\/\/(localhost|127\.0\.0\.1)\/\*$/.test(origin)) {
