@@ -3,7 +3,7 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.1.1] - 2026-10-25
 
 ### Added
 - **Toolbar popup**: shows on/off state, judge and evidence setup, answers detected on the current ChatGPT tab and the
@@ -44,4 +44,5 @@ All notable changes to this project are documented here. The format follows
 - **Benchmark**: 37 labeled synthetic items, a runner, and a `BaselineVerifier` plug-in interface.
 - Release packaging (`pnpm package`) and GitHub Actions for CI and tagged releases.
 
+[0.1.1]: https://github.com/sathvik150/cac26/releases/tag/v0.1.1
 [0.1.0]: https://github.com/sathvik150/cac26/releases/tag/v0.1.0

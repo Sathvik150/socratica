@@ -26,7 +26,7 @@ quote is not a verbatim substring of a retrieved passage. Missing evidence stays
 ## Claude Code
 
 ```bash
-unzip hallucination-firewall-skill-v0.1.0.zip -d ~/.claude/skills/        # all projects
+unzip hallucination-firewall-skill-v0.1.1.zip -d ~/.claude/skills/        # all projects
 # or: unzip ... -d .claude/skills/                                        # this project only
 ```
 

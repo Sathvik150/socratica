@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Hallucination Firewall",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Checks ChatGPT answers against retrieved evidence: claims are marked supported, contradicted or unverifiable, with source quotes.",
   "permissions": [
     "storage",
