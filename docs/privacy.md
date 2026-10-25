@@ -9,6 +9,8 @@
     receives **short search queries built from individual claims**, never the whole conversation. Web search is
     required, so every check sends these queries. Without a key, Firecrawl counts usage by your network address
     (and refuses addresses it judges to be a VPN or proxy); with your key, it counts usage against your account.
+  - With Firecrawl and no key, DuckDuckGo's Instant Answer API also receives the name of what each claim is about
+    (for example "james webb space telescope"), as a keyless backup.
   - Wikipedia, Europe PMC, GOV.UK and Google Fact Check also receive short claim-based queries. Wikidata receives
     entity names from claim context. World Bank receives country, indicator and date requests. Wikipedia, Wikidata
     and Europe PMC are enabled by default after consent; each of these can be disabled independently.
@@ -27,8 +29,8 @@
   the engine you choose and the sources you enable.
   The optional HTTPS wildcard declaration enables user-supplied URLs; permission requests use only the specific
   site origins the user enters, never blanket access to all HTTPS sites.
-- **Consent version 3:** adding new destinations (the web search engines in 0.2.0) requires existing users to
-  accept the updated notice before any requests resume. Declining a source's permission skips that source and
+- **Consent version 4:** adding new destinations (the web search engines in 0.2.0, the DuckDuckGo backup in 0.2.1)
+  requires existing users to accept the updated notice before any requests resume. Declining a source's permission skips that source and
   displays a warning; declining the web search engine's permission stops checks until it is allowed.
 - **Local model judge:** claims and passages go only to the server URL you enter, which must be on your own machine.
 - **No backend, accounts, telemetry or analytics.**

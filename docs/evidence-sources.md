@@ -17,13 +17,22 @@ accepts your own `--evidence` files instead).
 
 | Engine | Evidence returned | Key | Notes |
 |---|---|---|---|
-| Firecrawl (default) | Result titles, links and snippets | None on most networks. A free Firecrawl key (sign up with Google or GitHub, 1,000 credits) works anywhere | Works with no sign-up on most networks. Keyless use has a daily limit per network address, and Firecrawl refuses keyless requests from VPN, proxy and IPv6 addresses (HTTP 403 or 401) address; when it runs out, the check continues with the other sources and says so |
+| Firecrawl (default) | Result titles, links and snippets | None. An optional free Firecrawl key (sign up with Google or GitHub, 1,000 credits) works on any network | No sign-up. Keyless use has a daily limit per network address, and Firecrawl turns away keyless requests from VPN, proxy and IPv6 addresses (HTTP 403 or 401). Without a key, DuckDuckGo backs it up (below) address; when it runs out, the check continues with the other sources and says so |
 | Google results via Serper | Google's answer box, knowledge panel and result snippets | Free Serper key (2,500 searches, no card) | The closest thing to Google web search with a free key. Google's own Custom Search JSON API is closed to new customers, so it is not offered |
 | Brave Search | Result snippets | Brave Search API key | Brave's independent index |
 
 Search snippets are short. A snippet only decides a verdict when it states the fact itself and the
 quote is verbatim; otherwise the claim stays `unverifiable`. Results are restricted to `http(s)`
 links, cleaned of markup, and ranked by how closely they match the claim's subject.
+
+### The DuckDuckGo backup
+
+Nobody has to add a key. When Firecrawl runs without one, every check also asks DuckDuckGo's Instant
+Answer API (keyless, with no documented network limits) about the subject of each claim. It answers with a
+short summary of that thing, usually Wikipedia's, and related topics: encyclopedia-style evidence, not
+full web results. Where Firecrawl's free tier turns a network away, the check carries on with
+DuckDuckGo, Wikipedia and Wikidata, and the note says that an optional free Firecrawl key adds full
+web results there. With a Firecrawl key, or with Serper or Brave, the backup isn't used.
 
 ## How searches are built
 
@@ -77,7 +86,7 @@ separately, so switching back and forth keeps them. If the engine's site permiss
 checks stop with a message telling you to press Save and allow it.
 
 Wikipedia, Wikidata and Europe PMC are also enabled by default after consent; every other source has
-an independent toggle. Existing users must accept consent version 3 before any requests resume.
+an independent toggle. Existing users must accept consent version 4 before any requests resume.
 Settings from earlier versions are migrated: a Brave key becomes the Brave engine choice, and Tavily
 settings are dropped.
 

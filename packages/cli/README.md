@@ -51,7 +51,7 @@ To check claims about the real world, `verify` needs a web search engine. Pick o
 
 | Engine | Flag | Key |
 |---|---|---|
-| Firecrawl | `--web firecrawl` | None on most networks. `SOCRATICA_FIRECRAWL_API_KEY` raises the free daily limit and is needed on a VPN, a proxy or IPv6 |
+| Firecrawl | `--web firecrawl` | None. Without a key, DuckDuckGo's keyless answers back it up where Firecrawl's free tier refuses the network. An optional `SOCRATICA_FIRECRAWL_API_KEY` gives full web results on any network |
 | Google results via Serper | `--web serper` | `SOCRATICA_SERPER_API_KEY` (free sign-up at serper.dev) |
 | Brave Search | `--web brave` | `SOCRATICA_BRAVE_API_KEY` |
 

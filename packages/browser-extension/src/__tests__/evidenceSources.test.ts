@@ -16,11 +16,11 @@ function response(data: unknown, status = 200, type = 'application/json') {
 }
 afterEach(() => vi.unstubAllGlobals());
 
-/** Every check queries the web search engine (Firecrawl by default); these fakes answer it with no results. */
-const isWebSearch = (url: string) => url.startsWith('https://api.firecrawl.dev/');
+/** Every check queries the web search engine (keyless Firecrawl by default, backed up by DuckDuckGo); these fakes answer with no results. */
+const isWebSearch = (url: string) => url.startsWith('https://api.firecrawl.dev/') || url.startsWith('https://api.duckduckgo.com/');
 const noWebResults = () => response({ success: true, data: { web: [] } });
-/** Permissions for the default web engine plus whatever a test allows. */
-const allow = (...origins: string[]) => async (origin: string) => origin === HOST_PERMISSIONS.firecrawl || origins.includes(origin);
+/** Permissions for the default web engine and its backup, plus whatever a test allows. */
+const allow = (...origins: string[]) => async (origin: string) => origin === HOST_PERMISSIONS.firecrawl || origin === HOST_PERMISSIONS.duckduckgo || origins.includes(origin);
 
 describe('source settings and consent migration', () => {
   it('migrates old stored settings without losing keys or treating old consent as valid', async () => {
@@ -46,8 +46,11 @@ describe('source settings and consent migration', () => {
     const s = { ...settings, evidence: { ...offline, wikidata: true, europePmc: true, worldBank: true, govUk: true, googleFactCheck: true, urls: true, trustedUrls: ['https://trusted.org/a', 'https://trusted.org/b'] } };
     const origins = requiredOrigins(s);
     // The web search engine is always first: it is required.
-    expect(origins).toEqual([HOST_PERMISSIONS.firecrawl, HOST_PERMISSIONS.wikidata, HOST_PERMISSIONS.europePmc, HOST_PERMISSIONS.worldBank, HOST_PERMISSIONS.govUk, HOST_PERMISSIONS.googleFactCheck, 'https://trusted.org/*']);
+    expect(origins).toEqual([HOST_PERMISSIONS.firecrawl, HOST_PERMISSIONS.duckduckgo, HOST_PERMISSIONS.wikidata, HOST_PERMISSIONS.europePmc, HOST_PERMISSIONS.worldBank, HOST_PERMISSIONS.govUk, HOST_PERMISSIONS.googleFactCheck, 'https://trusted.org/*']);
     expect(requiredOrigins({ ...s, evidence: { ...s.evidence, web: { ...s.evidence.web, engine: 'serper' } } })[0]).toBe(HOST_PERMISSIONS.serper);
+    // The DuckDuckGo backup is only for keyless Firecrawl.
+    expect(requiredOrigins({ ...s, evidence: { ...s.evidence, web: { ...s.evidence.web, firecrawlApiKey: 'fc-test' } } })).not.toContain(HOST_PERMISSIONS.duckduckgo);
+    expect(requiredOrigins({ ...s, evidence: { ...s.evidence, web: { ...s.evidence.web, engine: 'serper' } } })).not.toContain(HOST_PERMISSIONS.duckduckgo);
     expect(origins).not.toContain('https://*/*');
     for (const origin of Object.values(HOST_PERMISSIONS)) expect(manifest.optional_host_permissions).toContain(origin);
     expect(manifest.optional_host_permissions).toContain('https://*/*');
@@ -129,7 +132,7 @@ describe('source options', () => {
 
   it('describes every destination and saves preferences without permissions before consent', async () => {
     const state = await mount(false);
-    for (const name of ['Wikipedia', 'Wikidata', 'Europe PMC', 'Google Fact Check', 'Firecrawl', 'Serper', 'Brave']) expect(document.getElementById('consent')!.textContent).toContain(name);
+    for (const name of ['Wikipedia', 'Wikidata', 'Europe PMC', 'Google Fact Check', 'Firecrawl', 'Serper', 'Brave', 'DuckDuckGo']) expect(document.getElementById('consent')!.textContent).toContain(name);
     set('ev-world-bank', true);
     document.querySelector<HTMLButtonElement>('#save')!.click(); await flush();
     expect(state.saved().evidence.worldBank).toBe(true);
@@ -160,13 +163,21 @@ describe('background source integration', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("explains Firecrawl's no-key refusal (VPN, proxy or IPv6 network) with how to fix it", async () => {
-    const fetch: FetchLike = async (url) => (isWebSearch(url) ? response({ success: false, error: 'blocked' }, 403) : response({}));
+  it("carries on with DuckDuckGo when Firecrawl's free tier refuses the network, without asking for a key", async () => {
+    const fetch: FetchLike = async (url) => {
+      if (url.startsWith('https://api.firecrawl.dev/')) return response({ success: false, error: 'blocked' }, 403);
+      if (url.startsWith('https://api.duckduckgo.com/')) return response({ Heading: 'Eiffel Tower', AbstractSource: 'Wikipedia', AbstractURL: 'https://en.wikipedia.org/wiki/Eiffel_Tower', AbstractText: 'The Eiffel Tower opened in 1889.' });
+      return response({});
+    };
     const r = await handleVerifyText({ text: answer }, { ...settings, evidence: offline }, { fetch, hasPermission: async () => true });
     if (r.status !== 'ok') throw new Error(r.status);
+    // The backup's evidence decides the verdict.
+    expect(r.result.summary.contradicted).toBe(1);
+    expect(r.result.verdicts[0]!.quotes[0]!.source.providerId).toBe('duckduckgo');
     const notes = summarizeWarnings(r.warnings).notes.join(' ');
-    expect(notes).toContain("Firecrawl won't search without a key from this network (HTTP 403)");
-    expect(notes).toContain('Add a free Firecrawl key in Settings');
+    expect(notes).toContain("Firecrawl's free tier doesn't search from this network (HTTP 403)");
+    expect(notes).toContain('The other sources were still used');
+    expect(notes).toContain('optional');
     expect(notes).not.toContain('firecrawl:');
     expect(notes).not.toContain('blocked');
   });
@@ -244,5 +255,6 @@ describe('background source integration', () => {
     expect(document.getElementById('evidence-summary')!.textContent).toBe('Also searching: Wikidata, Europe PMC, Google Fact Check, Trusted URLs.');
     expect(document.getElementById('web-source')!.textContent).toContain('Firecrawl');
     expect(document.getElementById('web-source')!.textContent).toContain('no key needed');
+    expect(document.getElementById('web-backup')!.textContent).toContain('DuckDuckGo');
   });
 });

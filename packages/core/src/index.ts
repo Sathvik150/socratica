@@ -22,6 +22,7 @@ export {
   type WebSearchEngine,
 } from './providers/evidence/webSearch.js';
 export { WikidataEvidenceProvider, type WikidataOptions } from './providers/evidence/wikidata.js';
+export { DuckDuckGoEvidenceProvider, type DuckDuckGoOptions } from './providers/evidence/duckduckgo.js';
 export { GoogleFactCheckEvidenceProvider, type GoogleFactCheckOptions } from './providers/evidence/factCheck.js';
 export { UrlEvidenceProvider, trustedUrl, trustedDomains, type UrlEvidenceOptions } from './providers/evidence/urls.js';
 export { EuropePmcEvidenceProvider, type ScholarlyOptions } from './providers/evidence/scholarly.js';

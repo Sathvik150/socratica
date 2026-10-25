@@ -16,6 +16,7 @@ import {
   UrlEvidenceProvider,
   WEB_SEARCH_ENGINES,
   createWebSearch,
+  DuckDuckGoEvidenceProvider,
   EuropePmcEvidenceProvider,
   WorldBankEvidenceProvider,
   GovUkEvidenceProvider,
@@ -51,8 +52,9 @@ VERIFY OPTIONS
   --answer <file|->        Answer text to check ("-" reads stdin).
   --question <text>        The question that produced the answer (context only).
   --evidence <file|dir>    Evidence documents: .json ([{title,text,url}]), .txt/.md, or a folder. Repeatable.
-  --web <engine>           Web search engine: firecrawl (free, no key), serper (Google results, free key)
-                           or brave (your key). Required unless you pass --evidence files.
+  --web <engine>           Web search engine: firecrawl (free, no key; backed up by DuckDuckGo answers),
+                           serper (Google results, free key) or brave (your key). Required unless you
+                           pass --evidence files.
   --wikipedia              Also search English Wikipedia (network).
   --wikidata               Search structured Wikidata statements (network, no key).
   --europe-pmc             Search biomedical abstracts (network, no key).
@@ -72,7 +74,7 @@ ENVIRONMENT
   SOCRATICA_ANTHROPIC_API_KEY     Key for --llm anthropic.
   SOCRATICA_LOCAL_API_KEY         Optional key for --llm local.
   SOCRATICA_GOOGLE_FACT_CHECK_API_KEY  Key for --fact-check.
-  SOCRATICA_FIRECRAWL_API_KEY     Optional key for --web firecrawl (raises the free limits).
+  SOCRATICA_FIRECRAWL_API_KEY     Optional key for --web firecrawl (full results on VPNs and past the free limit).
   SOCRATICA_SERPER_API_KEY        Key for --web serper (free sign-up at serper.dev).
   SOCRATICA_BRAVE_API_KEY         Key for --web brave.
   The pre-0.2 HF_* names (HF_OPENAI_API_KEY and so on) are still read as fallbacks.
@@ -230,6 +232,8 @@ export async function main(argv: string[], io: Io): Promise<number> {
       const key = env[WEB_KEY_ENV[engine as WebSearchEngine]];
       try { providers.push(createWebSearch(engine as WebSearchEngine, { fetch: io.fetch, ...(key ? { apiKey: key } : {}) })); }
       catch (err) { throw new UsageError(`${err instanceof Error ? err.message : 'Web search is not set up.'} Set ${WEB_KEY_ENV[engine as WebSearchEngine]} in the environment.`); }
+      // Keyless Firecrawl is backed up by DuckDuckGo's keyless answers where Firecrawl's free tier refuses the network.
+      if (engine === 'firecrawl' && !key) providers.push(new DuckDuckGoEvidenceProvider({ fetch: io.fetch }));
     } else if (documents.length === 0) {
       throw new UsageError('verify needs a web search engine: add --web firecrawl (free, no key needed), --web serper or --web brave. Or check against your own files with --evidence.');
     }

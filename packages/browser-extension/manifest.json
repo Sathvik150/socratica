@@ -15,6 +15,7 @@
     "https://api.search.brave.com/*",
     "https://api.firecrawl.dev/*",
     "https://google.serper.dev/*",
+    "https://api.duckduckgo.com/*",
     "https://www.wikidata.org/*",
     "https://www.ebi.ac.uk/*",
     "https://api.worldbank.org/*",

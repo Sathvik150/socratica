@@ -6,10 +6,12 @@ All notable changes to this project are documented here. The format follows
 ## [0.2.1] - 2026-10-25
 
 ### Fixed
-- **Firecrawl's "could not be reached (HTTP 403)".** Without a key, Firecrawl refuses requests from addresses it judges
-  to be a VPN or proxy (HTTP 403) and from IPv6 addresses (HTTP 401), and stops after its daily allowance (HTTP 429).
-  Each case now says so and how to fix it: add a free Firecrawl key (sign up with Google or GitHub, 1,000 credits) or
-  choose Google results via Serper. Settings links to each engine's key page.
+- **Firecrawl's "could not be reached (HTTP 403)", and no key needed anywhere.** Without a key, Firecrawl turns away
+  addresses it judges to be a VPN or proxy (HTTP 403) and IPv6 addresses (HTTP 401), and stops after its daily allowance
+  (HTTP 429). Keyless Firecrawl is now backed up by DuckDuckGo's Instant Answer API, which needs no key and has no documented network limits,
+  so checks carry on with DuckDuckGo, Wikipedia and Wikidata and nobody has to add a key. The note says what happened and
+  that an optional free Firecrawl key adds full web results on that network. The CLI's `--web firecrawl` uses the same
+  backup. DuckDuckGo is a new destination, so the privacy notice moves to version 4.
 - **Every claim came back unverifiable on long, framed answers.** Searches went to the reporter or the first capitalized
   word ("NASA", "According", "Scientists") and passages about the actual fact scored too low to reach the judge.
   Searches now target each fact (`james webb space telescope launch`, `earth oxygen concentration`,
@@ -24,6 +26,8 @@ All notable changes to this project are documented here. The format follows
   Benchmark results are unchanged (89.2%; 82.6% and 75.0% on the encyclopedia-style sets; no false contradictions).
 - Wikidata also reads launch dates, elevation, orbital period and rotation period.
 - The toolbar icon is the gold laurel alone, as in the README, without the letter or the tile.
+- A source's rate-limit cooldown is cleared once its short `Retry-After` wait is over; a timer firing slightly early
+  could leave it in place and fail the next request.
 
 ## [0.2.0] - 2026-10-25
 

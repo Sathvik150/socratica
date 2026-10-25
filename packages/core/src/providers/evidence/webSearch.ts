@@ -37,22 +37,23 @@ export interface FirecrawlSearchOptions {
   fetch: FetchLike;
   /**
    * Optional. Firecrawl answers without a key on most networks (free, capped per IP address per day).
-   * Its no-key tier refuses VPN, proxy and IPv6 addresses; a free key works from anywhere.
+   * Its no-key tier refuses VPN, proxy and IPv6 addresses, where `DuckDuckGoEvidenceProvider` is the
+   * keyless backup; a free key works from anywhere.
    */
   apiKey?: string;
   /** Results per search, 1-20. Default 5. */
   count?: number;
 }
 
-const FIRECRAWL_KEY_HINT = 'Add a free Firecrawl key in Settings (sign up with Google or GitHub at firecrawl.dev, 1,000 free credits), or choose Google results via Serper.';
+const FIRECRAWL_KEY_HINT = 'The other sources were still used. A free Firecrawl key (optional; sign up with Google or GitHub at firecrawl.dev) adds full web results on this network.';
 
 /** What a Firecrawl error status means, and what to do about it. */
 export function firecrawlError(status: number, hasKey: boolean): string | undefined {
   if (!hasKey) {
     // Firecrawl's no-key tier answers 403 for addresses it judges to be a VPN or proxy, and 401 for
     // IPv6 addresses (its per-address caps can't be enforced there).
-    if (status === 401 || status === 403) return `Firecrawl won't search without a key from this network (HTTP ${status}). Its free no-key tier refuses VPN, proxy and IPv6 connections. ${FIRECRAWL_KEY_HINT}`;
-    if (status === 429 || status === 402) return `Firecrawl's free no-key searches for this network are used up for today (HTTP ${status}). ${FIRECRAWL_KEY_HINT}`;
+    if (status === 401 || status === 403) return `Firecrawl's free tier doesn't search from this network (HTTP ${status}): it turns away VPN, proxy and IPv6 connections. ${FIRECRAWL_KEY_HINT}`;
+    if (status === 429 || status === 402) return `Firecrawl's free searches for this network are used up for today (HTTP ${status}). ${FIRECRAWL_KEY_HINT}`;
     return undefined;
   }
   if (status === 401) return 'Firecrawl rejected the API key (HTTP 401). Check the key in Settings.';

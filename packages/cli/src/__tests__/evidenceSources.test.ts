@@ -51,6 +51,26 @@ describe('evidence source CLI flags', () => {
     expect(JSON.parse(t.output()).verdicts[0].quotes[0].source.url).toBe('https://example.org/tower');
   });
 
+  it('falls back to DuckDuckGo, with no key, when Firecrawl refuses the network', async () => {
+    const t = io();
+    const fetch = t.x.fetch;
+    t.x.fetch = async (url, init) => {
+      if (url.includes('api.firecrawl.dev')) return { ok: false, status: 403, json: async () => ({ success: false }), text: async () => '' };
+      if (url.includes('api.duckduckgo.com')) return { ok: true, status: 200, text: async () => '', json: async () => ({ Heading: 'Eiffel Tower', AbstractSource: 'Wikipedia', AbstractURL: 'https://en.wikipedia.org/wiki/Eiffel_Tower', AbstractText: 'The Eiffel Tower opened in 1889.' }) };
+      return fetch(url, init);
+    };
+    expect(await main([...args, '--fail-on-contradiction'], t.x)).toBe(2);
+    const result = JSON.parse(t.output());
+    expect(result.verdicts[0].quotes[0].source.providerId).toBe('duckduckgo');
+    expect(result.errors[0].message).toContain("Firecrawl's free tier doesn't search from this network (HTTP 403)");
+  });
+
+  it('uses no DuckDuckGo backup when Firecrawl has a key', async () => {
+    const t = io({ SOCRATICA_FIRECRAWL_API_KEY: 'fc-test' }, tower);
+    await main(args, t.x);
+    expect(t.calls.some((c) => c.url.includes('duckduckgo'))).toBe(false);
+  });
+
   it('reads keyed source credentials only from environment bindings', async () => {
     const t = io({ SOCRATICA_GOOGLE_FACT_CHECK_API_KEY: 'google-test', SOCRATICA_SERPER_API_KEY: 'serper-test' }, tower);
     await main(['verify', '--answer', '-', '--format', 'json', '--web', 'serper', '--fact-check'], t.x);

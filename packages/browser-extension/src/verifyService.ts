@@ -4,6 +4,7 @@ import {
   OpenAIProvider,
   WikipediaEvidenceProvider,
   WikidataEvidenceProvider,
+  DuckDuckGoEvidenceProvider,
   EuropePmcEvidenceProvider,
   WorldBankEvidenceProvider,
   GovUkEvidenceProvider,
@@ -19,7 +20,7 @@ import {
 } from '@socratica/core';
 import type { PlatformId } from './adapters/adapter.js';
 import type { TestJudgeResponse, VerifyResponse } from './messages.js';
-import { DEFAULT_MODELS, HOST_PERMISSIONS, WEB_KEY_FIELD, hasValidConsent, localOrigin, type Settings } from './settings.js';
+import { DEFAULT_MODELS, HOST_PERMISSIONS, WEB_KEY_FIELD, hasValidConsent, localOrigin, usesKeylessBackup, type Settings } from './settings.js';
 
 // One Wikipedia provider per fetch function, so its article cache survives across answers
 // and the extension sends Wikimedia fewer requests.
@@ -117,6 +118,10 @@ export async function webSearchFor(settings: Settings, deps: ServiceDeps): Promi
 function evidenceProviders(settings: Settings, deps: ServiceDeps, warnings: string[]): Promise<EvidenceProvider[]> {
   return (async () => {
     const providers: EvidenceProvider[] = [];
+    if (usesKeylessBackup(settings)) {
+      if (await deps.hasPermission(HOST_PERMISSIONS.duckduckgo)) providers.push(cachedSource(deps.fetch, 'duckduckgo', () => new DuckDuckGoEvidenceProvider({ fetch: deps.fetch })));
+      else warnings.push('The DuckDuckGo backup for keyless web search is not allowed yet. Open Settings and press Save.');
+    }
     if (settings.evidence.wikipedia) {
       if (await deps.hasPermission(HOST_PERMISSIONS.wikipedia)) providers.push(wikipediaFor(deps.fetch));
       else warnings.push('Wikipedia is enabled but its permission was not granted.');

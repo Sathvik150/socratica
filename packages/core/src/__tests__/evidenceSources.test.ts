@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  BraveSearchEvidenceProvider, EuropePmcEvidenceProvider, FirecrawlSearchEvidenceProvider, GoogleFactCheckEvidenceProvider, HeuristicLLM,
+  BraveSearchEvidenceProvider, DuckDuckGoEvidenceProvider, EuropePmcEvidenceProvider, FirecrawlSearchEvidenceProvider, GoogleFactCheckEvidenceProvider, HeuristicLLM,
   SerperEvidenceProvider, UrlEvidenceProvider, WikidataEvidenceProvider, WikipediaEvidenceProvider, createWebSearch,
   retrieveEvidence, runVerification, trustedUrl, verifyClaim, type Claim, type FetchLike, type Passage,
 } from '../index.js';
@@ -336,11 +336,11 @@ describe('web search engines (fake fetch, no network)', () => {
 
   it('Firecrawl explains its no-key limits and refusals instead of a bare HTTP status', async () => {
     // Firecrawl's no-key tier answers 403 for VPN/proxy addresses, 401 for IPv6, 429 when the daily allowance is used.
-    for (const [status, text] of [[403, "won't search without a key from this network (HTTP 403)"], [401, 'refuses VPN, proxy and IPv6 connections'], [429, 'used up for today (HTTP 429)']] as const) {
+    for (const [status, text] of [[403, "free tier doesn't search from this network (HTTP 403)"], [401, 'turns away VPN, proxy and IPv6 connections'], [429, 'used up for today (HTTP 429)']] as const) {
       const f = fake(() => response({ success: false, error: 'private detail' }, status, { 'retry-after': '64418' }));
       const p = new FirecrawlSearchEvidenceProvider({ fetch: f.fetch });
       await expect(p.retrieve(claim, opts)).rejects.toThrow(text);
-      await expect(p.retrieve(claim, opts)).rejects.toThrow('Add a free Firecrawl key in Settings');
+      await expect(p.retrieve(claim, opts)).rejects.toThrow('The other sources were still used. A free Firecrawl key (optional');
       await expect(p.retrieve(claim, opts)).rejects.not.toThrow('private detail');
     }
   });
@@ -364,6 +364,24 @@ describe('web search engines (fake fetch, no network)', () => {
     expect(f.calls[0]!.url).toBe('https://google.serper.dev/search');
     expect(f.calls[0]!.init!.headers).toMatchObject({ 'x-api-key': 'serper-test' });
     expect(f.calls[0]!.init!.body).not.toContain('serper-test');
+  });
+
+  it('DuckDuckGo asks about the subject, needs no key, and quotes its summary and related topics', async () => {
+    const f = fake(() => response({
+      Heading: 'Eiffel Tower', AbstractSource: 'Wikipedia', AbstractURL: 'https://en.wikipedia.org/wiki/Eiffel_Tower',
+      AbstractText: snippet,
+      RelatedTopics: [
+        { Text: 'Eiffel Tower opening ceremony, 1889 World’s Fair in Paris.', FirstURL: 'https://duckduckgo.com/Exposition_Universelle_(1889)' },
+        { Text: 'Unlinked topic about the tower', FirstURL: 'javascript:alert(1)' },
+      ],
+    }));
+    const found = await new DuckDuckGoEvidenceProvider({ fetch: f.fetch }).retrieve(claim, opts);
+    expect(found[0]).toMatchObject({ text: snippet, source: { title: 'Eiffel Tower (Wikipedia, via DuckDuckGo)', url: 'https://en.wikipedia.org/wiki/Eiffel_Tower', providerId: 'duckduckgo' } });
+    expect(found.every((p) => p.source.url!.startsWith('https://'))).toBe(true);
+    const url = new URL(f.calls[0]!.url);
+    expect(url.origin).toBe('https://api.duckduckgo.com');
+    expect(url.searchParams.get('q')).toBe('eiffel tower');
+    expect(f.calls[0]!.init!.headers ?? {}).not.toHaveProperty('authorization');
   });
 
   it('createWebSearch builds Firecrawl without a key and explains a missing key for the others', () => {

@@ -22,9 +22,9 @@ const h = <K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, props: 
 const ENGINE_COPY: Record<WebSearchEngine, { title: string; detail: string; keyLabel: string; keyLink: string }> = {
   firecrawl: {
     title: 'Firecrawl',
-    detail: 'Free, and works without a key on most home networks, with a daily limit. On a VPN, a proxy, an IPv6 connection or some school and office networks, it needs a free key (sign up with Google or GitHub for 1,000 credits).',
+    detail: 'Free, no key needed. Where Firecrawl’s free tier doesn’t search (VPNs, proxies, IPv6 and some school or office networks, or after its daily limit), checks carry on with DuckDuckGo answers, Wikipedia and Wikidata. An optional free Firecrawl key adds full web results there.',
     keyLabel: 'Firecrawl API key (optional)',
-    keyLink: 'Get a free Firecrawl key (needed on a VPN or proxy)',
+    keyLink: 'Optional: get a free Firecrawl key for full web results on any network',
   },
   serper: {
     title: 'Google results via Serper',
@@ -75,7 +75,7 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
         doc,
         'ul',
         {},
-        h(doc, 'li', {}, 'Short search queries built from individual claims are sent to the web search engine you choose (Firecrawl by default; Google results via Serper or Brave Search with your own key). Web search is required, so every check uses it.'),
+        h(doc, 'li', {}, 'Short search queries built from individual claims are sent to the web search engine you choose (Firecrawl by default; Google results via Serper or Brave Search with your own key). Web search is required, so every check uses it. Firecrawl without a key is backed up by DuckDuckGo, which receives the name of what each claim is about.'),
         h(doc, 'li', {}, 'The other sources you enable also receive claim-based queries: Wikipedia, Wikidata (entity names), Europe PMC, GOV.UK, World Bank (country, indicator and year requests) and Google Fact Check (your key).'),
         h(doc, 'li', {}, 'If you enable trusted URLs, their pages are fetched without cookies or credentials. Those sites receive the URL request, not your claim text. Only the HTTPS sites you enter are requested; redirects are refused.'),
         h(doc, 'li', {}, 'If you choose OpenAI or Anthropic as the judge, each claim, its surrounding sentence, your question, and the retrieved passages are sent to that provider using your own API key, under that provider’s terms.'),

@@ -57,7 +57,7 @@ describe('background verify service', () => {
     if (res.status !== 'ok') return;
     expect(res.result.summary.contradicted).toBe(1);
     expect(calls.some((u) => u.startsWith('https://api.firecrawl.dev/'))).toBe(true);
-    expect(calls.every((u) => u.startsWith('https://en.wikipedia.org/') || u.startsWith('https://api.firecrawl.dev/'))).toBe(true);
+    expect(calls.every((u) => ['https://en.wikipedia.org/', 'https://api.firecrawl.dev/', 'https://api.duckduckgo.com/'].some((o) => u.startsWith(o)))).toBe(true);
     for (const body of bodies) expect(JSON.parse(body).query).toContain('zentha bridge');
   });
 

@@ -1,6 +1,6 @@
 import { WEB_SEARCH_ENGINES, type ClaimVerdict } from '@socratica/core';
 import type { PageStatus, VerifyResponse } from './messages.js';
-import { DEFAULT_MODELS, WEB_KEY_FIELD, hasValidConsent, type Settings } from './settings.js';
+import { DEFAULT_MODELS, WEB_KEY_FIELD, hasValidConsent, usesKeylessBackup, type Settings } from './settings.js';
 import { friendlyWarning, icon, type IconName } from './ui/theme.js';
 
 /** Everything the popup needs from the browser, injected so the view can be tested without chrome.*. */
@@ -287,6 +287,7 @@ export async function mountPopup(root: HTMLElement, power: HTMLButtonElement | n
     h(doc, 'div', { className: 'card-title' }, h(doc, 'h2', {}, 'Web search'), h(doc, 'span', { className: 'badge' }, 'Required')),
     h(doc, 'p', { className: 'source-line' }, icon(doc, 'document', 18), h(doc, 'span', {}, h(doc, 'b', {}, engine.name), h(doc, 'small', { className: webReady ? 'ok' : 'bad' }, webReady ? (hasKey ? 'Ready, with your key' : 'Ready, no key needed') : 'Needs an API key: open Settings'))),
   );
+  if (usesKeylessBackup(settings)) webCard.append(h(doc, 'p', { className: 'muted', id: 'web-backup' }, 'Backed up by DuckDuckGo answers where Firecrawl’s free tier doesn’t search.'));
   const others: Array<[boolean, string]> = [
     [settings.evidence.wikipedia, 'Wikipedia'], [settings.evidence.wikidata, 'Wikidata'], [settings.evidence.europePmc, 'Europe PMC'],
     [settings.evidence.worldBank, 'World Bank'], [settings.evidence.govUk, 'GOV.UK'], [settings.evidence.googleFactCheck, 'Google Fact Check'],

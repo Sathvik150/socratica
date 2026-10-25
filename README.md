@@ -31,7 +31,7 @@ Plenty of tools say "this might be a hallucination." Socratica is built so you c
 - **Evidence-linked verdicts.** A claim is marked supported or contradicted only with a quote from a passage that was actually retrieved. Code checks that the quote is a **verbatim substring** of the passage. If it isn't, the verdict is thrown out and becomes `unverifiable`.
 - **Three-way verdicts.** "Demonstrably false" (`contradicted`) is kept separate from "couldn't find evidence" (`unverifiable`). Missing evidence is **never** reported as false.
 - **Low false positives by design.** Opinions, advice, questions, hedged statements and code are not checked. Weak or malformed judgments fall back to `unverifiable`, and a correction is shown only when the source states it directly.
-- **Web search for everyone.** Every check searches the web. The default engine, Firecrawl, works without an account or key on most networks; Google results through Serper and Brave Search are there if you have a key.
+- **Web search for everyone, no key needed.** Every check searches the web. The default engine, Firecrawl, needs no account or key, and where its free tier doesn't search (VPNs, some school or office networks, after its daily limit) DuckDuckGo's keyless answers back it up. Google results through Serper and Brave Search are there if you have a key.
 - **Model-independent.** Use the offline judge, your own OpenAI or Anthropic key, or a **local model** (Ollama, LM Studio, llama.cpp, vLLM).
 
 ## Download
@@ -55,7 +55,7 @@ Grab the zips from the **[latest release](https://github.com/sathvik150/cac26/re
 1. Unzip `socratica-extension-v0.2.1.zip`.
 2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and pick the unzipped folder.
 3. Read and accept the privacy notice on the settings page that opens. **Nothing is checked or sent before you accept.**
-4. **Web search** is required and already set up: Firecrawl works with no key on most home networks. On a VPN, a proxy, an IPv6 connection or some school and office networks, Firecrawl refuses keyless searches; Socratica tells you so, and a free Firecrawl key (sign up with Google or GitHub, 1,000 credits) fixes it. To use Google results instead, choose **Google results via Serper** and paste a free key from [serper.dev](https://serper.dev); for Brave, paste a Brave Search API key.
+4. **Web search** is required and already set up, with no key: Firecrawl searches the web, and on networks its free tier turns away (a VPN, a proxy, IPv6, some school and office networks) DuckDuckGo's keyless answers stand in. An optional free Firecrawl key (sign up with Google or GitHub) brings full web results to those networks too. To use Google results instead, choose **Google results via Serper** and paste a free key from [serper.dev](https://serper.dev); for Brave, paste a Brave Search API key.
 5. **Choose a judge** in the same settings page. The default offline judge only recognises very literal matches, so on real answers it mostly says "unverifiable". For real checks, pick one of:
    - **Local model (free, private):** install [Ollama](https://ollama.com), run `ollama pull qwen2.5:7b`, then start it with `OLLAMA_ORIGINS="chrome-extension://*" ollama serve`. In settings, choose **Local model**, press **Save**, then **Test connection**.
    - **OpenAI or Anthropic:** paste your own API key.
@@ -154,7 +154,7 @@ The core engine has no DOM or browser code and doesn't know which chatbot wrote 
 
 | Engine | Key | Good to know |
 |---|---|---|
-| **Firecrawl** (default) | None on most networks | Free, no sign-up, with a daily limit per network. Its no-key tier refuses VPN, proxy and IPv6 connections; a free key (1,000 credits) works anywhere |
+| **Firecrawl** (default) | None | Free, no sign-up, with a daily limit per network. Its free tier turns away VPN, proxy and IPv6 connections; there, DuckDuckGo's keyless answers stand in, and an optional free key restores full web results |
 | **Google results via Serper** | Free key from [serper.dev](https://serper.dev) (2,500 searches, no card) | Google's answer box, knowledge panel and results. Google's own Custom Search API is closed to new customers |
 | **Brave Search** | Brave Search API key | Brave's independent index |
 
@@ -212,7 +212,7 @@ On the held-out set, true claims are now marked supported 90% of the time instea
 |---|---|---|
 | Core, SDK, CLI, extension logic | Automated tests (`pnpm test`); no network | Pass |
 | GitHub CI | Node 20 and 22 on GitHub Actions, building, testing, benchmarking and packaging | Pass |
-| Web search engines (Firecrawl, Serper, Brave) | Fake-fetch tests of each API's documented request and response shape; live Firecrawl requests without a key | Tests pass. Live, Firecrawl's no-key tier answered HTTP 403 on a user's network (its VPN/proxy refusal) and HTTP 429 from a cloud machine (daily limit used); no successful live keyless search is recorded yet. Serper and Brave not run live |
+| Web search engines (Firecrawl, Serper, Brave) and the DuckDuckGo backup | Fake-fetch tests of each API's documented request and response shape; live keyless requests | Tests pass. Live, Firecrawl's free tier answered HTTP 403 on a user's network (its VPN/proxy refusal) and HTTP 429 from a cloud machine (daily limit used); DuckDuckGo answered a keyless query from that cloud machine with the Wikipedia summary. No successful live Firecrawl search is recorded yet; Serper and Brave not run live |
 | Extension on **live chatgpt.com** | Real Chromium with the extension, logged-out ChatGPT, 2026-10-24 (version 0.1.x, before the rename) | Detects finished answers, extracts claims, highlights and explains them |
 | Agent Skill in **Claude Code** | Installed from the release zip into `.claude/skills`, then a fact-check request run headless | Skill auto-loaded, validator ran, semantic contradiction caught |
 | CLI with a **local model** | Ollama 0.40.10, `qwen2.5:3b` and `qwen2.5:7b`, from the unzipped release | Works; quality depends on the model (see benchmark) |
@@ -224,7 +224,7 @@ On the held-out set, true claims are now marked supported 90% of the time instea
 
 - **Review Mode only.** You see the answer before it's checked.
 - **ChatGPT's page can change.** The adapter was verified on live chatgpt.com in logged-out and logged-in UIs on 2026-10-24, with sanitized fixtures for both. This covers the tested layouts; other accounts or rollouts may differ. Older selectors are kept as a fallback. Fixes go in [`adapters/chatgpt.ts`](packages/browser-extension/src/adapters/chatgpt.ts).
-- **Free web search has limits.** Keyless Firecrawl refuses VPN, proxy and IPv6 connections and is limited per network address. When the limit is reached, the check says so and continues with the other sources; add a free Firecrawl key, or switch to Serper or Brave.
+- **Free web search has limits.** Keyless Firecrawl turns away VPN, proxy and IPv6 connections and is limited per network address. There, checks continue with the DuckDuckGo backup, Wikipedia and Wikidata, which give encyclopedia-style answers rather than full web results; an optional free Firecrawl key, or Serper or Brave, gives full web results.
 - **Search snippets are short.** A snippet decides a verdict only when it states the fact itself, so many claims checked only against snippets stay `unverifiable`.
 - **Wikimedia rate limits.** Wikipedia and Wikidata can be throttled by IP (HTTP 429). Requests are cached and backed off; independent sources continue when a source fails. Claims without sufficient evidence remain `unverifiable`.
 - **The offline heuristic judge is lexical.** It understands units, spelling variants ("metres"), rounding, "the tower"-style back-references and simple number, name and negation conflicts, but not paraphrase that needs world knowledge (see the benchmark above). It abstains on publisher reviews, publication metadata and qualified statistics. For real-world answers, use an LLM judge: OpenAI or Anthropic in the extension, or a local model with the CLI.

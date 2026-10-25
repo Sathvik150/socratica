@@ -2,7 +2,7 @@ import { trustedUrl, type WebSearchEngine } from '@socratica/core';
 import type { PlatformId } from './adapters/adapter.js';
 
 /** Bump when the consent text changes materially; users must consent again. */
-export const CONSENT_VERSION = 3;
+export const CONSENT_VERSION = 4;
 
 export type LLMChoice = 'heuristic' | 'openai' | 'anthropic' | 'local';
 
@@ -18,7 +18,7 @@ export interface Settings {
     wikipedia: boolean; wikidata: boolean; europePmc: boolean; worldBank: boolean; govUk: boolean;
     googleFactCheck: boolean; googleFactCheckApiKey: string;
     urls: boolean; trustedUrls: string[];
-    /** Web search is required: every check uses the chosen engine. Firecrawl needs no key. */
+    /** Web search is required: every check uses the chosen engine. Firecrawl needs no key (DuckDuckGo backs it up). */
     web: { engine: WebSearchEngine; firecrawlApiKey: string; serperApiKey: string; braveApiKey: string };
   };
 }
@@ -56,10 +56,19 @@ export const HOST_PERMISSIONS = {
   firecrawl: 'https://api.firecrawl.dev/*',
   serper: 'https://google.serper.dev/*',
   brave: 'https://api.search.brave.com/*',
+  duckduckgo: 'https://api.duckduckgo.com/*',
 } as const;
 
 /** The key field for each web search engine (Firecrawl's is optional). */
 export const WEB_KEY_FIELD = { firecrawl: 'firecrawlApiKey', serper: 'serperApiKey', brave: 'braveApiKey' } as const;
+
+/**
+ * Firecrawl without a key is backed up by DuckDuckGo's keyless answers, because Firecrawl's free tier
+ * turns some networks away (VPNs, proxies, IPv6) and has a daily cap. Nobody has to add a key.
+ */
+export function usesKeylessBackup(s: Settings): boolean {
+  return s.evidence.web.engine === 'firecrawl' && !s.evidence.web.firecrawlApiKey.trim();
+}
 
 /** Host-permission pattern for a local OpenAI-compatible server, e.g. http://localhost:11434/v1 -> http://localhost/* */
 export function localOrigin(baseUrl: string): string | undefined {
@@ -79,6 +88,7 @@ export function hasValidConsent(s: Settings): boolean {
 /** Origins the current settings would contact. Always includes the web search engine. */
 export function requiredOrigins(s: Settings): string[] {
   const out: string[] = [HOST_PERMISSIONS[s.evidence.web.engine]];
+  if (usesKeylessBackup(s)) out.push(HOST_PERMISSIONS.duckduckgo);
   if (s.evidence.wikipedia) out.push(HOST_PERMISSIONS.wikipedia);
   for (const source of ['wikidata', 'europePmc', 'worldBank', 'govUk', 'googleFactCheck'] as const) {
     if (s.evidence[source]) out.push(HOST_PERMISSIONS[source]);
