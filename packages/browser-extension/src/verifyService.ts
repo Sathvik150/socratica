@@ -167,8 +167,8 @@ async function run(answer: string, question: string | undefined, settings: Setti
       llm: judge.llm,
       providers,
       ...(question ? { question } : {}),
-      // Fast turnaround: claims in parallel, and never wait more than 10 s for evidence.
-      options: { concurrency: 4, retrievalDeadlineMs: 10_000 },
+      // Every claim asks for evidence at once (each source paces itself); wait at most 20 s for it.
+      options: { concurrency: 4, retrievalDeadlineMs: 20_000 },
     });
     for (const e of result.errors) warnings.push(`${e.providerId}: ${e.message}`);
     // A judge failure shows up per claim; surface it once so the user can fix it.

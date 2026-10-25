@@ -1,5 +1,5 @@
 import type { Claim, EvidenceProvider, FetchLike, Passage, RetrieveOptions } from '../../types.js';
-import { scorePassage, searchQuery } from '../../rank.js';
+import { scorePassage, webQuery } from '../../rank.js';
 import { MIN_RELEVANCE } from './documents.js';
 import { count, EvidenceHttp, list, record, text } from './http.js';
 
@@ -35,15 +35,35 @@ function cleanSnippet(s: string): string {
 
 export interface FirecrawlSearchOptions {
   fetch: FetchLike;
-  /** Optional. Firecrawl answers without a key (free, capped per IP address per day); a free key raises the limits. */
+  /**
+   * Optional. Firecrawl answers without a key on most networks (free, capped per IP address per day).
+   * Its no-key tier refuses VPN, proxy and IPv6 addresses; a free key works from anywhere.
+   */
   apiKey?: string;
   /** Results per search, 1-20. Default 5. */
   count?: number;
 }
 
+const FIRECRAWL_KEY_HINT = 'Add a free Firecrawl key in Settings (sign up with Google or GitHub at firecrawl.dev, 1,000 free credits), or choose Google results via Serper.';
+
+/** What a Firecrawl error status means, and what to do about it. */
+export function firecrawlError(status: number, hasKey: boolean): string | undefined {
+  if (!hasKey) {
+    // Firecrawl's no-key tier answers 403 for addresses it judges to be a VPN or proxy, and 401 for
+    // IPv6 addresses (its per-address caps can't be enforced there).
+    if (status === 401 || status === 403) return `Firecrawl won't search without a key from this network (HTTP ${status}). Its free no-key tier refuses VPN, proxy and IPv6 connections. ${FIRECRAWL_KEY_HINT}`;
+    if (status === 429 || status === 402) return `Firecrawl's free no-key searches for this network are used up for today (HTTP ${status}). ${FIRECRAWL_KEY_HINT}`;
+    return undefined;
+  }
+  if (status === 401) return 'Firecrawl rejected the API key (HTTP 401). Check the key in Settings.';
+  if (status === 402) return 'Your Firecrawl key has run out of credits (HTTP 402). Top it up at firecrawl.dev, or choose another engine in Settings.';
+  if (status === 403) return 'Firecrawl refused the request for this key (HTTP 403). Check the key and its plan at firecrawl.dev.';
+  return undefined;
+}
+
 /**
- * Web search through Firecrawl's search API. Works without an account or key, which is why it
- * is the default engine. https://docs.firecrawl.dev/api-reference/endpoint/search
+ * Web search through Firecrawl's search API. Works without an account or key on most networks,
+ * which is why it is the default engine. https://docs.firecrawl.dev/api-reference/endpoint/search
  */
 export class FirecrawlSearchEvidenceProvider implements EvidenceProvider {
   readonly id = 'firecrawl';
@@ -52,8 +72,9 @@ export class FirecrawlSearchEvidenceProvider implements EvidenceProvider {
   readonly #count: number;
 
   constructor(opts: FirecrawlSearchOptions) {
-    this.#http = new EvidenceHttp('Firecrawl', opts.fetch, false, 2);
     this.#key = opts.apiKey?.trim() ?? '';
+    const hasKey = Boolean(this.#key);
+    this.#http = new EvidenceHttp('Firecrawl', opts.fetch, false, 2, (status) => firecrawlError(status, hasKey));
     this.#count = count(opts.count);
   }
 
@@ -61,7 +82,7 @@ export class FirecrawlSearchEvidenceProvider implements EvidenceProvider {
     const data = record(await this.#http.json('https://api.firecrawl.dev/v2/search', {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...(this.#key ? { authorization: `Bearer ${this.#key}` } : {}) },
-      body: JSON.stringify({ query: searchQuery(claim), limit: this.#count, sources: ['web'], timeout: 8000 }),
+      body: JSON.stringify({ query: webQuery(claim), limit: this.#count }),
     }));
     // v2 nests web results under data.web; v1 returned them as data[].
     const results = Array.isArray(data.data) ? data.data : list(record(data.data).web);
@@ -99,7 +120,7 @@ export class SerperEvidenceProvider implements EvidenceProvider {
     const data = record(await this.#http.json('https://google.serper.dev/search', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': this.#key },
-      body: JSON.stringify({ q: searchQuery(claim), num: this.#count }),
+      body: JSON.stringify({ q: webQuery(claim), num: this.#count }),
     }));
     const hits: Hit[] = [];
     const box = record(data.answerBox);
@@ -138,7 +159,7 @@ export class BraveSearchEvidenceProvider implements EvidenceProvider {
   }
 
   async retrieve(claim: Claim, options: RetrieveOptions): Promise<Array<Omit<Passage, 'id'>>> {
-    const q = encodeURIComponent(searchQuery(claim));
+    const q = encodeURIComponent(webQuery(claim));
     const data = record(await this.#http.json(`https://api.search.brave.com/res/v1/web/search?count=${this.#count}&q=${q}`, {
       headers: { accept: 'application/json', 'x-subscription-token': this.#key },
     }));
@@ -155,7 +176,7 @@ export class BraveSearchEvidenceProvider implements EvidenceProvider {
 
 /** The engines a user can pick from, with what each one needs. */
 export const WEB_SEARCH_ENGINES = {
-  firecrawl: { name: 'Firecrawl', keyRequired: false, origin: 'https://api.firecrawl.dev/*', signup: 'https://www.firecrawl.dev' },
+  firecrawl: { name: 'Firecrawl', keyRequired: false, origin: 'https://api.firecrawl.dev/*', signup: 'https://www.firecrawl.dev/app/api-keys' },
   serper: { name: 'Google (via Serper)', keyRequired: true, origin: 'https://google.serper.dev/*', signup: 'https://serper.dev' },
   brave: { name: 'Brave Search', keyRequired: true, origin: 'https://api.search.brave.com/*', signup: 'https://brave.com/search/api/' },
 } as const;
@@ -165,7 +186,7 @@ export type WebSearchEngine = keyof typeof WEB_SEARCH_ENGINES;
 export function createWebSearch(engine: WebSearchEngine, opts: { fetch: FetchLike; apiKey?: string }): EvidenceProvider {
   const apiKey = opts.apiKey?.trim() ?? '';
   if (WEB_SEARCH_ENGINES[engine].keyRequired && !apiKey) {
-    throw new Error(`${WEB_SEARCH_ENGINES[engine].name} needs an API key (free sign-up at ${WEB_SEARCH_ENGINES[engine].signup}), or choose Firecrawl, which needs none.`);
+    throw new Error(`${WEB_SEARCH_ENGINES[engine].name} needs an API key (free sign-up at ${WEB_SEARCH_ENGINES[engine].signup}), or choose Firecrawl, which works without a key on most networks.`);
   }
   switch (engine) {
     case 'firecrawl': return new FirecrawlSearchEvidenceProvider({ fetch: opts.fetch, ...(apiKey ? { apiKey } : {}) });

@@ -77,8 +77,9 @@ export function friendlyWarning(warning: string): string {
   const timeout = /^[\w-]+: (.+?) request failed or timed out\.?$/i.exec(warning);
   if (timeout) return `${timeout[1]} did not respond in time. Other enabled sources were still used.`;
   const slow = /^([\w-]+): [\w-]+ did not answer within (\d+) seconds\.?$/i.exec(warning);
-  if (slow) return `${SOURCE_NAMES[slow[1]!] ?? slow[1]} was too slow (no answer within ${slow[2]}s), so results were shown without it.`;
-  return warning;
+  if (slow) return `${SOURCE_NAMES[slow[1]!] ?? slow[1]} did not answer within ${slow[2]}s for some claims, so those were checked without it.`;
+  // Messages a source already wrote for people (such as Firecrawl's key advice) lose only the source id.
+  return warning.replace(/^[\w-]+: /, '');
 }
 
 const SOURCE_NAMES: Record<string, string> = {

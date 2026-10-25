@@ -1,5 +1,6 @@
 import type { LLMProvider } from '../../types.js';
 import { parseVerifierPrompt, type LLMVerdict } from '../../prompt.js';
+import { factUnits, propositions } from '../../rank.js';
 import { coverage, isStopword, numbers, splitSentences, stem, tokenize } from '../../text.js';
 
 /**
@@ -128,9 +129,10 @@ const UNITS: Array<[RegExp, string]> = [
   [/^(?:ft|feet|foot)\b/i, 'ft'], [/^(?:mi|miles?)\b/i, 'mi'], [/^(?:kg|kilogram(?:me)?s?)\b/i, 'kg'], [/^(?:lbs?|pounds?)\b/i, 'lb'],
   [/^(?:%|percent|per cent)/i, '%'], [/^(?:km2|sq(?:uare)? ?(?:km|kilomet(?:re|er)s?))\b/i, 'km2'], [/^(?:mi2|sq(?:uare)? ?miles?)\b/i, 'mi2'],
   [/^(?:million|billion|trillion)\b/i, 'scale'], [/^(?:years?|yrs?)\b/i, 'yr'],
+  [/^(?:hours?|hrs?)\b/i, 'h'], [/^days?\b/i, 'd'], [/^weeks?\b/i, 'wk'], [/^(?:minutes?|mins?)\b/i, 'min'], [/^(?:seconds?|secs?)\b/i, 's'],
 ];
 
-interface Quantity { value: string; unit: string | undefined }
+interface Quantity { value: string; unit: string | undefined; at: number }
 
 /** Numbers with the unit that follows them ("330 m", "1,083 ft", "48%"). */
 function quantities(s: string): Quantity[] {
@@ -138,7 +140,7 @@ function quantities(s: string): Quantity[] {
   for (const m of s.matchAll(/\d[\d,]*(?:\.\d+)?/g)) {
     const after = s.slice((m.index ?? 0) + m[0].length).replace(/^[\s -]+/, '');
     const unit = UNITS.find(([re]) => re.test(after))?.[1];
-    out.push({ value: m[0].replace(/,/g, '').replace(/\.0+$/, ''), unit });
+    out.push({ value: m[0].replace(/,/g, '').replace(/\.0+$/, ''), unit, at: m.index ?? 0 });
   }
   return out;
 }
@@ -167,6 +169,63 @@ function unitsAgree(a: Quantity, b: Quantity): boolean {
 }
 
 function judge(claim: string, passages: Array<{ id: string; text: string; source?: string }>): LLMVerdict {
+  const whole = judgeWhole(claim, passages);
+  return whole.verdict === 'unverifiable' ? judgeFacts(claim, passages) ?? whole : whole;
+}
+
+/**
+ * A long claim ("According to the agency, … detected by the James Webb Space Telescope, which has been
+ * monitoring … since its launch in 2018") rarely shares enough words with one source sentence to be
+ * judged whole, so each numeric fact in it is also checked on its own. A sentence about the same
+ * subject that puts a different number of the same kind right next to the word the claim uses
+ * ("launched on 25 December 2021", "20.95% oxygen") contradicts that fact, and so the claim. Agreement
+ * on one fact never supports the whole claim.
+ */
+function judgeFacts(claim: string, passages: Array<{ id: string; text: string; source?: string }>): LLMVerdict | undefined {
+  const asClaim = { id: 'claim', text: claim, context: claim, span: { start: 0, end: claim.length } };
+  const units = factUnits(asClaim);
+  const claimQs = quantities(claim);
+  for (const unit of units) {
+    const subject = unit.subject;
+    // An amount of change ("decreased by 15%") is not the value a source would state.
+    if (unit.change || !subject) continue;
+    const q = claimQs.find((c) => c.value === unit.number.replace(/\.0+$/, ''));
+    if (!q) continue;
+    // Two numbers of the same kind ("from a 24-hour … to a 30-hour …") may describe different times.
+    if (claimQs.some((c) => c !== q && c.unit === q.unit && isYear(c) === isYear(q))) continue;
+    const measures = new Set(unit.words.map((w) => CANONICAL[w] ?? stem(w)));
+    for (const p of passages) {
+      const full = `${p.source ?? ''}\n${p.text}`;
+      // The passage is about the subject when its source is ("Atmosphere of Earth" for the Earth).
+      const aboutSubject = (p.source ?? '').toLowerCase().includes(subject);
+      for (const { text: sentence } of splitSentences(p.text)) {
+        if (!aboutSubject && !present(subject, sentence, full)) continue;
+        if (NEGATION.test(sentence)) continue;
+        const words = wordPositions(sentence);
+        const nearWord = (o: Quantity) => {
+          const k = words.findIndex((w) => w.index >= o.at);
+          // A year sits a little further off in a full date ("launched on 25 December 2021").
+          return words.some((w, i) => measures.has(w.token) && Math.abs(i - k) <= (isYear(o) ? 5 : 3));
+        };
+        const sameKind = quantities(sentence).filter((o) => o.unit === q.unit && isYear(o) === isYear(q) && nearWord(o));
+        if (!sameKind.length || sameKind.some((o) => sameValue(claim, q, o))) continue;
+        const values = [...new Set(sameKind.map((o) => o.value))];
+        // Only a plain one-fact claim gets a rewritten version; a framed one would repeat its other assertions.
+        const plain = units.length === 1 && propositions(claim).join(' ') === claim.trim().replace(/[.!?]+$/, '');
+        return {
+          verdict: 'contradicted',
+          confidence: 0.7,
+          rationale: `The passage gives ${values.join(', ')} for the ${unit.words.join(' ')} where the claim says ${q.value}.`,
+          quotes: [{ passage_id: p.id, quote: sentence }],
+          correction: plain && values.length === 1 ? replaceNumber(claim, q.value, values[0]!) : null,
+        };
+      }
+    }
+  }
+  return undefined;
+}
+
+function judgeWhole(claim: string, passages: Array<{ id: string; text: string; source?: string }>): LLMVerdict {
   const claimTokens = nonNumeric(judgeTokens(claim));
   const claimQs = quantities(claim);
   const claimNames = names(claim);

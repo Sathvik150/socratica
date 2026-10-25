@@ -16,7 +16,10 @@ export interface RetrievedEvidence {
 export interface RetrieveEvidenceOptions {
   limit?: number;
   question?: string;
-  /** Claims retrieved at the same time. Default 4. */
+  /**
+   * Claims retrieved at the same time. Default: all of them, since each source already limits
+   * its own requests in flight; a claim no longer waits behind another claim's slowest source.
+   */
   concurrency?: number;
   /** Stop waiting for providers after this many milliseconds (whole run). Default: none. */
   deadlineMs?: number;
@@ -63,7 +66,7 @@ export async function retrieveEvidence(
         });
   deadline?.catch(() => undefined); // only observed through Promise.race below
 
-  const perClaim = await mapConcurrent(claims, options.concurrency ?? 4, async (claim) => {
+  const perClaim = await mapConcurrent(claims, options.concurrency ?? claims.length, async (claim) => {
     const merged: Array<Omit<Passage, 'id'>> = [];
     await Promise.all(
       providers.map(async (provider) => {

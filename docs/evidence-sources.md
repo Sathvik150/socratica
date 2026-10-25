@@ -17,13 +17,27 @@ accepts your own `--evidence` files instead).
 
 | Engine | Evidence returned | Key | Notes |
 |---|---|---|---|
-| Firecrawl (default) | Result titles, links and snippets | None. An optional free Firecrawl key raises the limits | Works for anyone with no sign-up. Keyless use has a daily limit per network address; when it runs out, the check continues with the other sources and says so |
+| Firecrawl (default) | Result titles, links and snippets | None on most networks. A free Firecrawl key (sign up with Google or GitHub, 1,000 credits) works anywhere | Works with no sign-up on most networks. Keyless use has a daily limit per network address, and Firecrawl refuses keyless requests from VPN, proxy and IPv6 addresses (HTTP 403 or 401) address; when it runs out, the check continues with the other sources and says so |
 | Google results via Serper | Google's answer box, knowledge panel and result snippets | Free Serper key (2,500 searches, no card) | The closest thing to Google web search with a free key. Google's own Custom Search JSON API is closed to new customers, so it is not offered |
 | Brave Search | Result snippets | Brave Search API key | Brave's independent index |
 
 Search snippets are short. A snippet only decides a verdict when it states the fact itself and the
 quote is verbatim; otherwise the claim stays `unverifiable`. Results are restricted to `http(s)`
 links, cleaned of markup, and ranked by how closely they match the claim's subject.
+
+## How searches are built
+
+Sources are searched for the facts a claim states, not for its wording or for whoever reported it.
+For "Researchers at Harvard University have also concluded that the Earth's atmospheric oxygen
+concentration has increased to 35%", the reporting frame is set aside and the search is
+`earth oxygen concentration`: the subject plus the words next to the number. The claimed number
+itself is never searched for, since it may be the hallucination. A claim with several facts gets one
+search per fact (up to three), and Wikidata looks up the entity the fact is about (the James Webb
+Space Telescope, not NASA). Wikipedia answers each search with the top article's text in a single
+request, and claims about the same thing share cached searches.
+
+Evidence for every claim is requested at once; each source paces its own requests, so one slow
+source no longer holds up the others. The extension waits up to 20 seconds for evidence.
 
 ## More sources
 
@@ -160,6 +174,12 @@ dependency and does not perform DNS resolution.
   as inception, rather than silently treated as an opening date.
   Precise dates also supply an entailed year statement, with the full date retained on a separate
   line, so the literal judge can correct a wrong year without inventing a day or month.
+- The offline judge also checks each numeric fact inside a long claim on its own. A source sentence
+  about the same subject that puts a different number of the same kind next to the same word ("was
+  launched on 25 December 2021" against "since its launch in 2018") contradicts the claim. It never
+  supports a whole claim from one fact, skips amounts of change ("decreased by 15%") and claims with
+  two numbers of the same kind ("from 24 hours to 30 hours"), and writes a correction only for a plain
+  one-fact claim.
 - Qualified statistics and quantities (which require unit interpretation) need a model. The offline
   heuristic abstains on these passages rather than comparing mismatched dates or units.
 - Google Fact Check returns an attributed review, not a new assertion of the quoted claim. The

@@ -7,8 +7,8 @@
 - **After consent:**
   - The web search engine you choose (Firecrawl by default, or Google results via Serper, or Brave Search)
     receives **short search queries built from individual claims**, never the whole conversation. Web search is
-    required, so every check sends these queries. Firecrawl is used without an account unless you add a key, and
-    then sees the requests coming from your network address.
+    required, so every check sends these queries. Without a key, Firecrawl counts usage by your network address
+    (and refuses addresses it judges to be a VPN or proxy); with your key, it counts usage against your account.
   - Wikipedia, Europe PMC, GOV.UK and Google Fact Check also receive short claim-based queries. Wikidata receives
     entity names from claim context. World Bank receives country, indicator and date requests. Wikipedia, Wikidata
     and Europe PMC are enabled by default after consent; each of these can be disabled independently.

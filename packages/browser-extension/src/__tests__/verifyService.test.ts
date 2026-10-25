@@ -3,7 +3,7 @@ import type { FetchLike } from '@socratica/core';
 import { handleTestJudge, handleVerify, handleVerifyText } from '../verifyService.js';
 import { CONSENT_VERSION, DEFAULT_SETTINGS, type Settings } from '../settings.js';
 
-/** Fake network: Wikipedia knows the bridge; the web search engine (Firecrawl, the default) finds nothing. */
+/** Fake network: Wikipedia's search finds the bridge; the web search engine (Firecrawl, the default) finds nothing. */
 function deps(granted: boolean | ((origin: string) => boolean) = true) {
   const calls: string[] = [];
   const bodies: string[] = [];
@@ -13,8 +13,7 @@ function deps(granted: boolean | ((origin: string) => boolean) = true) {
       bodies.push(init?.body ?? '');
       return { ok: true, status: 200, json: async () => ({ success: true, data: { web: [] } }), text: async () => '' };
     }
-    if (url.includes('list=search')) return { ok: true, status: 200, json: async () => ({ query: { search: [{ title: 'Zentha Bridge' }] } }), text: async () => '' };
-    return { ok: true, status: 200, json: async () => ({ query: { pages: { 1: { extract: 'The Zentha Bridge opened in 1991.' } } } }), text: async () => '' };
+    return { ok: true, status: 200, json: async () => ({ query: { pages: { 1: { title: 'Zentha Bridge', extract: 'The Zentha Bridge opened in 1991.' } } } }), text: async () => '' };
   };
   return { calls, bodies, deps: { fetch, hasPermission: async (origin: string) => typeof granted === 'function' ? granted(origin) : granted } };
 }

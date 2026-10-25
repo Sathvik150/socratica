@@ -323,7 +323,7 @@ describe('web search engines (fake fetch, no network)', () => {
     expect(found.map((p) => [p.text, p.source.url, p.source.providerId])).toEqual([[snippet, 'https://example.org/eiffel', 'firecrawl']]);
     expect(f.calls[0]!.url).toBe('https://api.firecrawl.dev/v2/search');
     expect(f.calls[0]!.init!.headers).not.toHaveProperty('authorization');
-    expect(JSON.parse(f.calls[0]!.init!.body!)).toMatchObject({ limit: 5, sources: ['web'] });
+    expect(JSON.parse(f.calls[0]!.init!.body!)).toEqual({ query: expect.stringContaining('eiffel tower'), limit: 5 });
   });
 
   it('Firecrawl sends an optional key as a bearer token and reads the v1 response shape too', async () => {
@@ -334,9 +334,22 @@ describe('web search engines (fake fetch, no network)', () => {
     expect(f.calls[0]!.init!.body).not.toContain('fc-test');
   });
 
-  it('Firecrawl reports its daily limit as a temporary outage, never as a contradiction', async () => {
-    const f = fake(() => response({ success: false, error: 'Rate limit exceeded' }, 429, { 'retry-after': '60' }));
-    await expect(new FirecrawlSearchEvidenceProvider({ fetch: f.fetch }).retrieve(claim, opts)).rejects.toThrow('Firecrawl is temporarily unavailable (HTTP 429); try again in 60 seconds.');
+  it('Firecrawl explains its no-key limits and refusals instead of a bare HTTP status', async () => {
+    // Firecrawl's no-key tier answers 403 for VPN/proxy addresses, 401 for IPv6, 429 when the daily allowance is used.
+    for (const [status, text] of [[403, "won't search without a key from this network (HTTP 403)"], [401, 'refuses VPN, proxy and IPv6 connections'], [429, 'used up for today (HTTP 429)']] as const) {
+      const f = fake(() => response({ success: false, error: 'private detail' }, status, { 'retry-after': '64418' }));
+      const p = new FirecrawlSearchEvidenceProvider({ fetch: f.fetch });
+      await expect(p.retrieve(claim, opts)).rejects.toThrow(text);
+      await expect(p.retrieve(claim, opts)).rejects.toThrow('Add a free Firecrawl key in Settings');
+      await expect(p.retrieve(claim, opts)).rejects.not.toThrow('private detail');
+    }
+  });
+
+  it('Firecrawl with a key reports a rejected key, spent credits, and rate limits with a retry time', async () => {
+    for (const [status, text] of [[401, 'rejected the API key'], [402, 'run out of credits'], [429, 'temporarily unavailable (HTTP 429); try again in 60 seconds']] as const) {
+      const f = fake(() => response({ success: false }, status, { 'retry-after': '60' }));
+      await expect(new FirecrawlSearchEvidenceProvider({ fetch: f.fetch, apiKey: 'fc-test' }).retrieve(claim, opts)).rejects.toThrow(text);
+    }
   });
 
   it('Serper uses the answer box, knowledge panel and organic snippets, with the key only in a header', async () => {
@@ -357,7 +370,7 @@ describe('web search engines (fake fetch, no network)', () => {
     const { fetch } = fake(() => response({}));
     expect(createWebSearch('firecrawl', { fetch }).id).toBe('firecrawl');
     expect(createWebSearch('serper', { fetch, apiKey: 'k' }).id).toBe('serper');
-    expect(() => createWebSearch('serper', { fetch })).toThrow('Google (via Serper) needs an API key (free sign-up at https://serper.dev), or choose Firecrawl, which needs none.');
+    expect(() => createWebSearch('serper', { fetch })).toThrow('Google (via Serper) needs an API key (free sign-up at https://serper.dev), or choose Firecrawl, which works without a key on most networks.');
     expect(() => createWebSearch('brave', { fetch, apiKey: '  ' })).toThrow(/Brave Search needs an API key/);
   });
 });

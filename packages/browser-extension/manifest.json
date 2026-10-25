@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Socratica",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A firewall against AI hallucinations: checks ChatGPT answers against web evidence, with the source quote behind every verdict.",
   "permissions": [
     "storage",

@@ -19,21 +19,24 @@ const h = <K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, props: 
 };
 
 /** How each web search engine is described in settings. */
-const ENGINE_COPY: Record<WebSearchEngine, { title: string; detail: string; keyLabel: string }> = {
+const ENGINE_COPY: Record<WebSearchEngine, { title: string; detail: string; keyLabel: string; keyLink: string }> = {
   firecrawl: {
     title: 'Firecrawl',
-    detail: 'Free, with no key or sign-up. A daily limit applies per network; add a free Firecrawl key for more.',
+    detail: 'Free, and works without a key on most home networks, with a daily limit. On a VPN, a proxy, an IPv6 connection or some school and office networks, it needs a free key (sign up with Google or GitHub for 1,000 credits).',
     keyLabel: 'Firecrawl API key (optional)',
+    keyLink: 'Get a free Firecrawl key (needed on a VPN or proxy)',
   },
   serper: {
     title: 'Google results via Serper',
     detail: 'Google’s web results. Needs a free Serper key (2,500 searches, no card) from serper.dev.',
     keyLabel: 'Serper API key',
+    keyLink: 'Get a free Serper key',
   },
   brave: {
     title: 'Brave Search',
     detail: 'Brave’s independent web index. Needs your Brave Search API key.',
     keyLabel: 'Brave Search API key',
+    keyLink: 'Get a Brave Search API key',
   },
 };
 
@@ -110,14 +113,18 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
     let engine: WebSearchEngine = settings.evidence.web.engine;
     const webKey = h(doc, 'input', { type: 'password', id: 'web-key', autocomplete: 'off' });
     const webKeyLabel = h(doc, 'span', {});
+    const webKeyLink = h(doc, 'a', { id: 'web-key-link', target: '_blank', rel: 'noopener noreferrer' });
     const webKeyRow = h(doc, 'label', { id: 'web-key-row' }, webKeyLabel, webKey);
+    const webKeyHelp = h(doc, 'p', { className: 'muted hint' }, webKeyLink);
     const choices = h(doc, 'div', { className: 'choices' });
     choices.setAttribute('role', 'radiogroup');
     choices.setAttribute('aria-label', 'Web search engine');
     const syncWebKey = () => {
       webKey.value = webKeys[WEB_KEY_FIELD[engine]];
-      webKey.placeholder = WEB_SEARCH_ENGINES[engine].keyRequired ? 'paste your key' : 'not needed';
+      webKey.placeholder = WEB_SEARCH_ENGINES[engine].keyRequired ? 'paste your key' : 'not needed on most networks';
       webKeyLabel.textContent = ENGINE_COPY[engine].keyLabel;
+      webKeyLink.href = WEB_SEARCH_ENGINES[engine].signup;
+      webKeyLink.textContent = ENGINE_COPY[engine].keyLink;
       for (const c of choices.querySelectorAll('.choice')) c.classList.toggle('selected', (c as HTMLElement).dataset.engine === engine);
     };
     for (const id of Object.keys(WEB_SEARCH_ENGINES) as WebSearchEngine[]) {
@@ -138,6 +145,7 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
       h(doc, 'p', { className: 'muted' }, 'Every check searches the web, so claims about the real world have something to be checked against. Pick one engine.'),
       choices,
       webKeyRow,
+      webKeyHelp,
     );
     webSection.querySelector('h2')!.append(h(doc, 'span', { className: 'badge' }, 'Required'));
     syncWebKey();
@@ -252,7 +260,7 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
       };
       // Web search is required, so an engine that can't run is not saved.
       if (WEB_SEARCH_ENGINES[engine].keyRequired && !next.evidence.web[WEB_KEY_FIELD[engine]]) {
-        status(`${ENGINE_COPY[engine].title} needs an API key (free sign-up at ${WEB_SEARCH_ENGINES[engine].signup}). Or choose Firecrawl, which needs none.`);
+        status(`${ENGINE_COPY[engine].title} needs an API key (free sign-up at ${WEB_SEARCH_ENGINES[engine].signup}). Or choose Firecrawl, which works without a key on most networks.`);
         webKey.focus();
         return;
       }

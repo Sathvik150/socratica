@@ -4,8 +4,7 @@ import { WikipediaEvidenceProvider, extractClaims, HeuristicLLM, runVerification
 const [claim, other] = extractClaims('The Zentha Bridge opened in 1987. The Zentha Bridge is in Velmora.');
 const ok = (body: unknown) => ({ ok: true, status: 200, json: async () => body, text: async () => '' });
 const limited = (header: string | null) => ({ ...ok({}), ok: false, status: 429, headers: { get: () => header } });
-const search = { query: { search: [{ title: 'Zentha Bridge' }] } };
-const article = { query: { pages: { 1: { extract: 'The Zentha Bridge opened in 1991 in Velmora.' } } } };
+const article = { query: { pages: { 1: { title: 'Zentha Bridge', extract: 'The Zentha Bridge opened in 1991 in Velmora.' } } } };
 
 afterEach(() => vi.useRealTimers());
 
@@ -23,7 +22,7 @@ describe('Wikipedia shared cooldown', () => {
     await vi.advanceTimersByTimeAsync(20_000);
     fetch.mockResolvedValue(ok({}));
     await expect(wiki.retrieve(claim!, { limit: 2 })).resolves.toEqual([]);
-    expect(fetch).toHaveBeenCalledTimes(3); // subject search found nothing, so the claim's own search ran too
+    expect(fetch).toHaveBeenCalledTimes(3); // the focused search ("zentha bridge opened"), then the subject
   });
 
   it.each([null, '', 'invalid', '-1'])('uses a safe fallback for Retry-After %s', async (header) => {
@@ -54,31 +53,32 @@ describe('Wikipedia shared cooldown', () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
-  it('shares search/extract work and serves cached evidence during cooldown', async () => {
-    const fetch = vi.fn<FetchLike>(async (url) => ok(url.includes('list=search') ? search : article));
+  it('shares searches and serves cached evidence during cooldown', async () => {
+    const fetch = vi.fn<FetchLike>(async () => ok(article));
     const wiki = new WikipediaEvidenceProvider({ fetch });
     const results = await Promise.all([wiki.retrieve(claim!, { limit: 2 }), wiki.retrieve(claim!, { limit: 2 })]);
     expect(results[0]).toEqual(results[1]);
     expect(results[0]!.length).toBeGreaterThan(0);
     expect(fetch).toHaveBeenCalledTimes(2);
     fetch.mockResolvedValue(limited('21'));
-    // Another claim about the same subject is answered from the cached search and article, even while rate-limited.
+    // Another claim about the same subject is answered from the cached subject search, even while
+    // its own focused search ("zentha bridge velmora") is rate-limited.
     expect((await wiki.retrieve(other!, { limit: 2 })).length).toBeGreaterThan(0);
     await expect(wiki.retrieve(claim!, { limit: 2 })).resolves.toEqual(results[0]);
-    expect(fetch).toHaveBeenCalledTimes(2);
-    // A claim about something else still needs a request, and gets the cooldown error.
+    expect(fetch).toHaveBeenCalledTimes(3);
+    // A claim about something else needs new requests, and gets the cooldown error.
     const [unrelated] = extractClaims('The Orrin Library holds 2.4 million volumes.');
     await expect(wiki.retrieve(unrelated!, { limit: 2 })).rejects.toThrow('21 seconds');
     expect(fetch).toHaveBeenCalledTimes(3);
   });
 
-  it('applies extract 429 cooldowns and does not cache failed extracts', async () => {
+  it('applies 429 cooldowns and does not cache failed searches', async () => {
     vi.useFakeTimers();
-    const fetch = vi.fn<FetchLike>().mockResolvedValueOnce(ok(search)).mockResolvedValueOnce(limited('21')).mockResolvedValue(ok(article));
+    const fetch = vi.fn<FetchLike>().mockResolvedValueOnce(limited('21')).mockResolvedValue(ok(article));
     const wiki = new WikipediaEvidenceProvider({ fetch });
     await expect(wiki.retrieve(claim!, { limit: 2 })).rejects.toThrow('21 seconds');
     await expect(wiki.retrieve(other!, { limit: 2 })).rejects.toThrow('21 seconds');
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(21_000);
     expect((await wiki.retrieve(claim!, { limit: 2 })).length).toBeGreaterThan(0);
     expect(fetch).toHaveBeenCalledTimes(3);

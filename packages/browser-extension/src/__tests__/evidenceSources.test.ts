@@ -4,6 +4,7 @@ import { CONSENT_VERSION, DEFAULT_SETTINGS, HOST_PERMISSIONS, hasValidConsent, l
 import { handleVerifyText } from '../verifyService.js';
 import { mountOptions, type OptionsApi } from '../optionsView.js';
 import { mountPopup, renderResult, type PopupApi } from '../popupView.js';
+import { summarizeWarnings } from '../ui/theme.js';
 import manifest from '../../manifest.json';
 
 const answer = 'The Eiffel Tower opened in 1899.';
@@ -157,6 +158,17 @@ describe('background source integration', () => {
     expect(noKey).toMatchObject({ status: 'error' });
     if (noKey.status === 'error') expect(noKey.message).toContain('Web search is required');
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("explains Firecrawl's no-key refusal (VPN, proxy or IPv6 network) with how to fix it", async () => {
+    const fetch: FetchLike = async (url) => (isWebSearch(url) ? response({ success: false, error: 'blocked' }, 403) : response({}));
+    const r = await handleVerifyText({ text: answer }, { ...settings, evidence: offline }, { fetch, hasPermission: async () => true });
+    if (r.status !== 'ok') throw new Error(r.status);
+    const notes = summarizeWarnings(r.warnings).notes.join(' ');
+    expect(notes).toContain("Firecrawl won't search without a key from this network (HTTP 403)");
+    expect(notes).toContain('Add a free Firecrawl key in Settings');
+    expect(notes).not.toContain('firecrawl:');
+    expect(notes).not.toContain('blocked');
   });
 
   it('warns about missing API keys without making keyed-provider calls', async () => {

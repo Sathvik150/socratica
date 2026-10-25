@@ -1,5 +1,5 @@
 import type { Claim, EvidenceProvider, FetchLike, Passage, RetrieveOptions } from '../../types.js';
-import { scorePassage } from '../../rank.js';
+import { factSubject, scorePassage } from '../../rank.js';
 import { properNouns } from '../../text.js';
 import { MIN_RELEVANCE } from './documents.js';
 import { EvidenceHttp, list, record, text } from './http.js';
@@ -24,6 +24,10 @@ const PROPERTIES: Record<string, (name: string, value: string) => string> = {
   P2048: (n, v) => `${n} has height ${v}.`,
   P2046: (n, v) => `${n} has area ${v}.`,
   P1082: (n, v) => `${n} has population ${v}.`,
+  P619: (n, v) => `${n} was launched in ${v}.`,
+  P2044: (n, v) => `${n} has elevation above sea level ${v}.`,
+  P2146: (n, v) => `${n} has orbital period ${v}.`,
+  P2147: (n, v) => `${n} has rotation period ${v}.`,
 };
 
 function entityId(value: unknown): string {
@@ -73,8 +77,9 @@ export class WikidataEvidenceProvider implements EvidenceProvider {
   }
 
   async retrieve(claim: Claim, options: RetrieveOptions): Promise<Array<Omit<Passage, 'id'>>> {
+    // The entity the claim's fact is about, not whoever reports it ("NASA announced that…").
     const names = properNouns(claim.context).filter((n) => !/^(the|a|an|it|he|she|they|in|on)$/.test(n));
-    const query = (names[0] ?? '').replace(/^(the|a|an) /, '');
+    const query = (factSubject(claim) ?? names[0] ?? '').replace(/^(the|a|an) /, '');
     if (!query) return [];
     const search = await this.#api(`action=wbsearchentities&language=en&type=item&limit=1&search=${encodeURIComponent(query)}`);
     const id = text(record(list(search.search)[0]).id);
