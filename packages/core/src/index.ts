@@ -6,7 +6,7 @@ export { verifyClaim, verifyClaims, isVerbatimQuote, type VerifyClaimsOptions } 
 export { scoreResults, summarize, finalizeVerdicts, isCorrectionGrounded } from './scoreResults.js';
 export { runVerification, type VerifyInput, type VerifyOutput } from './verify.js';
 export { buildVerifierPrompt, parseLLMVerdict, parseVerifierPrompt, LLMVerdictSchema, type LLMVerdict } from './prompt.js';
-export { chunkText, factQueries, factSubject, factUnits, propositions, scorePassage, searchQuery, webQuery, type FactUnit } from './rank.js';
+export { chunkText, factQueries, factSubject, factUnits, propositions, scorePassage, searchQuery, webQuery, type FactUnit, type NumberKind } from './rank.js';
 export { hashString, splitSentences } from './text.js';
 export { DocumentEvidenceProvider } from './providers/evidence/documents.js';
 export { WikipediaEvidenceProvider, type WikipediaOptions } from './providers/evidence/wikipedia.js';

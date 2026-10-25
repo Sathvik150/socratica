@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   extractClaims, factQueries, factUnits, HeuristicLLM, parseVerifierPrompt, propositions, runVerification,
-  WikipediaEvidenceProvider, type FetchLike, type LLMProvider,
+  SocraticaSearchEvidenceProvider, WikipediaEvidenceProvider, type FetchLike, type LLMProvider,
 } from '../index.js';
 
 // A synthetic misinformation answer: every central assertion is false, wrapped in reporting frames.
@@ -53,6 +53,8 @@ describe('claims wrapped in reporting frames', () => {
     ]);
     const units = factUnits(claims[2]!);
     expect(units.map((u) => [u.number, u.change])).toEqual([['15', true], ['12', true]]);
+    expect([1, 4].map((i) => factUnits(claims[i]!)[0]!.kind)).toEqual(['year', 'percent']);
+    expect(factUnits(extractClaims('The bridge is 1,000 metres long.')[0]!)[0]).toMatchObject({ number: '1000', kind: 'number' });
   });
 
   it('gives the judge the passage that states each fact', async () => {
@@ -90,6 +92,23 @@ describe('claims wrapped in reporting frames', () => {
     expect(byClaim[claims[2]!.text]!.verdict).toBe('unverifiable');
     expect(byClaim[claims[3]!.text]!.verdict).toBe('unverifiable');
     expect(result.summary.supported).toBe(0);
+  });
+
+  it('ranks the web result that states the figure above ones that only mention the topic', async () => {
+    // Shaped like a live Google answer: four snippets about Earth's oxygen, and the one that gives the
+    // figure last, from a page whose title, not its text, says it is about the Earth.
+    const organic = [
+      { title: 'Historical Global Atmospheric Oxygen Levels Graph', link: 'https://example.org/graph', snippet: "This graph displays earth's atmospheric oxygen levels from 1991 up to the present." },
+      { title: 'How has the oxygen on earth been preserved?', link: 'https://example.org/forum', snippet: "Is it known how earth's oxygen has stayed steady for the past couple million years?" },
+      { title: 'Oxygen cycle', link: 'https://example.org/cycle', snippet: "Plants release the oxygen in Earth's atmosphere through photosynthesis." },
+      { title: 'Where does oxygen come from?', link: 'https://example.org/ocean', snippet: "Much of Earth's oxygen comes from tiny ocean plants called phytoplankton." },
+      { title: 'Atmosphere of Earth', link: 'https://example.org/atmosphere', snippet: 'dry air contains 78.08% nitrogen, 20.95% oxygen, varies significantly from around 10 ppm.' },
+    ];
+    const fetch: FetchLike = async () => ({ ok: true, status: 200, text: async () => '', json: async () => ({ organic }) });
+    const result = await runVerification({ answer: ANSWER, llm: new HeuristicLLM(), providers: [new SocraticaSearchEvidenceProvider({ fetch })] });
+    const oxygen = result.verdicts.find((v) => v.claim === claims[4]!.text)!;
+    expect(oxygen.verdict).toBe('contradicted');
+    expect(oxygen.quotes[0]!.quote).toContain('20.95% oxygen');
   });
 
   it('still corrects a plain one-fact claim', async () => {
