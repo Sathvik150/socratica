@@ -39,7 +39,7 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
         doc,
         'ul',
         {},
-        h(doc, 'li', {}, 'Short search queries built from individual claims are sent to the sources you enable: Wikipedia, Wikidata, Europe PMC, Crossref, GOV.UK, World Bank, Google Fact Check, Tavily, or Brave Search. Google Fact Check, Tavily, and Brave require your own keys. Wikidata receives entity names; World Bank receives country, indicator and year requests; other search sources receive claim-based queries.'),
+        h(doc, 'li', {}, 'Short search queries built from individual claims are sent to the sources you enable: Wikipedia, Wikidata, Europe PMC, GOV.UK, World Bank, Google Fact Check, Tavily, or Brave Search. Google Fact Check, Tavily, and Brave require your own keys. Wikidata receives entity names; World Bank receives country, indicator and year requests; other search sources receive claim-based queries.'),
         h(doc, 'li', {}, 'If you enable trusted URLs, their pages are fetched without cookies or credentials. Those sites receive the URL request, not your claim text. Only the HTTPS sites you enter are requested; redirects are refused.'),
         h(doc, 'li', {}, 'If you choose OpenAI or Anthropic as the judge, each claim, its surrounding sentence, your question, and the retrieved passages are sent to that provider using your own API key, under that provider’s terms.'),
         h(doc, 'li', {}, 'With the offline judge and no evidence sources enabled, nothing leaves your browser (but every claim will be unverifiable).'),
@@ -137,7 +137,6 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
     const webKey = h(doc, 'input', { type: 'password', id: 'ev-web-key', value: settings.evidence.webSearchApiKey, autocomplete: 'off', placeholder: 'Brave Search API key' });
     const wikidata = h(doc, 'input', { type: 'checkbox', id: 'ev-wikidata', checked: settings.evidence.wikidata });
     const europePmc = h(doc, 'input', { type: 'checkbox', id: 'ev-europe-pmc', checked: settings.evidence.europePmc });
-    const crossref = h(doc, 'input', { type: 'checkbox', id: 'ev-crossref', checked: settings.evidence.crossref });
     const worldBank = h(doc, 'input', { type: 'checkbox', id: 'ev-world-bank', checked: settings.evidence.worldBank });
     const govUk = h(doc, 'input', { type: 'checkbox', id: 'ev-gov-uk', checked: settings.evidence.govUk });
     const factCheck = h(doc, 'input', { type: 'checkbox', id: 'ev-fact-check', checked: settings.evidence.googleFactCheck });
@@ -162,7 +161,6 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
       h(doc, 'label', { className: 'inline' }, wiki, `Wikipedia (${HOST_PERMISSIONS.wikipedia.replace('/*', '')})`),
       h(doc, 'label', { className: 'inline' }, wikidata, 'Wikidata — structured dates, numbers, people and places (no key)'),
       h(doc, 'label', { className: 'inline' }, europePmc, 'Europe PMC — biomedical abstracts (no key)'),
-      h(doc, 'label', { className: 'inline' }, crossref, 'Crossref — publication metadata, not study findings (no key)'),
       h(doc, 'label', { className: 'inline' }, worldBank, 'World Bank — country statistics with dates and units (no key; choose a model to interpret values)'),
       h(doc, 'label', { className: 'inline' }, govUk, 'GOV.UK — official UK government guidance (no key)'),
       h(doc, 'label', { className: 'inline' }, factCheck, 'Google Fact Check — publisher reviews (your key; choose a model to interpret ratings)'),
@@ -177,7 +175,7 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
       webKey,
       h(doc, 'label', { className: 'inline' }, urls, 'Trusted URLs — check against pages you choose'),
       h(doc, 'label', {}, 'Source URLs (one per line)', trustedUrls),
-      h(doc, 'p', { className: 'muted' }, 'Wikidata can share Wikimedia rate limits. Europe PMC and Crossref are independent sources. No source guarantees coverage; failures remain visible and other sources continue.'),
+      h(doc, 'p', { className: 'muted' }, 'Wikidata can share Wikimedia rate limits. Europe PMC is an independent source. No source guarantees coverage; failures remain visible and other sources continue.'),
     );
 
     const save = h(doc, 'button', { id: 'save', type: 'button', className: 'primary' }, 'Save');
@@ -192,7 +190,7 @@ export async function mountOptions(root: HTMLElement, api: OptionsApi): Promise<
         autoCheck: auto.checked,
         llm: { provider: llmSelect.value as LLMChoice, model: model.value.trim(), apiKey: key.value.trim(), baseUrl: baseUrl.value.trim() || 'http://localhost:11434/v1' },
         evidence: {
-          wikipedia: wiki.checked, wikidata: wikidata.checked, europePmc: europePmc.checked, crossref: crossref.checked, worldBank: worldBank.checked, govUk: govUk.checked,
+          wikipedia: wiki.checked, wikidata: wikidata.checked, europePmc: europePmc.checked, worldBank: worldBank.checked, govUk: govUk.checked,
           googleFactCheck: factCheck.checked, googleFactCheckApiKey: factCheckKey.value.trim(),
           tavily: tavily.checked, tavilyApiKey: tavilyKey.value.trim(), tavilyDomains: tavilyDomains.value.split(/\r?\n/).map((s) => s.trim()).filter(Boolean),
           urls: urls.checked, trustedUrls: trustedUrls.value.split(/\r?\n/).map((s) => s.trim()).filter(Boolean),

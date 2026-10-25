@@ -15,7 +15,7 @@ export { WikidataEvidenceProvider, type WikidataOptions } from './providers/evid
 export { GoogleFactCheckEvidenceProvider, type GoogleFactCheckOptions } from './providers/evidence/factCheck.js';
 export { UrlEvidenceProvider, trustedUrl, trustedDomains, type UrlEvidenceOptions } from './providers/evidence/urls.js';
 export { TavilyEvidenceProvider, type TavilyOptions } from './providers/evidence/tavily.js';
-export { EuropePmcEvidenceProvider, CrossrefEvidenceProvider, type ScholarlyOptions } from './providers/evidence/scholarly.js';
+export { EuropePmcEvidenceProvider, type ScholarlyOptions } from './providers/evidence/scholarly.js';
 export { WorldBankEvidenceProvider, type WorldBankOptions } from './providers/evidence/worldBank.js';
 export { GovUkEvidenceProvider, type GovUkOptions } from './providers/evidence/govuk.js';
 export { OpenAIProvider, type OpenAIOptions } from './providers/llm/openai.js';

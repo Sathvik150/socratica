@@ -11,7 +11,7 @@ reported separately. No certificate verification was disabled.
 | Wikipedia | Four relevant passages retrieved | Search and article-extract API requests work |
 | Wikidata | Four structured statements retrieved | Search, entity data, labels, date precision and source links work |
 | Europe PMC | Four abstract passages retrieved | Search and abstract extraction work; this does not independently validate the research conclusions |
-| Crossref | Exact paper retrieved | *Deep Residual Learning for Image Recognition*, DOI `10.1109/cvpr.2016.90`, publication date June 2016 |
+| Crossref (since removed) | Exact paper retrieved | *Deep Residual Learning for Image Recognition*, DOI `10.1109/cvpr.2016.90`, publication date June 2016 |
 | World Bank | One dated observation retrieved | India, total population, 2023: `1438069596` people, as returned by the API during the run |
 | GOV.UK | Four official guidance passages retrieved | The first-adult-passport guide states: “An adult passport is valid for 10 years.” |
 | NASA trusted URL | Four page passages retrieved | Mars facts states: “Mars has two small moons, Phobos and Deimos, that may be captured asteroids.” |
@@ -98,3 +98,5 @@ All 184 tests passed with fake fetch in the original feature suites. After integ
 Vitest 4.1.11. Build, type checking, frozen-lockfile installation and release packaging passed.
 The offline benchmark remained at 89.2% on its existing
 37 synthetic claims (four misses); that result is not a measure of real-world or hosted-model accuracy.
+
+> **Note:** Crossref was removed as an evidence source after this validation run, so its results above are historical only.

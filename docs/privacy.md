@@ -5,7 +5,7 @@
 - **Default: no network calls.** Until you accept the privacy notice, the background worker returns before any
   provider is created. Tests cover this.
 - **After consent:**
-  - Wikipedia, Europe PMC, Crossref, GOV.UK, Google Fact Check, Tavily and Brave Search receive **short search queries
+  - Wikipedia, Europe PMC, GOV.UK, Google Fact Check, Tavily and Brave Search receive **short search queries
     built from individual claims**, never the whole conversation. Wikidata receives entity names from claim context.
     World Bank receives country, indicator and date requests. Wikipedia, Wikidata and Europe PMC are enabled by default after consent; each source can be disabled independently.
   - Trusted URLs receive only the explicitly chosen page request, not claim queries. Requests omit cookies,
@@ -29,7 +29,7 @@
 
 ## CLI
 
-- Offline by default. Network evidence is opt-in using `--wikipedia`, `--wikidata`, `--europe-pmc`, `--crossref`, `--world-bank`, `--gov-uk`,
+- Offline by default. Network evidence is opt-in using `--wikipedia`, `--wikidata`, `--europe-pmc`, `--world-bank`, `--gov-uk`,
   `--fact-check`, `--tavily` or `--evidence-url`. Model requests use `--llm openai`, `--llm anthropic`, or
   `--llm local` (your own server). The source and model keys are independent.
 - Keys are read from environment variables only, so they don't land in shell history.

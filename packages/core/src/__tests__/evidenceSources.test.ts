@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  CrossrefEvidenceProvider, EuropePmcEvidenceProvider, GoogleFactCheckEvidenceProvider, HeuristicLLM,
+  EuropePmcEvidenceProvider, GoogleFactCheckEvidenceProvider, HeuristicLLM,
   TavilyEvidenceProvider, UrlEvidenceProvider, WikidataEvidenceProvider, WikipediaEvidenceProvider,
   retrieveEvidence, runVerification, trustedUrl, verifyClaim, type Claim, type FetchLike, type Passage,
 } from '../index.js';
@@ -240,30 +240,6 @@ describe('independent search sources', () => {
     expect(found).toHaveLength(1);
     expect(found[0]?.text).toBe('The Eiffel Tower opened in 1889.');
     expect(found[0]?.source.url).toBe('https://europepmc.org/article/MED/123');
-  });
-
-  it('Crossref labels metadata and the heuristic does not use a paper title as a finding', async () => {
-    const f = fake(() => response({ message: { items: [{ title: [claim.text], DOI: '10.1234/tower', author: [{ given: 'Ada', family: 'Lovelace' }], published: { 'date-parts': [[2024, 3, 1]] }, 'container-title': ['Example Journal'] }] } }));
-    const provider = new CrossrefEvidenceProvider(f);
-    const found = await provider.retrieve(claim, opts);
-    expect(found[0]?.text).toContain('Authors: Ada Lovelace\nPublished: 2024-3-1\nJournal: Example Journal');
-    expect(found[0]?.source).toMatchObject({ kind: 'metadata', url: 'https://doi.org/10.1234/tower' });
-    const result = await runVerification({ answer: claim.text, providers: [provider], llm: new HeuristicLLM() });
-    expect(result.summary.unverifiable).toBe(1);
-  });
-
-  it('searches the publication title without the claimed year and rejects similarly named papers', async () => {
-    const title = 'Deep Residual Learning for Image Recognition';
-    const f = fake(() => response({ message: { items: [
-      { title: [`${title}: A Survey`], DOI: '10.0000/survey', published: { 'date-parts': [[2022]] } },
-      { title: [title], DOI: '10.1109/cvpr.2016.90', published: { 'date-parts': [[2016, 6]] } },
-    ] } }));
-    const found = await new CrossrefEvidenceProvider(f).retrieve({ ...claim, text: `${title} was published in 2015.` }, opts);
-    expect(decodeURIComponent(f.calls[0]!.url)).toContain(`query.title=${title}`);
-    expect(f.calls[0]!.url).not.toContain('2015');
-    expect(found).toHaveLength(1);
-    expect(found[0]?.text).toContain('Published: 2016-6');
-    expect(found[0]?.source.url).toBe('https://doi.org/10.1109/cvpr.2016.90');
   });
 
   it('keeps independent evidence when Wikipedia returns 429', async () => {

@@ -141,7 +141,7 @@ Pass `llm` (e.g. `new OpenAIProvider({ apiKey, fetch })`, or `{ baseUrl: 'http:/
 
 The core engine has no DOM or browser code and doesn't know which chatbot wrote the text. The extension, CLI, skill and SDK are thin layers on top of it. Details: [docs/architecture.md](docs/architecture.md).
 
-Evidence can come from **Wikipedia, Wikidata, Europe PMC, Crossref, World Bank, GOV.UK, Google Fact Check, trusted URLs,
+Evidence can come from **Wikipedia, Wikidata, Europe PMC, World Bank, GOV.UK, Google Fact Check, trusted URLs,
 Tavily or Brave Search**. Enable sources independently in extension settings, or use CLI flags such as
 `--wikidata --europe-pmc`, `--evidence-url <url>`, `--fact-check`, or `--tavily --search-domain who.int`.
 Wikipedia, Wikidata and Europe PMC are enabled by default after accepting the updated privacy notice.

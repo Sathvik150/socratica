@@ -6,7 +6,6 @@ import {
   WikipediaEvidenceProvider,
   WikidataEvidenceProvider,
   EuropePmcEvidenceProvider,
-  CrossrefEvidenceProvider,
   WorldBankEvidenceProvider,
   GovUkEvidenceProvider,
   GoogleFactCheckEvidenceProvider,
@@ -105,7 +104,6 @@ function evidenceProviders(settings: Settings, deps: ServiceDeps, warnings: stri
     for (const [source, label, create] of [
       ['wikidata', 'Wikidata', () => new WikidataEvidenceProvider({ fetch: deps.fetch })],
       ['europePmc', 'Europe PMC', () => new EuropePmcEvidenceProvider({ fetch: deps.fetch })],
-      ['crossref', 'Crossref', () => new CrossrefEvidenceProvider({ fetch: deps.fetch })],
       ['worldBank', 'World Bank', () => new WorldBankEvidenceProvider({ fetch: deps.fetch })],
       ['govUk', 'GOV.UK', () => new GovUkEvidenceProvider({ fetch: deps.fetch })],
     ] as const) {

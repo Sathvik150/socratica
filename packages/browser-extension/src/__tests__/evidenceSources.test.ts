@@ -24,9 +24,9 @@ describe('source settings and consent migration', () => {
   });
 
   it('declares all API permissions but only requests enabled exact origins, including pasted URL sites', () => {
-    const s = { ...settings, evidence: { ...offline, wikidata: true, europePmc: true, crossref: true, worldBank: true, govUk: true, googleFactCheck: true, tavily: true, urls: true, trustedUrls: ['https://trusted.org/a', 'https://trusted.org/b'] } };
+    const s = { ...settings, evidence: { ...offline, wikidata: true, europePmc: true, worldBank: true, govUk: true, googleFactCheck: true, tavily: true, urls: true, trustedUrls: ['https://trusted.org/a', 'https://trusted.org/b'] } };
     const origins = requiredOrigins(s);
-    expect(origins).toEqual([HOST_PERMISSIONS.wikidata, HOST_PERMISSIONS.europePmc, HOST_PERMISSIONS.crossref, HOST_PERMISSIONS.worldBank, HOST_PERMISSIONS.govUk, HOST_PERMISSIONS.googleFactCheck, HOST_PERMISSIONS.tavily, 'https://trusted.org/*']);
+    expect(origins).toEqual([HOST_PERMISSIONS.wikidata, HOST_PERMISSIONS.europePmc, HOST_PERMISSIONS.worldBank, HOST_PERMISSIONS.govUk, HOST_PERMISSIONS.googleFactCheck, HOST_PERMISSIONS.tavily, 'https://trusted.org/*']);
     expect(origins).not.toContain('https://*/*');
     for (const origin of Object.values(HOST_PERMISSIONS)) expect(manifest.optional_host_permissions).toContain(origin);
     expect(manifest.optional_host_permissions).toContain('https://*/*');
@@ -34,7 +34,7 @@ describe('source settings and consent migration', () => {
 
   it('does not send any queries or URL requests with stale consent, even when all sources are enabled', async () => {
     const fetch = vi.fn<FetchLike>();
-    const s = { ...settings, consent: { granted: true, version: 1 }, evidence: { ...DEFAULT_SETTINGS.evidence, googleFactCheck: true, googleFactCheckApiKey: 'test', tavily: true, tavilyApiKey: 'test', crossref: true, urls: true, trustedUrls: ['https://trusted.org/a'] } };
+    const s = { ...settings, consent: { granted: true, version: 1 }, evidence: { ...DEFAULT_SETTINGS.evidence, googleFactCheck: true, googleFactCheckApiKey: 'test', tavily: true, tavilyApiKey: 'test', urls: true, trustedUrls: ['https://trusted.org/a'] } };
     expect(await handleVerifyText({ text: answer }, s, { fetch, hasPermission: async () => true })).toEqual({ status: 'consent-required' });
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -56,13 +56,13 @@ describe('source options', () => {
 
   it('saves all new toggles, keys and trusted URLs and requests only their enabled sites', async () => {
     const state = await mount();
-    for (const id of ['ev-wikidata', 'ev-europe-pmc', 'ev-crossref', 'ev-world-bank', 'ev-gov-uk', 'ev-fact-check', 'ev-tavily', 'ev-urls']) set(id, true);
+    for (const id of ['ev-wikidata', 'ev-europe-pmc', 'ev-world-bank', 'ev-gov-uk', 'ev-fact-check', 'ev-tavily', 'ev-urls']) set(id, true);
     set('ev-fact-check-key', 'google-placeholder'); set('ev-tavily-key', 'tavily-placeholder');
     set('ev-tavily-domains', 'who.int\nnih.gov');
     set('ev-trusted-urls', 'https://trusted.org/a#fragment\nhttps://trusted.org/b');
     document.querySelector<HTMLButtonElement>('#save')!.click();
     await flush();
-    expect(state.saved().evidence).toMatchObject({ wikidata: true, europePmc: true, crossref: true, googleFactCheck: true, googleFactCheckApiKey: 'google-placeholder', tavily: true, tavilyApiKey: 'tavily-placeholder', tavilyDomains: ['who.int', 'nih.gov'], urls: true, trustedUrls: ['https://trusted.org/a', 'https://trusted.org/b'] });
+    expect(state.saved().evidence).toMatchObject({ wikidata: true, europePmc: true, googleFactCheck: true, googleFactCheckApiKey: 'google-placeholder', tavily: true, tavilyApiKey: 'tavily-placeholder', tavilyDomains: ['who.int', 'nih.gov'], urls: true, trustedUrls: ['https://trusted.org/a', 'https://trusted.org/b'] });
     expect(state.saved().evidence).toMatchObject({ worldBank: true, govUk: true });
     expect(state.requested[0]).toContain('https://trusted.org/*');
     expect(state.requested[0]).not.toContain('https://*/*');
@@ -100,7 +100,7 @@ describe('source options', () => {
 
   it('describes every destination and saves preferences without permissions before consent', async () => {
     const state = await mount(false);
-    for (const name of ['Wikipedia', 'Wikidata', 'Europe PMC', 'Crossref', 'Google Fact Check', 'Tavily', 'Brave']) expect(document.getElementById('consent')!.textContent).toContain(name);
+    for (const name of ['Wikipedia', 'Wikidata', 'Europe PMC', 'Google Fact Check', 'Tavily', 'Brave']) expect(document.getElementById('consent')!.textContent).toContain(name);
     set('ev-tavily', true); set('ev-tavily-key', 'placeholder');
     document.querySelector<HTMLButtonElement>('#save')!.click(); await flush();
     expect(state.saved().evidence.tavily).toBe(true);
@@ -111,10 +111,10 @@ describe('source options', () => {
 describe('background source integration', () => {
   it('skips every denied source and does not make network calls', async () => {
     const fetch = vi.fn<FetchLike>();
-    const s = { ...settings, evidence: { ...DEFAULT_SETTINGS.evidence, crossref: true, googleFactCheck: true, googleFactCheckApiKey: 'google', tavily: true, tavilyApiKey: 'tavily', urls: true, trustedUrls: ['https://trusted.org/a'] } };
+    const s = { ...settings, evidence: { ...DEFAULT_SETTINGS.evidence, googleFactCheck: true, googleFactCheckApiKey: 'google', tavily: true, tavilyApiKey: 'tavily', urls: true, trustedUrls: ['https://trusted.org/a'] } };
     const r = await handleVerifyText({ text: answer }, s, { fetch, hasPermission: async () => false });
     expect(r.status).toBe('ok');
-    if (r.status === 'ok') expect(r.warnings.filter((w) => w.includes('permission'))).toHaveLength(7);
+    if (r.status === 'ok') expect(r.warnings.filter((w) => w.includes('permission'))).toHaveLength(6);
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -184,9 +184,9 @@ describe('background source integration', () => {
 
   it('shows enabled sources in the popup', async () => {
     document.body.innerHTML = '<main id="app"></main>';
-    const s = { ...settings, evidence: { ...offline, wikidata: true, europePmc: true, crossref: true, googleFactCheck: true, tavily: true, urls: true } };
+    const s = { ...settings, evidence: { ...offline, wikidata: true, europePmc: true, googleFactCheck: true, tavily: true, urls: true } };
     const api: PopupApi = { getSettings: async () => s, activeTab: async () => undefined, pageStatus: async () => undefined, checkLatest: async () => ({ ok: true }), getSelection: async () => '', verifyText: async () => ({ status: 'disabled' }), openOptions: () => {} };
     await mountPopup(document.getElementById('app')!, null, api);
-    expect(document.body.textContent).toContain('Wikidata, Europe PMC, Crossref, Google Fact Check, Tavily, Trusted URLs');
+    expect(document.body.textContent).toContain('Wikidata, Europe PMC, Google Fact Check, Tavily, Trusted URLs');
   });
 });
