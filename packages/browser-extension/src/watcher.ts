@@ -42,7 +42,7 @@ export class MessageWatcher {
       if (mutations.every((m) => isOwnUi(m.target))) return;
       this.#schedule();
     });
-    this.#observer.observe(this.#root.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class', 'data-message-id'] });
+    this.#observer.observe(this.#root.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class', 'data-message-id', 'data-message-complete', 'data-talvt-turn-state'] });
     this.#schedule();
   }
 
