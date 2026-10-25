@@ -31,6 +31,9 @@ export class WikipediaEvidenceProvider implements EvidenceProvider {
   readonly #base: string;
   readonly #maxArticles: number;
   readonly #articleCache = new Map<string, Promise<string>>();
+  readonly #searchCache = new Map<string, Promise<string[]>>();
+  #retryAt = 0;
+  #queue: Promise<unknown> = Promise.resolve();
 
   constructor(opts: WikipediaOptions) {
     this.#fetch = opts.fetch;
@@ -38,27 +41,38 @@ export class WikipediaEvidenceProvider implements EvidenceProvider {
     this.#maxArticles = opts.maxArticles ?? 2;
   }
 
-  /** GET with Wikimedia headers; on HTTP 429 honors a short Retry-After (<= 5 s) once, then gives up. */
-  async #get(url: string) {
-    let res = await this.#fetch(url, { headers: WIKI_HEADERS });
-    if (res.status === 429) {
-      const retryAfter = Number(res.headers?.get('retry-after') ?? '1');
-      if (Number.isFinite(retryAfter) && retryAfter <= 5) {
-        await new Promise<void>((r) => setTimeout(() => r(), Math.max(0.5, retryAfter) * 1000));
-        res = await this.#fetch(url, { headers: WIKI_HEADERS });
+  #rateLimitError() {
+    const seconds = Math.max(1, Math.ceil((this.#retryAt - Date.now()) / 1000));
+    return new Error(`Wikipedia is rate-limiting this connection (HTTP 429); try again in ${seconds} seconds`);
+  }
+
+  /** Serialize network calls so a 429 also stops requests already in the queue. */
+  #get(url: string): ReturnType<FetchLike> {
+    const request = this.#queue.then(async () => {
+      if (Date.now() < this.#retryAt) throw this.#rateLimitError();
+      for (let attempt = 0; ; attempt++) {
+        const res = await this.#fetch(url, { headers: WIKI_HEADERS });
+        if (res.status !== 429) return res;
+        const header = res.headers?.get('retry-after')?.trim();
+        const now = Date.now();
+        // Retry-After may be delta-seconds or an HTTP date. Invalid/missing
+        // values get a conservative cooldown rather than immediate retries.
+        const delay = header && /^\d+$/.test(header)
+          ? Number(header) * 1000
+          : header && /^[A-Za-z]{3},?\s/.test(header) ? Date.parse(header) - now : NaN;
+        const wait = Number.isFinite(delay) ? Math.max(500, delay) : 30_000;
+        this.#retryAt = now + wait;
+        if (attempt > 0 || wait > 5000) throw this.#rateLimitError();
+        await new Promise<void>((resolve) => setTimeout(resolve, wait));
       }
-    }
-    return res;
+    });
+    // A rejected request must not poison the queue after the cooldown expires.
+    this.#queue = request.catch(() => undefined);
+    return request;
   }
 
   async retrieve(claim: Claim, options: RetrieveOptions): Promise<Array<Omit<Passage, 'id'>>> {
-    const q = encodeURIComponent(searchQuery(claim));
-    const res = await this.#get(
-      `${this.#base}/w/api.php?action=query&list=search&format=json&origin=*&srlimit=${this.#maxArticles}&srsearch=${q}`,
-    );
-    if (!res.ok) throw new Error(`Wikipedia search failed with HTTP ${res.status}`);
-    const data = (await res.json()) as { query?: { search?: Array<{ title: string }> } };
-    const titles = (data.query?.search ?? []).map((r) => r.title).slice(0, this.#maxArticles);
+    const titles = await this.#search(searchQuery(claim));
 
     const passages: Array<Omit<Passage, 'id'>> = [];
     for (const title of titles) {
@@ -70,6 +84,26 @@ export class WikipediaEvidenceProvider implements EvidenceProvider {
       }
     }
     return passages.sort((a, b) => b.score - a.score).slice(0, options.limit);
+  }
+
+  #search(query: string): Promise<string[]> {
+    let cached = this.#searchCache.get(query);
+    if (!cached) {
+      cached = (async () => {
+        const res = await this.#get(
+          `${this.#base}/w/api.php?action=query&list=search&format=json&origin=*&srlimit=${this.#maxArticles}&srsearch=${encodeURIComponent(query)}`,
+        );
+        if (!res.ok) throw new Error(`Wikipedia search failed with HTTP ${res.status}`);
+        const data = (await res.json()) as { query?: { search?: Array<{ title: string }> } };
+        return [...new Set((data.query?.search ?? []).map((r) => r.title))].slice(0, this.#maxArticles);
+      })();
+      this.#searchCache.set(query, cached);
+      cached.catch(() => {
+        if (this.#searchCache.get(query) === cached) this.#searchCache.delete(query);
+      });
+      if (this.#searchCache.size > 50) this.#searchCache.delete(this.#searchCache.keys().next().value!);
+    }
+    return cached;
   }
 
   #article(title: string): Promise<string> {
@@ -85,7 +119,9 @@ export class WikipediaEvidenceProvider implements EvidenceProvider {
       })();
       this.#articleCache.set(title, cached);
       // Don't cache failures; keep the cache bounded.
-      cached.catch(() => this.#articleCache.delete(title));
+      cached.catch(() => {
+        if (this.#articleCache.get(title) === cached) this.#articleCache.delete(title);
+      });
       if (this.#articleCache.size > 50) this.#articleCache.delete(this.#articleCache.keys().next().value!);
     }
     return cached;
