@@ -1,6 +1,6 @@
 {
   "name": "@hallucination-firewall/core",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Platform-agnostic claim extraction, evidence retrieval and evidence-linked verification.",
   "license": "MIT",
   "type": "module",
