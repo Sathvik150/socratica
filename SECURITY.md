@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please **do not open a public issue**. Use GitHub's
-[private vulnerability reporting](https://github.com/sathvik150/cac26/security/advisories/new) instead.
+[private vulnerability reporting](https://github.com/Sathvik150/socratica/security/advisories/new) instead.
 Include steps to reproduce and the affected component (extension, CLI, skill, core).
 
 ## Scope and design notes

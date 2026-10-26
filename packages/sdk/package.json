@@ -1,6 +1,6 @@
 {
   "name": "@socratica/sdk",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Thin public verify() wrapper over @socratica/core.",
   "license": "MIT",
   "type": "module",

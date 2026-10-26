@@ -7,14 +7,14 @@
 Socratica checks the factual claims in a ChatGPT answer against evidence from the web, right where you read it.
 Every claim is marked supported, contradicted or unverifiable, and every verdict cites the exact source text behind it.
 
-[![CI](https://github.com/sathvik150/cac26/actions/workflows/ci.yml/badge.svg)](https://github.com/sathvik150/cac26/actions/workflows/ci.yml)
+[![CI](https://github.com/Sathvik150/socratica/actions/workflows/ci.yml/badge.svg)](https://github.com/Sathvik150/socratica/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-a9884f.svg)](LICENSE)
 ![Node 20+](https://img.shields.io/badge/node-%3E%3D20-a9884f?logo=node.js&logoColor=white)
 ![TypeScript strict](https://img.shields.io/badge/TypeScript-strict-a9884f?logo=typescript&logoColor=white)
 ![Chrome MV3](https://img.shields.io/badge/Chrome-Manifest%20V3-a9884f?logo=googlechrome&logoColor=white)
 ![Agent Skill](https://img.shields.io/badge/Agent%20Skill-SKILL.md-a9884f)
 
-[Download](#download) · [Quick start](#quick-start) · [How it works](#how-it-works) · [Privacy](#privacy) · [Benchmark](#benchmark) · [Limitations](#known-limitations)
+**[Try it in your browser](https://socratica-search.vercel.app)** · [Download](#download) · [Quick start](#quick-start) · [How it works](#how-it-works) · [Privacy](#privacy) · [Benchmark](#benchmark) · [Limitations](#known-limitations)
 
 <img src="docs/images/demo.png" alt="A contradicted claim highlighted in a ChatGPT-style answer, with the evidence panel showing the source quote and a suggested correction" width="760">
 
@@ -36,23 +36,25 @@ Plenty of tools say "this might be a hallucination." Socratica is built so you c
 
 ## Download
 
-Grab the zips from the **[latest release](https://github.com/sathvik150/cac26/releases/latest)**, or build them yourself with `pnpm build && pnpm package`.
+Get the zips from **[Socratica's site](https://socratica-search.vercel.app/#download)**, which needs no GitHub access, or from the [latest release](https://github.com/Sathvik150/socratica/releases/latest). You can also build them yourself with `pnpm build && pnpm package`.
+
+The site also has a live check: paste any text and it is checked in your browser with the offline judge and Socratica search, Wikipedia, Wikidata and DuckDuckGo as sources.
 
 | Zip | For | What's inside |
 |---|---|---|
-| socratica-extension-v0.3.1.zip | **Chrome**: annotate ChatGPT answers in place | Ready-to-load MV3 extension plus an offline demo page |
-| socratica-plugin-v0.3.1.zip | **ChatGPT → Plugins → New Plugin** | Plugin manifest plus full skill and validators |
-| socratica-plugin-instructions-v0.3.1.zip | **ChatGPT plugin troubleshooting** | Plugin manifest plus instruction-only skill; manual quote checks |
-| socratica-skill-instructions-v0.3.1.zip | **Skills upload troubleshooting** | Instruction-only variant; manual quote checks, no scripts ([details](docs/skill.md#troubleshooting-a-chatgpt-upload-failure)) |
-| socratica-skill-v0.3.1.zip | **Claude, Claude Code** and other Agent Skills hosts | `SKILL.md`, rules, and Node and Python validators |
-| socratica-cli-v0.3.1.zip | **Local use** with your own model, scripts and agents | Single-file CLI (Node 20+, no install) plus examples |
+| socratica-extension-v0.3.2.zip | **Chrome**: annotate ChatGPT answers in place | Ready-to-load MV3 extension plus an offline demo page |
+| socratica-plugin-v0.3.2.zip | **ChatGPT → Plugins → New Plugin** | Plugin manifest plus full skill and validators |
+| socratica-plugin-instructions-v0.3.2.zip | **ChatGPT plugin troubleshooting** | Plugin manifest plus instruction-only skill; manual quote checks |
+| socratica-skill-instructions-v0.3.2.zip | **Skills upload troubleshooting** | Instruction-only variant; manual quote checks, no scripts ([details](docs/skill.md#troubleshooting-a-chatgpt-upload-failure)) |
+| socratica-skill-v0.3.2.zip | **Claude, Claude Code** and other Agent Skills hosts | `SKILL.md`, rules, and Node and Python validators |
+| socratica-cli-v0.3.2.zip | **Local use** with your own model, scripts and agents | Single-file CLI (Node 20+, no install) plus examples |
 
 ## Quick start
 
 <details open>
 <summary><b>Chrome extension (ChatGPT)</b></summary>
 
-1. Unzip `socratica-extension-v0.3.1.zip`.
+1. Unzip `socratica-extension-v0.3.2.zip`.
 2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and pick the unzipped folder.
 3. Read and accept the privacy notice on the settings page that opens. **Nothing is checked or sent before you accept.**
 4. **Web search** is required and already set up, with no key: **Socratica search** gets Google results through Socratica's own relay, and if the relay is busy, DuckDuckGo's keyless answers stand in. You can switch to Firecrawl (no key), or to Serper or Brave Search with your own key.
@@ -71,10 +73,10 @@ Want to see it without ChatGPT? Open `demo.html` from the unzipped folder. It ru
 <details>
 <summary><b>Agent Skill (Claude / ChatGPT / Claude Code)</b></summary>
 
-- **Claude:** with code execution enabled, open the Skills section in Settings, click **Upload skill**, and choose `socratica-skill-v0.3.1.zip`.
-- **Claude Code:** `unzip socratica-skill-v0.3.1.zip -d ~/.claude/skills/`
-- **ChatGPT plugin:** download `socratica-plugin-v0.3.1.zip`, keep it zipped, then open **Plugins → New Plugin**, upload it, and select **Add plugin**. Use `socratica-plugin-instructions-v0.3.1.zip` for the variant without bundled scripts.
-- **Standalone Skills upload:** use `socratica-skill-v0.3.1.zip` in a Skills uploader, or `socratica-skill-instructions-v0.3.1.zip` for manual quote checks. A standalone skill ZIP does not contain the manifest required by the plugin uploader.
+- **Claude:** with code execution enabled, open the Skills section in Settings, click **Upload skill**, and choose `socratica-skill-v0.3.2.zip`.
+- **Claude Code:** `unzip socratica-skill-v0.3.2.zip -d ~/.claude/skills/`
+- **ChatGPT plugin:** download `socratica-plugin-v0.3.2.zip`, keep it zipped, then open **Plugins → New Plugin**, upload it, and select **Add plugin**. Use `socratica-plugin-instructions-v0.3.2.zip` for the variant without bundled scripts.
+- **Standalone Skills upload:** use `socratica-skill-v0.3.2.zip` in a Skills uploader, or `socratica-skill-instructions-v0.3.2.zip` for manual quote checks. A standalone skill ZIP does not contain the manifest required by the plugin uploader.
 
 Install one full or instruction-only variant at a time; they share the same plugin/skill name. Instruction-only variants do not machine-validate quotes.
 
@@ -86,7 +88,7 @@ Then ask: *"Fact-check this answer against these sources."* Full guide: [docs/sk
 <summary><b>CLI and local models</b></summary>
 
 ```bash
-unzip socratica-cli-v0.3.1.zip && cd socratica-cli
+unzip socratica-cli-v0.3.2.zip && cd socratica-cli
 
 # Offline: your documents + the built-in deterministic judge
 node socratica.mjs verify --answer examples/answer.txt --evidence examples/evidence/
@@ -175,7 +177,7 @@ cite an explicitly conflicting passage; missing evidence stays unverifiable. See
 - **Your keys stay yours.** They're stored locally (`chrome.storage.local` or environment variables), never logged, and never bundled.
 - **Least privilege.** The extension's required permissions are `storage`, access to chatgpt.com, `activeTab` and `scripting`. The last two let **Check selected text** read your selection, and only in the tab where you clicked the toolbar button. The web search engine, evidence sources and model servers are requested only for what you choose.
 - **An off switch.** Turn Socratica off from the popup and nothing is checked or sent.
-- **One small server, no accounts, telemetry or analytics.** The only Socratica server is the search relay behind the default engine. It passes claim-based search queries to Serper and keeps no record of them; your network address is used only to limit searches, in memory. Pick another engine and nothing goes through it.
+- **One small server, no accounts, telemetry or analytics.** The only Socratica server is the search relay behind the default engine. It passes claim-based search queries to Serper and keeps no record of them; your network address is used only to limit searches, in memory. Pick another engine and nothing goes through it. The same deployment serves [Socratica's site](https://socratica-search.vercel.app), whose live check sends only claim-based queries too.
 
 Full details: [docs/privacy.md](docs/privacy.md).
 
@@ -212,6 +214,7 @@ On the held-out set, true claims are now marked supported 90% of the time instea
 | Core, SDK, CLI, extension logic | Automated tests (`pnpm test`); no network | Pass |
 | GitHub CI | Node 20 and 22 on GitHub Actions, building, testing, benchmarking and packaging | Pass |
 | Search relay | Unit tests with a fake Serper: query validation, key only in a header, caching, per-network limits, error mapping. Live on Vercel at `socratica-search.vercel.app`, 2026-10-25 | Pass. Live searches returned Google results; no key and no CORS headers in responses; GET answered 405 and bad queries 400; a repeated search came from the cache |
+| Socratica's site | The built site in Chromium (served locally with its security headers), searching through the live relay, 2026-10-26; desktop and 390 px wide | All six downloads served as zips. The live check underlined the pasted NASA claims in place and contradicted the 2018 Webb launch and 35% oxygen claims. No sideways scrolling on a phone |
 | A synthetic NASA misinformation paragraph, **live** | CLI with Socratica search and the offline judge, 2026-10-25 | The 2018 Webb launch and 35% oxygen claims were contradicted, quoting Wikipedia. The other four (rotation, gravity and sea levels, the UN calendar, the Moon) were unverifiable: the offline judge doesn't contradict them |
 | Web search engines (Firecrawl, Serper, Brave) and the DuckDuckGo backup | Fake-fetch tests of each API's documented request and response shape; live keyless requests | Tests pass. Live, Firecrawl's free tier answered HTTP 403 on a user's network (its VPN/proxy refusal) and HTTP 429 from a cloud machine (daily limit used); DuckDuckGo answered a keyless query from that cloud machine with the Wikipedia summary. No successful live Firecrawl search is recorded yet; Serper and Brave not run live |
 | Extension on **live chatgpt.com** | Real Chromium with the extension, logged-out ChatGPT, 2026-10-24 (version 0.1.x, before the rename) | Detects finished answers, extracts claims, highlights and explains them |

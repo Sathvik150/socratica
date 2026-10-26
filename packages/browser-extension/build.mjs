@@ -1,8 +1,9 @@
 // Bundles the extension into dist/ as a load-unpacked MV3 folder.
 import { build } from 'esbuild';
-import { cpSync, mkdirSync, rmSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 
 const outdir = 'dist';
+const { version } = JSON.parse(readFileSync('manifest.json', 'utf8'));
 rmSync(outdir, { recursive: true, force: true });
 mkdirSync(outdir, { recursive: true });
 
@@ -24,6 +25,8 @@ await build({
   minify: true,
   sourcemap: 'linked',
   legalComments: 'linked',
+  // The site's download links name the release zips.
+  define: { __SOCRATICA_VERSION__: JSON.stringify(version) },
   logLevel: 'info',
 });
 

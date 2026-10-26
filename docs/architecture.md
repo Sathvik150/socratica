@@ -52,7 +52,7 @@
 | `packages/browser-extension` | MV3 extension: adapters, watcher, overlay, options, background, demo. |
 | `skill/socratica` | Agent Skill: `SKILL.md`, references, Python validator. |
 | `benchmark` | Labeled dataset, metrics, runner, `BaselineVerifier`. |
-| `relay` | Search relay: one Vercel Function that forwards claim-based queries to Serper with the project's key, so the default engine needs no user key. Keeps no queries; rate-limits per network address in memory. See [`relay/README.md`](../relay/README.md). |
+| `relay` | Search relay: one Vercel Function that forwards claim-based queries to Serper with the project's key, so the default engine needs no user key. Keeps no queries; rate-limits per network address in memory. The same deployment serves Socratica's site: the extension's demo page with a live check (`src/liveCheck.ts`) and the release downloads, built into `public/` on deploy. See [`relay/README.md`](../relay/README.md). |
 
 ## Shield Mode (interface only)
 

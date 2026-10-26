@@ -292,13 +292,38 @@ body.demo { font-size: 16px; }
 .how .card ul { color: var(--sc-muted); font-size: 14px; }
 .site-foot { max-width: 1180px; margin: 0 auto; padding: 28px 24px 40px; border-top: 1px solid var(--sc-line); font-size: 13.5px; color: var(--sc-muted); }
 
+/* Site only (served over https): the live check and the downloads. */
+.try { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 20px 56px; align-items: start; max-width: 1180px; margin: 0 auto; padding: 80px 24px 0; }
+.try h2, .download h2 { font-size: 46px; line-height: 1.08; margin: 0 0 18px; }
+.try-intro p { color: var(--sc-muted); font-size: 16.5px; max-width: 520px; }
+.try-intro .hint { font-size: 13.5px; }
+.try-form textarea { min-height: 220px; font-size: 15px; line-height: 1.55; }
+.try-form .row { margin-top: 12px; }
+.try-output { grid-column: 1 / -1; }
+.download { max-width: 1180px; margin: 0 auto; padding: 0 24px 96px; }
+.downloads { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.card.get { display: flex; flex-direction: column; align-items: flex-start; margin: 0; }
+.card.get h3 { margin: 0 0 6px; font: 24px/1.2 var(--font-display); color: var(--sc-ink); }
+.card.get > p { margin: 0 0 14px; font-size: 14.5px; color: var(--sc-muted); }
+.card.get ol { margin: 16px 0 0; padding-left: 18px; font-size: 14px; color: var(--sc-muted); }
+.card.get li { margin: 0 0 6px; }
+.card.get .hint { margin-top: auto; padding-top: 10px; }
+.card.primary-get { box-shadow: inset 0 3px 0 var(--sc-gold), var(--shadow-ring), var(--sc-shadow); }
+
 @media (max-width: 900px) {
-  .hero, .idea { grid-template-columns: 1fr; gap: 36px; }
+  .hero, .idea, .try { grid-template-columns: 1fr; gap: 36px; }
+  .downloads { grid-template-columns: 1fr 1fr; }
+  .try h2, .download h2 { font-size: 36px; }
   .hero h1 { font-size: 46px; }
   .features, .steps { grid-template-columns: 1fr 1fr; gap: 16px; }
   .feature + .feature { border-left: 0; }
   .site-nav nav { display: none; }
   .idea figure.quote { padding-left: 0; border-left: 0; }
+}
+
+@media (max-width: 600px) {
+  .downloads { grid-template-columns: 1fr; }
+  .try { padding-top: 56px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
