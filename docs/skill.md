@@ -18,7 +18,7 @@ quote is not a verbatim substring of a retrieved passage. Missing evidence stays
 
 ## Claude (claude.ai and desktop app)
 
-1. Download `socratica-skill-vX.zip` from the [latest release](https://github.com/sathvik150/cac26/releases/latest).
+1. Download `socratica-skill-vX.zip` from the [latest release](https://github.com/Sathvik150/socratica/releases/latest).
 2. Make sure code execution is enabled in your settings (skills need it).
 3. Open the Skills section in Settings, choose **Upload skill**, and select the zip.
 4. Ask: *"Fact-check this answer against these sources"* and attach or paste the sources.
@@ -26,7 +26,7 @@ quote is not a verbatim substring of a retrieved passage. Missing evidence stays
 ## Claude Code
 
 ```bash
-unzip socratica-skill-v0.3.1.zip -d ~/.claude/skills/        # all projects
+unzip socratica-skill-v0.3.2.zip -d ~/.claude/skills/        # all projects
 # or: unzip ... -d .claude/skills/                                        # this project only
 ```
 
@@ -39,8 +39,8 @@ For ChatGPT's **Plugins → New Plugin** upload dialog, use
 The standalone `socratica-skill-vX.zip` is for Agent Skills hosts and
 is missing the plugin manifest required by that dialog.
 
-1. Open the [latest release](https://github.com/sathvik150/cac26/releases/latest).
-2. Download `socratica-plugin-v0.3.1.zip` without extracting it. To build locally instead, run `pnpm build && pnpm package`; the ZIP will be in `release/`.
+1. Open the [latest release](https://github.com/Sathvik150/socratica/releases/latest).
+2. Download `socratica-plugin-v0.3.2.zip` without extracting it. To build locally instead, run `pnpm build && pnpm package`; the ZIP will be in `release/`.
 3. In **Plugins → New Plugin**, choose that ZIP and select **Add plugin**.
 4. Start a new chat, select the plugin, and ask it to fact-check an answer against attached sources. Plugin upload has been confirmed; fact-checking behavior after installation still needs verification. If it fails, record the exact error and ZIP filename.
 
@@ -104,7 +104,7 @@ your own model, see [local-ai.md](local-ai.md).
 | Host | Status |
 |---|---|
 | **Claude Code** | Tested on 2026-10-24. The release zip was unzipped into a project's `.claude/skills/`, then `claude -p "Fact-check answer.txt against the documents in sources/"` ran headless. Claude Code loaded the skill on its own and ran `socratica.mjs`. It judged the claims, including a semantic contradiction ("landlocked" vs "island nation") that the offline judge misses, then ran `validate_verdicts.py` and reported `4 checked, 1 supported, 2 contradicted, 1 unverifiable`. |
-| claude.ai / Claude desktop upload | Upload confirmed: the uploaded files arrive intact. Earlier versions only "kind of worked" ([#3](https://github.com/Sathvik150/CAC26/issues/3)): SKILL.md used script paths relative to the skill folder, relied on Node, and had Claude retype source text, so correct quotes failed the exact-match check. Fixed by using full script paths, a Python-only workflow, passages read from saved files, and `find_quote.py`. claude.ai installs uploaded skills under `/mnt/skills/plugins/` (seen in a live run). Re-tested under simulated claude.ai conditions (read-only skill folder, separate working folder, no Node). Not yet re-tested in the live claude.ai app. |
+| claude.ai / Claude desktop upload | Upload confirmed: the uploaded files arrive intact. Earlier versions only "kind of worked" ([#3](https://github.com/Sathvik150/socratica/issues/3)): SKILL.md used script paths relative to the skill folder, relied on Node, and had Claude retype source text, so correct quotes failed the exact-match check. Fixed by using full script paths, a Python-only workflow, passages read from saved files, and `find_quote.py`. claude.ai installs uploaded skills under `/mnt/skills/plugins/` (seen in a live run). Re-tested under simulated claude.ai conditions (read-only skill folder, separate working folder, no Node). Not yet re-tested in the live claude.ai app. |
 | ChatGPT plugin | Plugin ZIP successfully uploaded through Plugins → New Plugin. Fact-checking behavior after installation still needs verification. |
 | Custom GPT fallback | Not tested in a logged-in account. |
 

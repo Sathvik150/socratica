@@ -1,13 +1,13 @@
 {
   "name": "socratica",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": true,
   "type": "module",
   "description": "Model-independent, evidence-linked fact verification for chatbot answers.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sathvik150/cac26.git"
+    "url": "https://github.com/Sathvik150/socratica.git"
   },
   "keywords": [
     "fact-checking",

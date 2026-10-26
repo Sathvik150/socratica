@@ -35,6 +35,20 @@ describe('retrieveEvidence', () => {
     expect(passages.some((p) => p.source.title === 'Velmora cuisine')).toBe(false);
   });
 
+  it('keeps one long page from filling every slot', async () => {
+    // Live, Wikipedia's "Geological history of oxygen" gave four chunks that outscored the one
+    // snippet, from another page, that states the figure.
+    const page = (title: string, url: string, score: number, text: string) => ({ text, score, source: { title, url, providerId: 'fake' } });
+    const history = [1, 2, 3, 4].map((n) => page('Geological history of oxygen', 'https://example.test/history', 0.9, `Oxygen concentration in Earth's early atmosphere, part ${n}.`));
+    const figure = page('Atmosphere of Earth', 'https://example.test/atmosphere', 0.7, 'dry air contains 78.08% nitrogen, 20.95% oxygen');
+    const claims = extractClaims("The Earth's atmospheric oxygen concentration is 35%.");
+    const mixed = await retrieveEvidence(claims, [{ id: 'fake', retrieve: async () => [...history, figure] }], { limit: 4 });
+    expect(mixed.byClaim[claims[0]!.id]!.map((p) => p.source.title)).toEqual(['Geological history of oxygen', 'Geological history of oxygen', 'Atmosphere of Earth', 'Geological history of oxygen']);
+    // With no other page, the same page fills the slots as before.
+    const single = await retrieveEvidence(claims, [{ id: 'fake', retrieve: async () => history }], { limit: 4 });
+    expect(single.byClaim[claims[0]!.id]).toHaveLength(4);
+  });
+
   it('returns no passages for an unrelated claim', async () => {
     const claims = extractClaims('The Harlow Observatory was built on Mount Teague in 1904.');
     const ev = await retrieveEvidence(claims, [new DocumentEvidenceProvider(docs)]);

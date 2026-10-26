@@ -50,6 +50,14 @@
   `--llm local` (your own server). The source and model keys are independent.
 - Keys are read from environment variables only, so they don't land in shell history.
 
+## Socratica's site
+
+[socratica-search.vercel.app](https://socratica-search.vercel.app) is served by the same Vercel project as the
+search relay. Its example at the top runs in your browser with a mock judge and sends nothing. The live check
+sends, for each claim in the text you paste, only short claim-based queries: to the relay (Google results via
+Serper), Wikipedia, Wikidata and DuckDuckGo. Your text itself is not sent anywhere, the judge is the offline one
+running in your browser, and the page sets no cookies and has no analytics. The relay keeps no queries (see above).
+
 ## Agent Skill
 
 The skill runs inside your AI assistant. Whatever that assistant can see or send is governed by its own

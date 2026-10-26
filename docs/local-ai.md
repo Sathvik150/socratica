@@ -3,7 +3,7 @@
 Download `socratica-cli-vX.zip`, unzip it, and run it with Node.js 20+. It needs no install and no account.
 
 ```bash
-unzip socratica-cli-v0.3.1.zip && cd socratica-cli
+unzip socratica-cli-v0.3.2.zip && cd socratica-cli
 node socratica.mjs verify --answer examples/answer.txt --evidence examples/evidence/
 ```
 

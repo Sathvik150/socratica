@@ -3,6 +3,25 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [SemVer](https://semver.org/).
 
+## [0.3.2] - 2026-10-26
+
+### Added
+- **Socratica's site, at [socratica-search.vercel.app](https://socratica-search.vercel.app).** The repository's About link
+  pointed at the relay's address, which had no page and answered 404. The same deployment now serves the extension's
+  demo page, which over https adds a **live check** (paste any text; it is checked in the browser with the offline judge,
+  and Socratica search, Wikipedia, Wikidata and DuckDuckGo as sources, sending only claim-based queries) and the six
+  **downloads**, built from the same commit on every deploy, so they need no GitHub access. As a file or inside the
+  extension, the page stays the offline demo.
+
+### Fixed
+- **One long page could crowd out the passage that settles a claim.** With Wikipedia on (the extension's default),
+  "Geological history of oxygen" gave four chunks that filled every slot the judge reads, so "the Earth's oxygen
+  concentration has increased to 35%" stayed unverifiable even though Google's "20.95% oxygen" snippet was found. A page
+  now gives a claim at most two passages while other pages have relevant ones; with no other pages, it still fills the
+  rest. Benchmark numbers are unchanged.
+- **The relay's deployment served some of its source files** (`tsconfig.json` and the tests). Only the built site in
+  `public/` is served now.
+
 ## [0.3.1] - 2026-10-25
 
 ### Fixed
@@ -199,12 +218,13 @@ Hallucination Firewall is now **Socratica**. This release also replaces the unre
 - **Benchmark**: 37 labeled synthetic items, a runner, and a `BaselineVerifier` plug-in interface.
 - Release packaging (`pnpm package`) and GitHub Actions for CI and tagged releases.
 
-[0.3.1]: https://github.com/sathvik150/cac26/releases/tag/v0.3.1
-[0.3.0]: https://github.com/sathvik150/cac26/releases/tag/v0.3.0
-[0.2.0]: https://github.com/sathvik150/cac26/releases/tag/v0.2.0
-[0.1.5]: https://github.com/sathvik150/cac26/releases/tag/v0.1.5
-[0.1.4]: https://github.com/sathvik150/cac26/releases/tag/v0.1.4
-[0.1.3]: https://github.com/sathvik150/cac26/releases/tag/v0.1.3
-[0.1.2]: https://github.com/sathvik150/cac26/releases/tag/v0.1.2
-[0.1.1]: https://github.com/sathvik150/cac26/releases/tag/v0.1.1
-[0.1.0]: https://github.com/sathvik150/cac26/releases/tag/v0.1.0
+[0.3.2]: https://github.com/Sathvik150/socratica/releases/tag/v0.3.2
+[0.3.1]: https://github.com/Sathvik150/socratica/releases/tag/v0.3.1
+[0.3.0]: https://github.com/Sathvik150/socratica/releases/tag/v0.3.0
+[0.2.0]: https://github.com/Sathvik150/socratica/releases/tag/v0.2.0
+[0.1.5]: https://github.com/Sathvik150/socratica/releases/tag/v0.1.5
+[0.1.4]: https://github.com/Sathvik150/socratica/releases/tag/v0.1.4
+[0.1.3]: https://github.com/Sathvik150/socratica/releases/tag/v0.1.3
+[0.1.2]: https://github.com/Sathvik150/socratica/releases/tag/v0.1.2
+[0.1.1]: https://github.com/Sathvik150/socratica/releases/tag/v0.1.1
+[0.1.0]: https://github.com/Sathvik150/socratica/releases/tag/v0.1.0

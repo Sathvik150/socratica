@@ -41,6 +41,9 @@ export async function mapConcurrent<T, R>(items: readonly T[], limit: number, ta
 
 class DeadlineError extends Error {}
 
+/** Most passages one page may give a claim while other pages have relevant ones. */
+const PER_PAGE = 2;
+
 /**
  * Query every provider for every claim, merge, de-duplicate and rank.
  * Claims run concurrently (sources still apply their own per-host request
@@ -94,21 +97,36 @@ export async function retrieveEvidence(
   let next = 1;
   claims.forEach((claim, i) => {
     const seen = new Set<string>();
-    const ranked: Passage[] = [];
+    const chosen: Array<{ p: Omit<Passage, 'id'>; key: string }> = [];
+    const spare: typeof chosen = [];
+    const fromPage = new Map<string, number>();
     for (const p of perClaim[i]!.sort((a, b) => b.score - a.score || a.source.title.localeCompare(b.source.title))) {
-      const key = `${p.source.url ?? p.source.title}\u0000${normalizeWhitespace(p.text)}`;
+      const page = p.source.url ?? p.source.title;
+      const key = `${page}\u0000${normalizeWhitespace(p.text)}`;
       if (seen.has(key)) continue;
       seen.add(key);
+      // One long page ("Geological history of oxygen") must not fill every slot: a passage from
+      // another page may be the one that states the fact.
+      const count = fromPage.get(page) ?? 0;
+      if (count >= PER_PAGE) {
+        spare.push({ p, key });
+        continue;
+      }
+      fromPage.set(page, count + 1);
+      chosen.push({ p, key });
+      if (chosen.length >= limit) break;
+    }
+    // Too few other pages: the next passages from the same ones fill the rest.
+    chosen.push(...spare.slice(0, Math.max(0, limit - chosen.length)));
+    result.byClaim[claim.id] = chosen.map(({ p, key }) => {
       let id = idByText.get(key);
       if (!id) {
         id = `p${next++}`;
         idByText.set(key, id);
         result.passages[id] = { ...p, id };
       }
-      ranked.push(result.passages[id]!);
-      if (ranked.length >= limit) break;
-    }
-    result.byClaim[claim.id] = ranked;
+      return result.passages[id]!;
+    });
   });
   // Errors in claim order, too.
   const order = new Map(claims.map((c, i) => [c.id, i]));
